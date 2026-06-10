@@ -14,7 +14,7 @@ type Alimento = {
   id: string
   nombre: string
   calorias_por_100g: number
-  proteinas_por_100g: number
+  proteina_por_100g: number
   carbos_por_100g: number
   grasas_por_100g: number
 }
@@ -109,7 +109,7 @@ export default function NutricionPage() {
 
   const calcularMacros = (alimento: Alimento, g: number) => ({
     calorias: Math.round(alimento.calorias_por_100g * g / 100),
-    proteinas: Math.round(alimento.proteinas_por_100g * g / 100),
+    proteinas: Math.round(alimento.proteina_por_100g * g / 100),
     carbohidratos: Math.round(alimento.carbos_por_100g * g / 100),
     grasas: Math.round(alimento.grasas_por_100g * g / 100),
   })
@@ -269,7 +269,7 @@ export default function NutricionPage() {
                   <button key={a.id} onClick={() => setSeleccionado(a)}
                     className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
                     <div className="text-sm font-medium">{a.nombre}</div>
-                    <div className="text-xs text-gray-500">{a.calorias_por_100g} kcal · P{a.proteinas_por_100g} · C{a.carbos_por_100g} · G{a.grasas_por_100g} (por 100g)</div>
+                    <div className="text-xs text-gray-500">{a.calorias_por_100g} kcal · P{a.proteina_por_100g} · C{a.carbos_por_100g} · G{a.grasas_por_100g} (por 100g)</div>
                   </button>
                 ))}
               </div>
