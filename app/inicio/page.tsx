@@ -1,6 +1,3 @@
-import { createBrowserClient } from '@supabase/ssr'
-import { redirect } from 'next/navigation'
-
 export default async function InicioPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
