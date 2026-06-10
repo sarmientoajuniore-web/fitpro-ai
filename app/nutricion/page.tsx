@@ -24,10 +24,10 @@ type RegistroComida = {
   tipo_comida: string
   cantidad_gramos: number
   calorias: number
-  proteinas: number
-  carbohidratos: number
+  proteina: number
+  carbos: number
   grasas: number
-  hora_registro: string
+  fecha: string
   alimentos: { nombre: string }
 }
 
@@ -61,10 +61,10 @@ export default function NutricionPage() {
     const { data } = await supabase
       .from('registro_comidas')
       .select('*, alimentos(nombre)')
-      .eq('usuario_id', userId)
-      .gte('hora_registro', `${hoy}T00:00:00`)
-      .lte('hora_registro', `${hoy}T23:59:59`)
-      .order('hora_registro', { ascending: true })
+      .eq('user_id', userId)
+      .gte('fecha', `${hoy}T00:00:00`)
+      .lte('fecha', `${hoy}T23:59:59`)
+      .order('fecha', { ascending: true })
     if (data) setRegistros(data)
   }, [userId])
 
@@ -89,8 +89,8 @@ export default function NutricionPage() {
     registros.filter(r => r.tipo_comida === tipo)
 
   const totalCals = registros.reduce((s, r) => s + (r.calorias || 0), 0)
-  const totalP = registros.reduce((s, r) => s + (r.proteinas || 0), 0)
-  const totalC = registros.reduce((s, r) => s + (r.carbohidratos || 0), 0)
+  const totalP = registros.reduce((s, r) => s + (r.proteina || 0), 0)
+  const totalC = registros.reduce((s, r) => s + (r.carbos || 0), 0)
   const totalG = registros.reduce((s, r) => s + (r.grasas || 0), 0)
 
   const toggleComida = (key: string) =>
@@ -106,8 +106,8 @@ export default function NutricionPage() {
 
   const calcularMacros = (alimento: Alimento, g: number) => ({
     calorias: Math.round((alimento.calorias_100g || 0) * g / 100),
-    proteinas: Math.round((alimento.proteina_100g || 0) * g / 100),
-    carbohidratos: Math.round((alimento.carbos_100g || 0) * g / 100),
+    proteina: Math.round((alimento.proteina_100g || 0) * g / 100),
+    carbos: Math.round((alimento.carbos_100g || 0) * g / 100),
     grasas: Math.round((alimento.grasas_100g || 0) * g / 100),
   })
 
@@ -117,15 +117,16 @@ export default function NutricionPage() {
     const g = parseFloat(gramos) || 100
     const macros = calcularMacros(seleccionado, g)
     const { error } = await supabase.from('registro_comidas').insert({
-      usuario_id: userId,
+      user_id: userId,
       alimento_id: seleccionado.id,
+      nombre_comida: seleccionado.nombre,
       tipo_comida: modal,
       cantidad_gramos: g,
       calorias: macros.calorias,
-      proteinas: macros.proteinas,
-      carbohidratos: macros.carbohidratos,
+      proteina: macros.proteina,
+      carbos: macros.carbos,
       grasas: macros.grasas,
-      hora_registro: new Date().toISOString(),
+      fecha: new Date().toISOString(),
     })
     if (error) console.error('Error guardando:', error)
     setGuardando(false)
@@ -215,7 +216,7 @@ export default function NutricionPage() {
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <div className="text-sm font-bold">{item.calorias} kcal</div>
-                          <div className="text-xs text-gray-500">P{item.proteinas} · C{item.carbohidratos} · G{item.grasas}</div>
+                          <div className="text-xs text-gray-500">P{item.proteina} · C{item.carbos} · G{item.grasas}</div>
                         </div>
                         <button onClick={() => eliminarRegistro(item.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none">×</button>
                       </div>
@@ -285,8 +286,8 @@ export default function NutricionPage() {
                       <div className="text-sm font-semibold">{seleccionado.nombre}</div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {calcularMacros(seleccionado, parseFloat(gramos) || 100).calorias} kcal ·
-                        P{calcularMacros(seleccionado, parseFloat(gramos) || 100).proteinas} ·
-                        C{calcularMacros(seleccionado, parseFloat(gramos) || 100).carbohidratos} ·
+                        P{calcularMacros(seleccionado, parseFloat(gramos) || 100).proteina} ·
+                        C{calcularMacros(seleccionado, parseFloat(gramos) || 100).carbos} ·
                         G{calcularMacros(seleccionado, parseFloat(gramos) || 100).grasas}
                       </div>
                     </div>
