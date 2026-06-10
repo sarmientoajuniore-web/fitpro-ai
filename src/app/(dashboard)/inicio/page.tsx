@@ -41,7 +41,7 @@ export default async function InicioPage() {
             { emoji: '🏋️', title: 'Registrar serie',     sub: 'Sesión de hoy',       href: '/rutinas' },
             { emoji: '⚖️', title: 'Registrar peso',      sub: 'Seguimiento corporal', href: '/progreso' },
           ].map(({ emoji, title, sub, href }) => (
-            
+            <a
               key={href}
               href={href}
               className="bg-[#1a1a1a] border border-white/8 rounded-xl p-4 hover:border-white/20 transition-colors"
