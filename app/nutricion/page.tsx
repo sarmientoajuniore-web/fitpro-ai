@@ -13,10 +13,10 @@ const OBJETIVO = { cals: 2700, p: 180, c: 290, g: 90 }
 type Alimento = {
   id: string
   nombre: string
-  calorias_por_100g: number
-  proteina_por_100g: number
-  carbos_por_100g: number
-  grasas_por_100g: number
+  calorias_100g: number
+  proteina_100g: number
+  carbos_100g: number
+  grasas_100g: number
 }
 
 type RegistroComida = {
@@ -41,7 +41,7 @@ const TIPOS = [
 export default function NutricionPage() {
   const [registros, setRegistros] = useState<RegistroComida[]>([])
   const [abierto, setAbierto] = useState<string[]>(['desayuno', 'almuerzo'])
-  const [modal, setModal] = useState<string | null>(null) // tipo_comida activo
+  const [modal, setModal] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [alimentos, setAlimentos] = useState<Alimento[]>([])
   const [seleccionado, setSeleccionado] = useState<Alimento | null>(null)
@@ -49,14 +49,12 @@ export default function NutricionPage() {
   const [guardando, setGuardando] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Obtener usuario actual
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
     })
   }, [])
 
-  // Cargar registros del día
   const cargarRegistros = useCallback(async () => {
     if (!userId) return
     const hoy = new Date().toISOString().split('T')[0]
@@ -74,13 +72,12 @@ export default function NutricionPage() {
     cargarRegistros()
   }, [cargarRegistros])
 
-  // Buscar alimentos
   useEffect(() => {
     if (busqueda.length < 2) { setAlimentos([]); return }
     const timer = setTimeout(async () => {
       const { data } = await supabase
         .from('alimentos')
-        .select('*')
+        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g')
         .ilike('nombre', `%${busqueda}%`)
         .limit(10)
       if (data) setAlimentos(data)
@@ -91,10 +88,10 @@ export default function NutricionPage() {
   const registrosPorTipo = (tipo: string) =>
     registros.filter(r => r.tipo_comida === tipo)
 
-  const totalCals = registros.reduce((s, r) => s + r.calorias, 0)
-  const totalP = registros.reduce((s, r) => s + r.proteinas, 0)
-  const totalC = registros.reduce((s, r) => s + r.carbohidratos, 0)
-  const totalG = registros.reduce((s, r) => s + r.grasas, 0)
+  const totalCals = registros.reduce((s, r) => s + (r.calorias || 0), 0)
+  const totalP = registros.reduce((s, r) => s + (r.proteinas || 0), 0)
+  const totalC = registros.reduce((s, r) => s + (r.carbohidratos || 0), 0)
+  const totalG = registros.reduce((s, r) => s + (r.grasas || 0), 0)
 
   const toggleComida = (key: string) =>
     setAbierto(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key])
@@ -108,10 +105,10 @@ export default function NutricionPage() {
   }
 
   const calcularMacros = (alimento: Alimento, g: number) => ({
-    calorias: Math.round(alimento.calorias_por_100g * g / 100),
-    proteinas: Math.round(alimento.proteina_por_100g * g / 100),
-    carbohidratos: Math.round(alimento.carbos_por_100g * g / 100),
-    grasas: Math.round(alimento.grasas_por_100g * g / 100),
+    calorias: Math.round((alimento.calorias_100g || 0) * g / 100),
+    proteinas: Math.round((alimento.proteina_100g || 0) * g / 100),
+    carbohidratos: Math.round((alimento.carbos_100g || 0) * g / 100),
+    grasas: Math.round((alimento.grasas_100g || 0) * g / 100),
   })
 
   const guardarRegistro = async () => {
@@ -119,14 +116,18 @@ export default function NutricionPage() {
     setGuardando(true)
     const g = parseFloat(gramos) || 100
     const macros = calcularMacros(seleccionado, g)
-    await supabase.from('registro_comidas').insert({
+    const { error } = await supabase.from('registro_comidas').insert({
       usuario_id: userId,
       alimento_id: seleccionado.id,
       tipo_comida: modal,
       cantidad_gramos: g,
-      ...macros,
+      calorias: macros.calorias,
+      proteinas: macros.proteinas,
+      carbohidratos: macros.carbohidratos,
+      grasas: macros.grasas,
       hora_registro: new Date().toISOString(),
     })
+    if (error) console.error('Error guardando:', error)
     setGuardando(false)
     setModal(null)
     cargarRegistros()
@@ -139,7 +140,6 @@ export default function NutricionPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white max-w-lg mx-auto">
-      {/* HEADER */}
       <div className="sticky top-0 bg-[#0a0a0a] z-10 border-b border-white/10 px-5 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold">Fit<span className="text-[#F5C518]">Pro</span> IA</h1>
         <a href="/inicio" className="text-xs text-gray-400">← Inicio</a>
@@ -188,7 +188,7 @@ export default function NutricionPage() {
         {/* COMIDAS */}
         {TIPOS.map(({ key, label, icono, hora }) => {
           const items = registrosPorTipo(key)
-          const calsTipo = items.reduce((s, r) => s + r.calorias, 0)
+          const calsTipo = items.reduce((s, r) => s + (r.calorias || 0), 0)
           return (
             <div key={key} className="bg-[#1a1a1a] border border-white/10 rounded-xl mb-3 overflow-hidden">
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => toggleComida(key)}>
@@ -243,7 +243,7 @@ export default function NutricionPage() {
         </a>
       </div>
 
-      {/* MODAL AÑADIR ALIMENTO */}
+      {/* MODAL */}
       {modal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4">
           <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg p-5">
@@ -252,7 +252,6 @@ export default function NutricionPage() {
               <button onClick={() => setModal(null)} className="text-gray-500 hover:text-white text-xl">×</button>
             </div>
 
-            {/* BUSCADOR */}
             <input
               type="text"
               placeholder="Buscar alimento..."
@@ -262,14 +261,13 @@ export default function NutricionPage() {
               autoFocus
             />
 
-            {/* RESULTADOS */}
             {alimentos.length > 0 && !seleccionado && (
               <div className="max-h-48 overflow-y-auto mb-3 rounded-xl border border-white/10 divide-y divide-white/5">
                 {alimentos.map(a => (
                   <button key={a.id} onClick={() => setSeleccionado(a)}
                     className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
                     <div className="text-sm font-medium">{a.nombre}</div>
-                    <div className="text-xs text-gray-500">{a.calorias_por_100g} kcal · P{a.proteina_por_100g} · C{a.carbos_por_100g} · G{a.grasas_por_100g} (por 100g)</div>
+                    <div className="text-xs text-gray-500">{a.calorias_100g} kcal · P{a.proteina_100g} · C{a.carbos_100g} · G{a.grasas_100g} (por 100g)</div>
                   </button>
                 ))}
               </div>
@@ -279,7 +277,6 @@ export default function NutricionPage() {
               <div className="text-center text-gray-500 text-sm py-4 mb-3">No se encontraron alimentos</div>
             )}
 
-            {/* ALIMENTO SELECCIONADO */}
             {seleccionado && (
               <div className="mb-4">
                 <div className="bg-[#111] border border-[#F5C518]/30 rounded-xl p-3 mb-3">
