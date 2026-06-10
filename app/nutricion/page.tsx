@@ -320,4 +320,3 @@ export default function NutricionPage() {
     </div>
   )
 }
-
