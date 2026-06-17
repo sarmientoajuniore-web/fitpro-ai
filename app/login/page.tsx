@@ -28,7 +28,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Fit<span className="text-[#F5C518]">Pro</span> IA</h1>
+          <h1 className="text-3xl font-bold text-white">Fit<span className="text-[#F5C518]">Pro</span> JS</h1>
           <p className="text-gray-500 mt-2 text-sm">Tu plataforma de fitness inteligente</p>
         </div>
 

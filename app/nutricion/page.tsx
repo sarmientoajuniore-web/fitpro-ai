@@ -45,8 +45,11 @@ export default function NutricionPage() {
   const [busqueda, setBusqueda] = useState('')
   const [alimentos, setAlimentos] = useState<Alimento[]>([])
   const [seleccionado, setSeleccionado] = useState<Alimento | null>(null)
+  const [modo, setModo] = useState<'gramos' | 'unidades'>('gramos')
   const [gramos, setGramos] = useState('100')
+  const [unidades, setUnidades] = useState('1')
   const [guardando, setGuardando] = useState(false)
+  const [errorGuardando, setErrorGuardando] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -101,8 +104,26 @@ export default function NutricionPage() {
     setBusqueda('')
     setAlimentos([])
     setSeleccionado(null)
+    setModo('gramos')
     setGramos('100')
+    setUnidades('1')
+    setErrorGuardando(null)
   }
+
+  const gramosPorUnidad = (nombre: string): number => {
+    const n = nombre.toLowerCase()
+    if (n.includes('huevo'))                    return 50
+    if (n.includes('limon') || n.includes('limón')) return 30
+    if (n.includes('banana') || n.includes('platano')) return 120
+    if (n.includes('manzana'))                  return 150
+    if (n.includes('naranja'))                  return 180
+    return 100
+  }
+
+  const totalGramos =
+    modo === 'gramos'
+      ? parseFloat(gramos) || 0
+      : (parseFloat(unidades) || 0) * (seleccionado ? gramosPorUnidad(seleccionado.nombre) : 100)
 
   const calcularMacros = (alimento: Alimento, g: number) => ({
     calorias: Math.round((alimento.calorias_100g || 0) * g / 100),
@@ -112,12 +133,39 @@ export default function NutricionPage() {
   })
 
   const guardarRegistro = async () => {
-    if (!seleccionado || !userId || !modal) return
+    if (!seleccionado || !modal) return
     setGuardando(true)
-    const g = parseFloat(gramos) || 100
+    setErrorGuardando(null)
+
+    // 1. Verificar sesión activa
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    console.log('[guardarRegistro] getSession →', sessionData?.session?.user?.id ?? null, sessionError)
+
+    if (sessionError || !sessionData.session) {
+      console.warn('[guardarRegistro] Sin sesión activa')
+      setErrorGuardando('Tu sesión expiró. Vuelve a iniciar sesión para continuar.')
+      setGuardando(false)
+      return
+    }
+
+    // 2. Obtener user verificado por el servidor
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    console.log('[guardarRegistro] getUser →', userData?.user?.id ?? null, userError)
+
+    if (userError || !userData.user) {
+      console.warn('[guardarRegistro] getUser falló:', userError)
+      setErrorGuardando('No se pudo verificar tu usuario. Vuelve a iniciar sesión.')
+      setGuardando(false)
+      return
+    }
+
+    const uid = userData.user.id
+    console.log('[guardarRegistro] user_id a insertar:', uid)
+
+    const g = totalGramos || 100
     const macros = calcularMacros(seleccionado, g)
-    const { error } = await supabase.from('registro_comidas').insert({
-      user_id: userId,
+    const payload = {
+      user_id: uid,
       alimento_id: seleccionado.id,
       nombre_comida: seleccionado.nombre,
       tipo_comida: modal,
@@ -127,8 +175,19 @@ export default function NutricionPage() {
       carbos: macros.carbos,
       grasas: macros.grasas,
       fecha: new Date().toISOString(),
-    })
-    if (error) console.error('Error guardando:', error)
+    }
+    console.log('[guardarRegistro] payload →', payload)
+
+    const { error } = await supabase.from('registro_comidas').insert(payload)
+
+    if (error) {
+      console.error('[guardarRegistro] INSERT error →', error)
+      setErrorGuardando(`Error al guardar: ${error.message}`)
+      setGuardando(false)
+      return
+    }
+
+    console.log('[guardarRegistro] INSERT ok')
     setGuardando(false)
     setModal(null)
     cargarRegistros()
@@ -142,7 +201,7 @@ export default function NutricionPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white max-w-lg mx-auto">
       <div className="sticky top-0 bg-[#0a0a0a] z-10 border-b border-white/10 px-5 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold">Fit<span className="text-[#F5C518]">Pro</span> IA</h1>
+        <h1 className="text-lg font-bold">Fit<span className="text-[#F5C518]">Pro</span> JS</h1>
         <a href="/inicio" className="text-xs text-gray-400">← Inicio</a>
       </div>
 
@@ -208,17 +267,30 @@ export default function NutricionPage() {
               {abierto.includes(key) && (
                 <div className="border-t border-white/10">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                      <div>
-                        <div className="text-sm font-medium">{item.alimentos?.nombre}</div>
-                        <div className="text-xs text-gray-500">{item.cantidad_gramos}g</div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-sm font-bold">{item.calorias} kcal</div>
-                          <div className="text-xs text-gray-500">P{item.proteina} · C{item.carbos} · G{item.grasas}</div>
+                    <div key={item.id} className="px-4 py-3 border-b border-white/5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{item.alimentos?.nombre}</div>
+                          <div className="text-xs text-gray-500">{item.cantidad_gramos}g</div>
                         </div>
-                        <button onClick={() => eliminarRegistro(item.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none">×</button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-sm font-bold text-[#F5C518]">{item.calorias} kcal</div>
+                          <button onClick={() => eliminarRegistro(item.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none">×</button>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-1.5">
+                        <span className="text-xs">
+                          <span className="text-blue-400 font-medium">Proteína</span>
+                          <span className="text-gray-300 ml-1">{item.proteina}g</span>
+                        </span>
+                        <span className="text-xs">
+                          <span className="text-amber-400 font-medium">Carbos</span>
+                          <span className="text-gray-300 ml-1">{item.carbos}g</span>
+                        </span>
+                        <span className="text-xs">
+                          <span className="text-rose-400 font-medium">Grasas</span>
+                          <span className="text-gray-300 ml-1">{item.grasas}g</span>
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -233,15 +305,6 @@ export default function NutricionPage() {
           )
         })}
 
-        {/* BOTÓN IA */}
-        <a href="/ia" className="mt-4 bg-[#1a1a1a] border border-[#3B82F6]/30 rounded-xl p-4 flex items-center gap-3 hover:border-[#3B82F6] transition-colors">
-          <div className="text-2xl">🧠</div>
-          <div>
-            <div className="text-sm font-semibold">Registrar con IA</div>
-            <div className="text-xs text-gray-500">Foto, voz o descripción de tu comida</div>
-          </div>
-          <span className="ml-auto text-gray-500">›</span>
-        </a>
       </div>
 
       {/* MODAL */}
@@ -280,29 +343,73 @@ export default function NutricionPage() {
 
             {seleccionado && (
               <div className="mb-4">
+                {/* Alimento seleccionado + macros en tiempo real */}
                 <div className="bg-[#111] border border-[#F5C518]/30 rounded-xl p-3 mb-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-semibold">{seleccionado.nombre}</div>
                       <div className="text-xs text-gray-500 mt-0.5">
-                        {calcularMacros(seleccionado, parseFloat(gramos) || 100).calorias} kcal ·
-                        P{calcularMacros(seleccionado, parseFloat(gramos) || 100).proteina} ·
-                        C{calcularMacros(seleccionado, parseFloat(gramos) || 100).carbos} ·
-                        G{calcularMacros(seleccionado, parseFloat(gramos) || 100).grasas}
+                        {calcularMacros(seleccionado, totalGramos || 100).calorias} kcal ·
+                        P{calcularMacros(seleccionado, totalGramos || 100).proteina} ·
+                        C{calcularMacros(seleccionado, totalGramos || 100).carbos} ·
+                        G{calcularMacros(seleccionado, totalGramos || 100).grasas}
+                        {totalGramos > 0 && <span className="ml-1">· {totalGramos}g total</span>}
                       </div>
                     </div>
                     <button onClick={() => setSeleccionado(null)} className="text-gray-500 text-sm">cambiar</button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-gray-400 whitespace-nowrap">Cantidad (g)</label>
-                  <input
-                    type="number"
-                    value={gramos}
-                    onChange={e => setGramos(e.target.value)}
-                    className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#F5C518]/50"
-                  />
+
+                {/* Toggle modo */}
+                <div className="flex gap-2 mb-3">
+                  {(['gramos', 'unidades'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setModo(m)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                        modo === m
+                          ? 'bg-[#F5C518] text-black'
+                          : 'bg-[#111] text-gray-400 border border-white/10'
+                      }`}>
+                      {m === 'gramos' ? 'Por gramos' : 'Por unidades'}
+                    </button>
+                  ))}
                 </div>
+
+                {/* Campos según modo */}
+                {modo === 'gramos' ? (
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-gray-400 whitespace-nowrap">Cantidad (g)</label>
+                    <input
+                      type="number"
+                      value={gramos}
+                      onChange={e => setGramos(e.target.value)}
+                      className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#F5C518]/50"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-400 whitespace-nowrap">Unidades</label>
+                      <input
+                        type="number"
+                        value={unidades}
+                        onChange={e => setUnidades(e.target.value)}
+                        className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#F5C518]/50"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-600 mt-1.5 pl-1">
+                      1 unidad ≈ {seleccionado ? gramosPorUnidad(seleccionado.nombre) : 100}g
+                      · total: {totalGramos}g
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {errorGuardando && (
+              <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
+                {errorGuardando}
               </div>
             )}
 
