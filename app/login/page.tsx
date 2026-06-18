@@ -15,13 +15,21 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user) {
       setError('Correo o contraseña incorrectos')
       setLoading(false)
-    } else {
-      router.push('/inicio')
+      return
     }
+
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('edad, peso_kg, altura_cm')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    const incompleto = !perfil || perfil.edad === null || perfil.peso_kg === null || perfil.altura_cm === null
+    router.push(incompleto ? '/onboarding' : '/inicio')
   }
 
   return (

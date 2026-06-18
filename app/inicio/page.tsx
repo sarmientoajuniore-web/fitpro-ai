@@ -17,6 +17,9 @@ const OBJETIVO_LABEL: Record<string, string> = {
 
 type Perfil = {
   nombre_completo: string | null
+  edad: number | null
+  peso_kg: number | null
+  altura_cm: number | null
   tdee: number | null
   calorias_objetivo: number | null
   objetivo: string | null
@@ -56,9 +59,9 @@ export default function InicioPage() {
       const [{ data: perfilData }, { data: comidas }] = await Promise.all([
         supabase
           .from('perfiles')
-          .select('nombre_completo, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo')
+          .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo')
           .eq('id', user.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('registro_comidas')
           .select('calorias, proteina, carbos, grasas')
@@ -66,7 +69,7 @@ export default function InicioPage() {
           .eq('fecha', hoy),
       ])
 
-      if (!perfilData || perfilData.calorias_objetivo === null) {
+      if (!perfilData || perfilData.edad === null || perfilData.peso_kg === null || perfilData.altura_cm === null) {
         router.replace('/onboarding')
         return
       }
@@ -95,7 +98,7 @@ export default function InicioPage() {
     )
   }
 
-  const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? 'Atleta'
+  const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? ''
   const tdee     = perfil?.tdee?.toLocaleString() ?? '—'
   const kcal     = perfil?.calorias_objetivo?.toLocaleString() ?? '—'
   const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? perfil.objetivo) : '—'

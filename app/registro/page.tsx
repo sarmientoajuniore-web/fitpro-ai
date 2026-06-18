@@ -2,12 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
-
-const supabase = createBrowserClient(
-  'https://dwecmbrrrwczlxlexmcg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZWNtYnJycndjemx4bGV4bWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NTE3MjUsImV4cCI6MjA5NjMyNzcyNX0.12Z47Z0mkiAMvXp1T3yre1YS6IHc80B9dsfpVDOGNIk'
-)
+import { createClient } from '@/lib/supabase/client'
 
 export default function RegistroPage() {
   const [nombre, setNombre] = useState('')
@@ -16,6 +11,7 @@ export default function RegistroPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
 
   const handleRegistro = async () => {
     setLoading(true)
@@ -39,7 +35,7 @@ export default function RegistroPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/inicio')
+      router.push('/onboarding')
     }
   }
 
