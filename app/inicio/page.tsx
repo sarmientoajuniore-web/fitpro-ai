@@ -107,8 +107,7 @@ export default function InicioPage() {
   const metaCarb = perfil?.carbos_objetivo    ?? 0
   const metaGra  = perfil?.grasas_objetivo    ?? 0
 
-  const calQuedan  = Math.max(metaCal - Math.round(consumo.calorias), 0)
-  const calExceso  = Math.round(consumo.calorias) - metaCal
+  const calRestantes = metaCal - Math.round(consumo.calorias)
   const calExcedido = consumo.calorias > metaCal
 
   const macros = [
@@ -167,19 +166,18 @@ export default function InicioPage() {
 
           {/* Calorías del día */}
           <div className="mb-5">
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-sm font-semibold">Calorías</span>
-              <span className={`text-xs font-medium ${calExcedido ? 'text-red-400' : 'text-gray-500'}`}>
-                {calExcedido
-                  ? `+${calExceso.toLocaleString()} excedidas`
-                  : `Quedan ${calQuedan.toLocaleString()}`}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Te quedan hoy</p>
+            <div className="flex items-baseline gap-1.5 mb-3">
+              <span className={`text-5xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#F5C518]'}`}>
+                {calRestantes.toLocaleString()}
               </span>
+              <span className="text-lg font-semibold text-gray-400">kcal</span>
             </div>
-            <div className="flex items-baseline gap-1.5 mb-2">
-              <span className={`text-2xl font-black ${calExcedido ? 'text-red-400' : 'text-[#F5C518]'}`}>
-                {Math.round(consumo.calorias).toLocaleString()}
+
+            <div className="flex items-end justify-between mb-1">
+              <span className="text-xs text-gray-500">
+                {Math.round(consumo.calorias).toLocaleString()} / {metaCal.toLocaleString()} kcal
               </span>
-              <span className="text-sm text-gray-500">/ {metaCal.toLocaleString()} kcal</span>
             </div>
             <Barra consumido={consumo.calorias} meta={metaCal} color="bg-[#F5C518]" />
           </div>
