@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 
 const supabase = createBrowserClient(
@@ -92,6 +92,135 @@ type WizardState = {
   diasElegidos: string[]   // en orden DIAS
   rutinaId: string | null  // se asigna al terminar paso 1
   diaActivo: string        // tab activo en paso 2
+}
+
+function beepFinDescanso(ctx: AudioContext) {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = 'sine'
+  osc.frequency.value = 880
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  const beepDur = 0.15
+  const gap = 0.12
+  const repeticiones = 3
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+  for (let i = 0; i < repeticiones; i++) {
+    const t0 = ctx.currentTime + i * (beepDur + gap)
+    gain.gain.setValueAtTime(0.0001, t0)
+    gain.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + beepDur)
+  }
+  osc.start()
+  osc.stop(ctx.currentTime + repeticiones * (beepDur + gap))
+}
+
+function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }) {
+  const inicial = segundosIniciales > 0 ? segundosIniciales : 60
+  const [duracion, setDuracion] = useState(inicial)
+  const [restante, setRestante] = useState(inicial)
+  const [corriendo, setCorriendo] = useState(false)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
+  // Cuenta regresiva
+  useEffect(() => {
+    if (!corriendo) return
+    const id = setInterval(() => setRestante(s => Math.max(s - 1, 0)), 1000)
+    return () => clearInterval(id)
+  }, [corriendo])
+
+  // Alarma al llegar a 0
+  useEffect(() => {
+    if (corriendo && restante === 0) {
+      setCorriendo(false)
+      if (audioCtxRef.current) beepFinDescanso(audioCtxRef.current)
+    }
+  }, [restante, corriendo])
+
+  const iniciar = () => {
+    // El AudioContext solo puede crearse/desbloquearse tras un gesto del usuario (clave en iOS)
+    if (!audioCtxRef.current) {
+      const AudioCtxClass = window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      audioCtxRef.current = new AudioCtxClass()
+    } else if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume()
+    }
+    if (restante === 0) setRestante(duracion)
+    setCorriendo(true)
+  }
+
+  const pausar = () => setCorriendo(false)
+
+  const reiniciar = () => {
+    setCorriendo(false)
+    setRestante(duracion)
+  }
+
+  const cambiarDuracion = (valor: string) => {
+    const v = Math.max(1, parseInt(valor) || 1)
+    setDuracion(v)
+    setRestante(v)
+  }
+
+  const r = 16
+  const circunferencia = 2 * Math.PI * r
+  const pct = duracion > 0 ? restante / duracion : 0
+  const offset = circunferencia * (1 - pct)
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        min="1"
+        value={duracion}
+        onChange={e => cambiarDuracion(e.target.value)}
+        disabled={corriendo}
+        className="w-11 bg-[#1a1a1a] border border-white/10 rounded-lg py-1 text-xs text-white text-center focus:outline-none focus:border-[#F5C518]/50 disabled:opacity-50"
+      />
+      <span className="text-[10px] text-gray-600">s</span>
+
+      <div className="relative w-10 h-10 shrink-0">
+        <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
+          <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+          <circle
+            cx="20" cy="20" r={r} fill="none"
+            stroke={restante === 0 ? '#EF4444' : '#F5C518'}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={circunferencia}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1s linear' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+          {restante}
+        </div>
+      </div>
+
+      <div className="flex gap-1">
+        {!corriendo ? (
+          <button
+            onClick={iniciar}
+            className="w-7 h-7 rounded-full bg-[#F5C518] text-black flex items-center justify-center text-[10px]">
+            ▶
+          </button>
+        ) : (
+          <button
+            onClick={pausar}
+            className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center text-[10px]">
+            ⏸
+          </button>
+        )}
+        <button
+          onClick={reiniciar}
+          className="w-7 h-7 rounded-full bg-white/10 text-gray-300 flex items-center justify-center text-[10px]">
+          ↺
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function RutinasPage() {
@@ -1009,6 +1138,11 @@ export default function RutinasPage() {
                           <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s desc.</div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-3 bg-[#111] border border-white/5 rounded-xl px-3 py-2">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wide">Descanso</span>
+                      <CronometroDescanso segundosIniciales={ej.descanso_segundos} />
                     </div>
 
                     <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-1.5 px-0.5">
