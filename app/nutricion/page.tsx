@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { BrowserMultiFormatOneDReader, type IScannerControls } from '@zxing/browser'
+import { DecodeHintType, BarcodeFormat } from '@zxing/library'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +21,61 @@ type Alimento = {
   grasas_100g: number
 }
 
+// Alimento elegido desde la tabla local "alimentos" (entrada manual existente)
+type AlimentoLocalSel = Alimento & { origen: 'local' }
+
+// Alimento elegido desde Open Food Facts (búsqueda por nombre o código de barras)
+type AlimentoOffSel = {
+  origen: 'off'
+  id: string
+  codigoBarras: string | null
+  nombre: string
+  marca: string
+  calorias_100g: number
+  proteina_100g: number
+  carbos_100g: number
+  grasas_100g: number
+  sinDatos: boolean
+}
+
+type Seleccion = AlimentoLocalSel | AlimentoOffSel
+
+type OFFNutriments = {
+  'energy-kcal_100g'?: number
+  proteins_100g?: number
+  carbohydrates_100g?: number
+  fat_100g?: number
+}
+
+type OFFProductoRaw = {
+  code?: string
+  product_name?: string
+  brands?: string
+  nutriments?: OFFNutriments
+}
+
+function offProductoAAlimento(p: OFFProductoRaw, codigoFallback?: string): AlimentoOffSel {
+  const n = p.nutriments || {}
+  const cal = n['energy-kcal_100g']
+  const prot = n.proteins_100g
+  const carb = n.carbohydrates_100g
+  const gra = n.fat_100g
+  const sinDatos = cal == null && prot == null && carb == null && gra == null
+  const codigo = p.code ?? codigoFallback ?? null
+  return {
+    origen: 'off',
+    id: `off-${codigo ?? Date.now()}`,
+    codigoBarras: codigo,
+    nombre: p.product_name?.trim() || 'Producto sin nombre',
+    marca: p.brands?.split(',')[0]?.trim() || '',
+    calorias_100g: cal ?? 0,
+    proteina_100g: prot ?? 0,
+    carbos_100g: carb ?? 0,
+    grasas_100g: gra ?? 0,
+    sinDatos,
+  }
+}
+
 type RegistroComida = {
   id: string
   tipo_comida: string
@@ -28,7 +85,8 @@ type RegistroComida = {
   carbos: number
   grasas: number
   fecha: string
-  alimentos: { nombre: string }
+  nombre_comida: string
+  alimentos: { nombre: string } | null
 }
 
 const TIPOS = [
@@ -38,19 +96,41 @@ const TIPOS = [
   { key: 'snack',    label: 'Snack',    icono: '🍎', hora: '' },
 ]
 
+const ORIGENES = [
+  { key: 'local' as const,   label: 'Mi lista' },
+  { key: 'off' as const,     label: 'Buscar online' },
+  { key: 'barcode' as const, label: 'Código de barras' },
+]
+
 export default function NutricionPage() {
   const [registros, setRegistros] = useState<RegistroComida[]>([])
   const [abierto, setAbierto] = useState<string[]>(['desayuno', 'almuerzo'])
   const [modal, setModal] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [alimentos, setAlimentos] = useState<Alimento[]>([])
-  const [seleccionado, setSeleccionado] = useState<Alimento | null>(null)
+  const [seleccionado, setSeleccionado] = useState<Seleccion | null>(null)
   const [modo, setModo] = useState<'gramos' | 'unidades'>('gramos')
   const [gramos, setGramos] = useState('100')
   const [unidades, setUnidades] = useState('1')
   const [guardando, setGuardando] = useState(false)
   const [errorGuardando, setErrorGuardando] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+
+  // Búsqueda por nombre en Open Food Facts
+  const [origenBusqueda, setOrigenBusqueda] = useState<'local' | 'off' | 'barcode'>('local')
+  const [busquedaOff, setBusquedaOff] = useState('')
+  const [resultadosOff, setResultadosOff] = useState<OFFProductoRaw[]>([])
+  const [buscandoOff, setBuscandoOff] = useState(false)
+  const [errorOff, setErrorOff] = useState<string | null>(null)
+  const [codigoNoEncontrado, setCodigoNoEncontrado] = useState<string | null>(null)
+
+  // Lector de código de barras (cámara)
+  const [escaneando, setEscaneando] = useState(false)
+  const [errorCamara, setErrorCamara] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const controlsRef = useRef<IScannerControls | null>(null)
+
+  const hoyStr = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -60,7 +140,7 @@ export default function NutricionPage() {
 
   const cargarRegistros = useCallback(async () => {
     if (!userId) return
-    const hoy = new Date().toISOString().split('T')[0]
+    const hoy = hoyStr
     const { data } = await supabase
       .from('registro_comidas')
       .select('*, alimentos(nombre)')
@@ -69,12 +149,13 @@ export default function NutricionPage() {
       .lte('fecha', `${hoy}T23:59:59`)
       .order('fecha', { ascending: true })
     if (data) setRegistros(data)
-  }, [userId])
+  }, [userId, hoyStr])
 
   useEffect(() => {
     cargarRegistros()
   }, [cargarRegistros])
 
+  // Búsqueda local (tabla "alimentos") — entrada manual existente, sin cambios
   useEffect(() => {
     if (busqueda.length < 2) { setAlimentos([]); return }
     const timer = setTimeout(async () => {
@@ -88,6 +169,36 @@ export default function NutricionPage() {
     return () => clearTimeout(timer)
   }, [busqueda])
 
+  // Búsqueda por nombre en Open Food Facts, vía nuestra ruta API interna (evita CORS y el User-Agent bloqueado)
+  useEffect(() => {
+    if (origenBusqueda !== 'off' || busquedaOff.trim().length < 2) { setResultadosOff([]); return }
+    const timer = setTimeout(async () => {
+      setBuscandoOff(true)
+      setErrorOff(null)
+      try {
+        const res = await fetch(`/api/alimentos/buscar?q=${encodeURIComponent(busquedaOff.trim())}`)
+        const data = await res.json()
+        if (data?.error) {
+          setErrorOff(data.error)
+          setResultadosOff([])
+        } else {
+          setResultadosOff(Array.isArray(data?.products) ? data.products : [])
+        }
+      } catch {
+        setErrorOff('No se pudo conectar con el servidor. Revisa tu conexión.')
+        setResultadosOff([])
+      } finally {
+        setBuscandoOff(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [busquedaOff, origenBusqueda])
+
+  // Detiene la cámara si el componente se desmonta con el escáner activo
+  useEffect(() => {
+    return () => { controlsRef.current?.stop() }
+  }, [])
+
   const registrosPorTipo = (tipo: string) =>
     registros.filter(r => r.tipo_comida === tipo)
 
@@ -99,6 +210,12 @@ export default function NutricionPage() {
   const toggleComida = (key: string) =>
     setAbierto(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key])
 
+  const detenerEscaneo = useCallback(() => {
+    controlsRef.current?.stop()
+    controlsRef.current = null
+    setEscaneando(false)
+  }, [])
+
   const abrirModal = (tipo: string) => {
     setModal(tipo)
     setBusqueda('')
@@ -108,6 +225,102 @@ export default function NutricionPage() {
     setGramos('100')
     setUnidades('1')
     setErrorGuardando(null)
+    setOrigenBusqueda('local')
+    setBusquedaOff('')
+    setResultadosOff([])
+    setErrorOff(null)
+    setCodigoNoEncontrado(null)
+    setErrorCamara(null)
+    detenerEscaneo()
+  }
+
+  const cerrarModal = () => {
+    detenerEscaneo()
+    setModal(null)
+  }
+
+  const cambiarOrigenBusqueda = (o: 'local' | 'off' | 'barcode') => {
+    if (o !== 'barcode') detenerEscaneo()
+    setOrigenBusqueda(o)
+    setSeleccionado(null)
+    setErrorOff(null)
+    setErrorCamara(null)
+    setCodigoNoEncontrado(null)
+  }
+
+  const buscarPorCodigoBarras = async (codigo: string) => {
+    setBuscandoOff(true)
+    setErrorOff(null)
+    setCodigoNoEncontrado(null)
+    try {
+      const res = await fetch(`/api/alimentos/codigo?code=${encodeURIComponent(codigo)}`)
+      const data = await res.json()
+      if (data?.error) {
+        setErrorOff(data.error)
+        return
+      }
+      if (!data?.product || data.status === 0) {
+        setErrorOff('Producto no encontrado. Agrégalo manualmente.')
+        setCodigoNoEncontrado(codigo)
+        return
+      }
+      setSeleccionado(offProductoAAlimento(data.product, codigo))
+    } catch {
+      setErrorOff('No se pudo conectar con el servidor. Revisa tu conexión.')
+    } finally {
+      setBuscandoOff(false)
+    }
+  }
+
+  const agregarOffManual = () => {
+    setSeleccionado({
+      origen: 'off',
+      id: `off-manual-${Date.now()}`,
+      codigoBarras: codigoNoEncontrado,
+      nombre: '',
+      marca: '',
+      calorias_100g: 0,
+      proteina_100g: 0,
+      carbos_100g: 0,
+      grasas_100g: 0,
+      sinDatos: true,
+    })
+    setErrorOff(null)
+    setCodigoNoEncontrado(null)
+  }
+
+  const actualizarOffTexto = (campo: 'nombre' | 'marca', valor: string) =>
+    setSeleccionado(prev => prev && prev.origen === 'off' ? { ...prev, [campo]: valor } : prev)
+
+  const actualizarOffMacro = (
+    campo: 'calorias_100g' | 'proteina_100g' | 'carbos_100g' | 'grasas_100g',
+    valor: string
+  ) =>
+    setSeleccionado(prev => prev && prev.origen === 'off' ? { ...prev, [campo]: parseFloat(valor) || 0 } : prev)
+
+  const iniciarEscaneo = async () => {
+    setErrorCamara(null)
+    setErrorOff(null)
+    if (!videoRef.current) return
+    setEscaneando(true)
+    try {
+      const hints = new Map<DecodeHintType, unknown>()
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+      ])
+      const lector = new BrowserMultiFormatOneDReader(hints)
+      const controls = await lector.decodeFromVideoDevice(undefined, videoRef.current, (resultado) => {
+        if (resultado) {
+          const codigo = resultado.getText()
+          detenerEscaneo()
+          buscarPorCodigoBarras(codigo)
+        }
+      })
+      controlsRef.current = controls
+    } catch {
+      setErrorCamara('No se pudo acceder a la cámara. Revisa los permisos del navegador.')
+      setEscaneando(false)
+    }
   }
 
   const gramosPorUnidad = (nombre: string): number => {
@@ -125,7 +338,10 @@ export default function NutricionPage() {
       ? parseFloat(gramos) || 0
       : (parseFloat(unidades) || 0) * (seleccionado ? gramosPorUnidad(seleccionado.nombre) : 100)
 
-  const calcularMacros = (alimento: Alimento, g: number) => ({
+  const calcularMacros = (
+    alimento: { calorias_100g: number; proteina_100g: number; carbos_100g: number; grasas_100g: number },
+    g: number
+  ) => ({
     calorias: Math.round((alimento.calorias_100g || 0) * g / 100),
     proteina: Math.round((alimento.proteina_100g || 0) * g / 100),
     carbos: Math.round((alimento.carbos_100g || 0) * g / 100),
@@ -134,6 +350,12 @@ export default function NutricionPage() {
 
   const guardarRegistro = async () => {
     if (!seleccionado || !modal) return
+
+    if (seleccionado.origen === 'off' && !seleccionado.nombre.trim()) {
+      setErrorGuardando('Ingresa un nombre para el alimento.')
+      return
+    }
+
     setGuardando(true)
     setErrorGuardando(null)
 
@@ -164,10 +386,14 @@ export default function NutricionPage() {
 
     const g = totalGramos || 100
     const macros = calcularMacros(seleccionado, g)
+    const nombreFinal = seleccionado.origen === 'off' && seleccionado.marca.trim()
+      ? `${seleccionado.nombre.trim()} (${seleccionado.marca.trim()})`
+      : seleccionado.nombre.trim()
+
     const payload = {
       user_id: uid,
-      alimento_id: seleccionado.id,
-      nombre_comida: seleccionado.nombre,
+      alimento_id: seleccionado.origen === 'local' ? seleccionado.id : null,
+      nombre_comida: nombreFinal,
       tipo_comida: modal,
       cantidad_gramos: g,
       calorias: macros.calorias,
@@ -189,7 +415,7 @@ export default function NutricionPage() {
 
     console.log('[guardarRegistro] INSERT ok')
     setGuardando(false)
-    setModal(null)
+    cerrarModal()
     cargarRegistros()
   }
 
@@ -270,7 +496,7 @@ export default function NutricionPage() {
                     <div key={item.id} className="px-4 py-3 border-b border-white/5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{item.alimentos?.nombre}</div>
+                          <div className="text-sm font-medium truncate">{item.alimentos?.nombre ?? item.nombre_comida}</div>
                           <div className="text-xs text-gray-500">{item.cantidad_gramos}g</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -310,40 +536,156 @@ export default function NutricionPage() {
       {/* MODAL */}
       {modal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg p-5">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg p-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold">Añadir alimento</h3>
-              <button onClick={() => setModal(null)} className="text-gray-500 hover:text-white text-xl">×</button>
+              <button onClick={cerrarModal} className="text-gray-500 hover:text-white text-xl">×</button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar alimento..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/50 mb-3"
-              autoFocus
-            />
+            {/* Selector de forma de búsqueda */}
+            <div className="flex gap-2 mb-3">
+              {ORIGENES.map(o => (
+                <button
+                  key={o.key}
+                  onClick={() => cambiarOrigenBusqueda(o.key)}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-colors ${
+                    origenBusqueda === o.key
+                      ? 'bg-[#F5C518] text-black'
+                      : 'bg-[#111] text-gray-400 border border-white/10'
+                  }`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
 
-            {alimentos.length > 0 && !seleccionado && (
-              <div className="max-h-48 overflow-y-auto mb-3 rounded-xl border border-white/10 divide-y divide-white/5">
-                {alimentos.map(a => (
-                  <button key={a.id} onClick={() => setSeleccionado(a)}
-                    className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
-                    <div className="text-sm font-medium">{a.nombre}</div>
-                    <div className="text-xs text-gray-500">{a.calorias_100g} kcal · P{a.proteina_100g} · C{a.carbos_100g} · G{a.grasas_100g} (por 100g)</div>
+            {/* ── TAB: Mi lista (entrada manual existente, sin cambios) ── */}
+            {origenBusqueda === 'local' && !seleccionado && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Buscar alimento..."
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/50 mb-3"
+                  autoFocus
+                />
+
+                {alimentos.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto mb-3 rounded-xl border border-white/10 divide-y divide-white/5">
+                    {alimentos.map(a => (
+                      <button key={a.id} onClick={() => setSeleccionado({ ...a, origen: 'local' })}
+                        className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
+                        <div className="text-sm font-medium">{a.nombre}</div>
+                        <div className="text-xs text-gray-500">{a.calorias_100g} kcal · P{a.proteina_100g} · C{a.carbos_100g} · G{a.grasas_100g} (por 100g)</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {busqueda.length >= 2 && alimentos.length === 0 && (
+                  <div className="text-center text-gray-500 text-sm py-4 mb-3">No se encontraron alimentos</div>
+                )}
+              </>
+            )}
+
+            {/* ── TAB: Buscar online (Open Food Facts por nombre) ── */}
+            {origenBusqueda === 'off' && !seleccionado && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Ej: galletas oreo, manzana, pechuga de pollo..."
+                  value={busquedaOff}
+                  onChange={e => setBusquedaOff(e.target.value)}
+                  className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/50 mb-3"
+                  autoFocus
+                />
+
+                {buscandoOff && (
+                  <div className="text-center text-gray-500 text-sm py-4 mb-3">Buscando en Open Food Facts...</div>
+                )}
+
+                {errorOff && (
+                  <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
+                    {errorOff}
+                  </div>
+                )}
+
+                {!buscandoOff && resultadosOff.length > 0 && (
+                  <div className="max-h-56 overflow-y-auto mb-3 rounded-xl border border-white/10 divide-y divide-white/5">
+                    {resultadosOff.map((p, i) => {
+                      const a = offProductoAAlimento(p)
+                      return (
+                        <button key={`${a.codigoBarras ?? 'sc'}-${i}`} onClick={() => setSeleccionado(a)}
+                          className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
+                          <div className="text-sm font-medium">{a.nombre}</div>
+                          <div className="text-xs text-gray-500">
+                            {a.marca && <span>{a.marca} · </span>}
+                            {a.sinDatos
+                              ? 'sin datos nutricionales'
+                              : `${Math.round(a.calorias_100g)} kcal · P${a.proteina_100g} · C${a.carbos_100g} · G${a.grasas_100g} (por 100g)`}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {!buscandoOff && !errorOff && busquedaOff.trim().length >= 2 && resultadosOff.length === 0 && (
+                  <div className="text-center text-gray-500 text-sm py-4 mb-3">
+                    No se encontraron alimentos con información nutricional. Intenta con otro nombre o agrégalo manualmente.
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── TAB: Código de barras (cámara) ── */}
+            {origenBusqueda === 'barcode' && !seleccionado && (
+              <div className="mb-3">
+                <div className={`rounded-xl overflow-hidden border border-white/10 relative bg-black transition-all ${escaneando ? 'h-56 mb-2' : 'h-0'}`}>
+                  <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+                  {escaneando && (
+                    <div className="absolute inset-x-0 bottom-0 p-2 bg-black/60 flex justify-center">
+                      <button onClick={detenerEscaneo} className="text-xs text-white border border-white/30 rounded-lg px-3 py-1.5">
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {!escaneando && (
+                  <button
+                    onClick={iniciarEscaneo}
+                    className="w-full border border-dashed border-white/20 rounded-xl py-4 text-sm text-gray-300 hover:border-[#F5C518]/50 hover:text-[#F5C518] transition-colors font-medium">
+                    📷 Escanear código de barras
                   </button>
-                ))}
+                )}
+
+                {buscandoOff && (
+                  <div className="text-center text-gray-500 text-sm py-3">Consultando Open Food Facts...</div>
+                )}
+
+                {errorCamara && (
+                  <div className="mt-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
+                    {errorCamara}
+                  </div>
+                )}
+
+                {errorOff && (
+                  <div className="mt-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
+                    {errorOff}
+                    {codigoNoEncontrado && (
+                      <button onClick={agregarOffManual} className="block mt-1.5 text-[#F5C518] underline">
+                        + Agregar manualmente
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {busqueda.length >= 2 && alimentos.length === 0 && !seleccionado && (
-              <div className="text-center text-gray-500 text-sm py-4 mb-3">No se encontraron alimentos</div>
-            )}
-
-            {seleccionado && (
+            {/* ── Alimento local seleccionado (sin cambios) ── */}
+            {seleccionado && seleccionado.origen === 'local' && (
               <div className="mb-4">
-                {/* Alimento seleccionado + macros en tiempo real */}
                 <div className="bg-[#111] border border-[#F5C518]/30 rounded-xl p-3 mb-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -359,8 +701,69 @@ export default function NutricionPage() {
                     <button onClick={() => setSeleccionado(null)} className="text-gray-500 text-sm">cambiar</button>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Toggle modo */}
+            {/* ── Producto de Open Food Facts seleccionado (editable) ── */}
+            {seleccionado && seleccionado.origen === 'off' && (
+              <div className="mb-4">
+                {seleccionado.sinDatos && (
+                  <div className="mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-400">
+                    ⚠️ Sin datos nutricionales de Open Food Facts. Complétalos manualmente.
+                  </div>
+                )}
+                <div className="bg-[#111] border border-[#F5C518]/30 rounded-xl p-3 mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-gray-500">
+                      {seleccionado.codigoBarras ? `Código: ${seleccionado.codigoBarras}` : 'Open Food Facts'}
+                    </span>
+                    <button onClick={() => setSeleccionado(null)} className="text-gray-500 text-sm">cambiar</button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Nombre del alimento"
+                    value={seleccionado.nombre}
+                    onChange={e => actualizarOffTexto('nombre', e.target.value)}
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/50 mb-2"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Marca (opcional)"
+                    value={seleccionado.marca}
+                    onChange={e => actualizarOffTexto('marca', e.target.value)}
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/50 mb-2"
+                  />
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {([
+                      { campo: 'calorias_100g' as const, lbl: 'Kcal' },
+                      { campo: 'proteina_100g' as const, lbl: 'Prot' },
+                      { campo: 'carbos_100g'   as const, lbl: 'Carb' },
+                      { campo: 'grasas_100g'   as const, lbl: 'Gras' },
+                    ]).map(({ campo, lbl }) => (
+                      <div key={campo}>
+                        <label className="text-[9px] text-gray-500 block mb-1">{lbl} /100g</label>
+                        <input
+                          type="number"
+                          value={seleccionado[campo]}
+                          onChange={e => actualizarOffMacro(campo, e.target.value)}
+                          className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-1.5 py-1.5 text-xs text-white text-center outline-none focus:border-[#F5C518]/50"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Total con {totalGramos || 100}g: {calcularMacros(seleccionado, totalGramos || 100).calorias} kcal ·
+                    P{calcularMacros(seleccionado, totalGramos || 100).proteina} ·
+                    C{calcularMacros(seleccionado, totalGramos || 100).carbos} ·
+                    G{calcularMacros(seleccionado, totalGramos || 100).grasas}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Cantidad (compartido por las 3 formas de búsqueda) ── */}
+            {seleccionado && (
+              <div className="mb-4">
                 <div className="flex gap-2 mb-3">
                   {(['gramos', 'unidades'] as const).map(m => (
                     <button
@@ -376,7 +779,6 @@ export default function NutricionPage() {
                   ))}
                 </div>
 
-                {/* Campos según modo */}
                 {modo === 'gramos' ? (
                   <div className="flex items-center gap-3">
                     <label className="text-sm text-gray-400 whitespace-nowrap">Cantidad (g)</label>

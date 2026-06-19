@@ -7,12 +7,17 @@ import { createClient } from '@/lib/supabase/client'
 const supabase = createClient()
 
 const OBJETIVO_LABEL: Record<string, string> = {
-  deficit_leve:     'Déficit leve',
-  deficit_moderado: 'Déficit moderado',
-  deficit_agresivo: 'Déficit agresivo',
-  mantenimiento:    'Mantenimiento',
-  superavit_leve:   'Superávit leve',
-  superavit:        'Superávit',
+  // Objetivo simplificado actual
+  bajar:    'Bajar de peso',
+  mantener: 'Mantenerme',
+  subir:    'Subir de peso',
+  // Compatibilidad con perfiles creados antes de simplificar el onboarding
+  deficit_leve:     'Bajar de peso',
+  deficit_moderado: 'Bajar de peso',
+  deficit_agresivo: 'Bajar de peso',
+  mantenimiento:    'Mantenerme',
+  superavit_leve:   'Subir de peso',
+  superavit:        'Subir de peso',
 }
 
 type Perfil = {
@@ -101,7 +106,7 @@ export default function InicioPage() {
   const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? ''
   const tdee     = perfil?.tdee?.toLocaleString() ?? '—'
   const kcal     = perfil?.calorias_objetivo?.toLocaleString() ?? '—'
-  const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? perfil.objetivo) : '—'
+  const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? 'Personalizado') : '—'
   const metaCal  = perfil?.calorias_objetivo  ?? 0
   const metaPro  = perfil?.proteina_objetivo  ?? 0
   const metaCarb = perfil?.carbos_objetivo    ?? 0

@@ -7,10 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 const supabase = createClient()
 
 type Actividad = 'sedentario' | 'moderada' | 'alta'
-type Objetivo =
-  | 'deficit_agresivo' | 'deficit_moderado' | 'deficit_leve'
-  | 'mantenimiento'
-  | 'superavit_leve' | 'superavit'
+type Objetivo = 'bajar' | 'mantener' | 'subir'
 
 const ACTIVIDADES: { val: Actividad; label: string; sub: string }[] = [
   { val: 'sedentario', label: 'Sedentario',  sub: 'Poco o nada de ejercicio' },
@@ -19,18 +16,14 @@ const ACTIVIDADES: { val: Actividad; label: string; sub: string }[] = [
 ]
 
 const OBJETIVOS: { val: Objetivo; label: string; sub: string }[] = [
-  { val: 'deficit_leve',     label: 'Déficit leve',     sub: '−10% calorías' },
-  { val: 'deficit_moderado', label: 'Déficit moderado', sub: '−20% calorías' },
-  { val: 'deficit_agresivo', label: 'Déficit agresivo', sub: '−30% calorías' },
-  { val: 'mantenimiento',    label: 'Mantenimiento',    sub: 'Mantener peso actual' },
-  { val: 'superavit_leve',   label: 'Superávit leve',  sub: '+10% calorías' },
-  { val: 'superavit',        label: 'Superávit',        sub: '+20% calorías' },
+  { val: 'bajar',    label: 'Bajar de peso', sub: 'Perder grasa de forma saludable' },
+  { val: 'mantener', label: 'Mantenerme',    sub: 'Conservar mi peso actual' },
+  { val: 'subir',    label: 'Subir de peso', sub: 'Ganar peso / músculo' },
 ]
 
 const FACTOR_ACT: Record<Actividad, number> = { sedentario: 1.2, moderada: 1.55, alta: 1.725 }
 const FACTOR_OBJ: Record<Objetivo, number> = {
-  deficit_leve: 0.90, deficit_moderado: 0.80, deficit_agresivo: 0.70,
-  mantenimiento: 1, superavit_leve: 1.10, superavit: 1.20,
+  bajar: 0.80, mantener: 1, subir: 1.12,
 }
 const G_PROTEINA: Record<Actividad, number> = { sedentario: 1.2, moderada: 1.6, alta: 2.0 }
 
