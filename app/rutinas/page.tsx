@@ -94,30 +94,50 @@ type WizardState = {
   diaActivo: string        // tab activo en paso 2
 }
 
-function beepFinDescanso(ctx: AudioContext) {
+function vibrar(patron: number | number[]) {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    navigator.vibrate(patron)
+  }
+}
+
+function pitido(ctx: AudioContext, t0: number, freq: number, dur: number, vol: number) {
   const osc = ctx.createOscillator()
   const gain = ctx.createGain()
-  osc.type = 'sine'
-  osc.frequency.value = 880
+  osc.type = 'square'
+  osc.frequency.value = freq
   osc.connect(gain)
   gain.connect(ctx.destination)
+  gain.gain.setValueAtTime(0.0001, t0)
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+  osc.start(t0)
+  osc.stop(t0 + dur + 0.02)
+}
 
-  const beepDur = 0.15
-  const gap = 0.12
-  const repeticiones = 3
-  gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-  for (let i = 0; i < repeticiones; i++) {
-    const t0 = ctx.currentTime + i * (beepDur + gap)
-    gain.gain.setValueAtTime(0.0001, t0)
-    gain.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + beepDur)
+// Aviso: un pitido por segundo durante los últimos 10s del descanso
+function beepAviso(ctx: AudioContext) {
+  pitido(ctx, ctx.currentTime, 880, 0.12, 0.35)
+  vibrar(70)
+}
+
+// Alarma final al llegar a 0: ráfagas de pitidos rápidos y repetidos + vibración insistente
+function alarmaFinal(ctx: AudioContext) {
+  const rondas = 5
+  const beepsPorRonda = 3
+  const beepDur = 0.1
+  const gapBeep = 0.06
+  const gapRonda = 0.22
+  for (let r = 0; r < rondas; r++) {
+    for (let b = 0; b < beepsPorRonda; b++) {
+      const t0 = ctx.currentTime + r * (beepsPorRonda * (beepDur + gapBeep) + gapRonda) + b * (beepDur + gapBeep)
+      pitido(ctx, t0, 1300, beepDur, 0.6)
+    }
   }
-  osc.start()
-  osc.stop(ctx.currentTime + repeticiones * (beepDur + gap))
+  vibrar([250, 120, 250, 120, 250, 120, 250, 120, 250])
 }
 
 function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }) {
-  const inicial = segundosIniciales > 0 ? segundosIniciales : 60
+  const inicial = segundosIniciales > 0 ? segundosIniciales : 90
   const [duracion, setDuracion] = useState(inicial)
   const [restante, setRestante] = useState(inicial)
   const [corriendo, setCorriendo] = useState(false)
@@ -130,11 +150,16 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
     return () => clearInterval(id)
   }, [corriendo])
 
-  // Alarma al llegar a 0
+  // Aviso en los últimos 10s + alarma final al llegar a 0
   useEffect(() => {
-    if (corriendo && restante === 0) {
+    if (!corriendo) return
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    if (restante === 0) {
       setCorriendo(false)
-      if (audioCtxRef.current) beepFinDescanso(audioCtxRef.current)
+      alarmaFinal(ctx)
+    } else if (restante <= 10) {
+      beepAviso(ctx)
     }
   }, [restante, corriendo])
 
@@ -164,58 +189,61 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
     setRestante(v)
   }
 
-  const r = 16
+  const r = 30
   const circunferencia = 2 * Math.PI * r
   const pct = duracion > 0 ? restante / duracion : 0
   const offset = circunferencia * (1 - pct)
+  const enAviso = restante > 0 && restante <= 10
 
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        min="1"
-        value={duracion}
-        onChange={e => cambiarDuracion(e.target.value)}
-        disabled={corriendo}
-        className="w-11 bg-[#1a1a1a] border border-white/10 rounded-lg py-1 text-xs text-white text-center focus:outline-none focus:border-[#F5C518]/50 disabled:opacity-50"
-      />
-      <span className="text-[10px] text-gray-600">s</span>
+    <div className="flex items-center gap-3">
+      <div className="flex flex-col items-center">
+        <input
+          type="number"
+          min="1"
+          value={duracion}
+          onChange={e => cambiarDuracion(e.target.value)}
+          disabled={corriendo}
+          className="w-16 bg-[#1a1a1a] border border-white/10 rounded-lg py-1.5 text-sm text-white text-center focus:outline-none focus:border-[#F5C518]/50 disabled:opacity-50"
+        />
+        <span className="text-[10px] text-gray-600 mt-0.5">segundos</span>
+      </div>
 
-      <div className="relative w-10 h-10 shrink-0">
-        <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
-          <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+      <div className="relative w-[72px] h-[72px] shrink-0">
+        <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
+          <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
           <circle
-            cx="20" cy="20" r={r} fill="none"
-            stroke={restante === 0 ? '#EF4444' : '#F5C518'}
-            strokeWidth="3"
+            cx="36" cy="36" r={r} fill="none"
+            stroke={restante === 0 || enAviso ? '#EF4444' : '#F5C518'}
+            strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={circunferencia}
             strokeDashoffset={offset}
             style={{ transition: 'stroke-dashoffset 1s linear' }}
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-black text-white">
           {restante}
         </div>
       </div>
 
-      <div className="flex gap-1">
+      <div className="flex gap-2">
         {!corriendo ? (
           <button
             onClick={iniciar}
-            className="w-7 h-7 rounded-full bg-[#F5C518] text-black flex items-center justify-center text-[10px]">
+            className="w-11 h-11 rounded-full bg-[#F5C518] text-black flex items-center justify-center text-sm">
             ▶
           </button>
         ) : (
           <button
             onClick={pausar}
-            className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center text-[10px]">
+            className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center text-sm">
             ⏸
           </button>
         )}
         <button
           onClick={reiniciar}
-          className="w-7 h-7 rounded-full bg-white/10 text-gray-300 flex items-center justify-center text-[10px]">
+          className="w-11 h-11 rounded-full bg-white/10 text-gray-300 flex items-center justify-center text-sm">
           ↺
         </button>
       </div>
@@ -1108,6 +1136,13 @@ export default function RutinasPage() {
 
           {!sesionOk ? (
             <>
+              <div className="px-5 py-4 border-b border-white/10 shrink-0 bg-[#111]">
+                <div className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2.5">
+                  ⏱ Cronómetro de descanso
+                </div>
+                <CronometroDescanso segundosIniciales={sesion.ejercicios[0]?.descanso_segundos ?? 90} />
+              </div>
+
               <div className="flex-1 overflow-y-auto px-5 py-5">
                 {sesion.ejercicios.map((ej, idx) => (
                   <div key={ej.id} className="mb-7">
@@ -1138,11 +1173,6 @@ export default function RutinasPage() {
                           <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s desc.</div>
                         )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-3 bg-[#111] border border-white/5 rounded-xl px-3 py-2">
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wide">Descanso</span>
-                      <CronometroDescanso segundosIniciales={ej.descanso_segundos} />
                     </div>
 
                     <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-1.5 px-0.5">
