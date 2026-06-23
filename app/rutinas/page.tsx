@@ -32,20 +32,20 @@ function buildCalendar(year: number, month: number): Array<Date | null> {
   return cells
 }
 
-type Filtro =
-  | { label: string; col: 'categoria'; op: 'eq'; val: string }
-  | { label: string; col: 'musculo_principal'; op: 'ilike'; val: string }
+type GrupoMuscular = { nombre: string; musculos?: string[]; categoria?: string }
 
-const FILTROS: Filtro[] = [
-  { label: 'Pecho',        col: 'categoria',         op: 'eq',    val: 'Pecho' },
-  { label: 'Espalda',      col: 'categoria',         op: 'eq',    val: 'Espalda' },
-  { label: 'Hombros',      col: 'categoria',         op: 'eq',    val: 'Hombros' },
-  { label: 'Bíceps',       col: 'musculo_principal',  op: 'ilike', val: '%biceps%' },
-  { label: 'Tríceps',      col: 'musculo_principal',  op: 'ilike', val: '%triceps%' },
-  { label: 'Piernas',      col: 'categoria',         op: 'eq',    val: 'Piernas' },
-  { label: 'Glúteos',      col: 'categoria',         op: 'eq',    val: 'Gluteos' },
-  { label: 'Pantorrillas', col: 'categoria',         op: 'eq',    val: 'Pantorrillas' },
-  { label: 'Core',         col: 'categoria',         op: 'eq',    val: 'Core' },
+// Grupos musculares en español para el selector de ejercicios, sobre los valores
+// ya traducidos de musculo_principal/categoria en la base de datos.
+// "Cardio" no es un músculo: se filtra por la columna categoria en vez de musculo_principal.
+const GRUPOS_MUSCULARES: GrupoMuscular[] = [
+  { nombre: 'Pecho', musculos: ['Pecho'] },
+  { nombre: 'Espalda', musculos: ['Dorsales', 'Espalda baja', 'Espalda media', 'Trapecios'] },
+  { nombre: 'Hombros', musculos: ['Hombros', 'Cuello'] },
+  { nombre: 'Brazos', musculos: ['Bíceps', 'Tríceps', 'Antebrazos'] },
+  { nombre: 'Piernas', musculos: ['Cuádriceps', 'Isquiotibiales', 'Pantorrillas', 'Aductores', 'Abductores'] },
+  { nombre: 'Glúteos', musculos: ['Glúteos'] },
+  { nombre: 'Abdomen', musculos: ['Abdominales'] },
+  { nombre: 'Cardio', categoria: 'Cardio' },
 ]
 
 const fechaRelativa = (fecha: string): string => {
@@ -57,7 +57,14 @@ const fechaRelativa = (fecha: string): string => {
   return semanas === 1 ? 'hace 1 semana' : `hace ${semanas} semanas`
 }
 
-type EjBasico = { id: string; nombre: string; musculo_principal: string }
+type EjBasico = {
+  id: string
+  nombre: string
+  musculo_principal: string
+  equipo: string | null
+  instrucciones: string | null
+  imagenes: string[] | null
+}
 
 type REjercicio = {
   id: string
@@ -275,10 +282,11 @@ export default function RutinasPage() {
 
   // Agregar ejercicio
   const [modalEj, setModalEj]               = useState<{ rutinaId: string; dia: string } | null>(null)
-  const [grupoFiltro, setGrupoFiltro]       = useState(FILTROS[0].label)
+  const [catFiltro, setCatFiltro]           = useState(GRUPOS_MUSCULARES[0].nombre)
   const [busquedaEj, setBusquedaEj]         = useState('')
   const [ejsCat, setEjsCat]                 = useState<EjBasico[]>([])
   const [cargandoCat, setCargandoCat]       = useState(false)
+  const [detalleEj, setDetalleEj]           = useState<EjBasico | null>(null)
   const [insertandoEjId, setInsertandoEjId] = useState<string | null>(null)
   const [errorEj, setErrorEj]               = useState<string | null>(null)
   const [agregadosCount, setAgregadosCount] = useState(0)
@@ -350,14 +358,30 @@ export default function RutinasPage() {
 
   useEffect(() => { cargarRutinas() }, [cargarRutinas])
 
+  // Búsqueda combinada: grupo muscular seleccionado + texto (por nombre o músculo principal).
+  // Solo se muestran ejercicios con imagen: el catálogo original en español aún no tiene
+  // (se deja en la base de datos pero no aparece aquí hasta que se traduzca).
   useEffect(() => {
     if (!modalEj) return
-    const f = FILTROS.find(x => x.label === grupoFiltro) ?? FILTROS[0]
+    const texto = busquedaEj.trim().replace(/,/g, '')
     setCargandoCat(true)
-    const base = supabase.from('ejercicios').select('id, nombre, musculo_principal')
-    const q = f.op === 'eq' ? base.eq(f.col, f.val) : base.ilike(f.col, f.val)
-    q.order('nombre').then(({ data }) => { setEjsCat(data || []); setCargandoCat(false) })
-  }, [grupoFiltro, modalEj])
+    const timer = setTimeout(async () => {
+      let query = supabase
+        .from('ejercicios')
+        .select('id, nombre, musculo_principal, equipo, instrucciones, imagenes')
+        .not('imagenes', 'is', null)
+        .order('nombre')
+        .limit(50)
+      const grupo = GRUPOS_MUSCULARES.find(g => g.nombre === catFiltro)
+      if (grupo?.musculos) query = query.in('musculo_principal', grupo.musculos)
+      if (grupo?.categoria) query = query.eq('categoria', grupo.categoria)
+      if (texto.length >= 2) query = query.or(`nombre.ilike.%${texto}%,musculo_principal.ilike.%${texto}%`)
+      const { data } = await query
+      setEjsCat((data || []).filter(ej => ej.imagenes && ej.imagenes.length > 0))
+      setCargandoCat(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [catFiltro, busquedaEj, modalEj])
 
   const prevMes = (rutinaId: string) =>
     setMesActivo(prev => {
@@ -440,8 +464,9 @@ export default function RutinasPage() {
   // ── Agregar ejercicio ──
   const abrirModalEj = (rutinaId: string, dia: string) => {
     setModalEj({ rutinaId, dia })
-    setGrupoFiltro(FILTROS[0].label)
+    setCatFiltro(GRUPOS_MUSCULARES[0].nombre)
     setBusquedaEj('')
+    setDetalleEj(null)
     setErrorEj(null)
     setAgregadosCount(0)
   }
@@ -449,6 +474,7 @@ export default function RutinasPage() {
   const cerrarModalEj = () => {
     setModalEj(null)
     setEjsCat([])
+    setDetalleEj(null)
     setErrorEj(null)
     setAgregadosCount(0)
     cargarRutinas()
@@ -473,6 +499,7 @@ export default function RutinasPage() {
     setInsertandoEjId(null)
     if (error) { setErrorEj(error.message); return }
     setAgregadosCount(c => c + 1)
+    setDetalleEj(null)
     cargarRutinas()
   }
 
@@ -1051,7 +1078,9 @@ export default function RutinasPage() {
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-white/20 rounded-full" />
             <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
               <div>
-                <div className="font-bold text-sm">Agregar ejercicio</div>
+                <div className="font-bold text-sm">
+                  {detalleEj ? detalleEj.nombre : 'Agregar ejercicio'}
+                </div>
                 <div className="text-xs text-[#F5C518]">{modalEj.dia}</div>
               </div>
               <button onClick={cerrarModalEj} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
@@ -1061,56 +1090,118 @@ export default function RutinasPage() {
                 ✓ {agregadosCount} ejercicio{agregadosCount > 1 ? 's' : ''} agregado{agregadosCount > 1 ? 's' : ''} a {modalEj.dia}
               </div>
             )}
-            <div className="px-5 pb-2 shrink-0">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                {FILTROS.map(f => (
-                  <button key={f.label} onClick={() => { setGrupoFiltro(f.label); setBusquedaEj('') }}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
-                      ${grupoFiltro === f.label ? 'bg-[#F5C518] text-black' : 'bg-[#1a1a1a] text-gray-400 border border-white/10'}`}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="px-5 pb-3 shrink-0">
-              <input
-                value={busquedaEj}
-                onChange={e => setBusquedaEj(e.target.value)}
-                placeholder="Buscar en este grupo..."
-                className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#F5C518]/40"
-              />
-            </div>
-            {errorEj && (
-              <div className="mx-5 mb-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 shrink-0">{errorEj}</div>
-            )}
-            <div className="flex-1 overflow-y-auto px-5 pb-5">
-              {cargandoCat ? (
-                [...Array(6)].map((_, i) => <div key={i} className="h-14 bg-[#1a1a1a] rounded-xl animate-pulse mb-2" />)
-              ) : (() => {
-                const visibles = busquedaEj.trim()
-                  ? ejsCat.filter(e => e.nombre.toLowerCase().includes(busquedaEj.toLowerCase()))
-                  : ejsCat
-                return visibles.length === 0 ? (
-                  <div className="text-center text-gray-600 text-sm py-10">
-                    {busquedaEj ? `Sin resultados para "${busquedaEj}"` : `Sin ejercicios en ${grupoFiltro}`}
+
+            {detalleEj ? (
+              /* ── DETALLE DEL EJERCICIO ── */
+              <div className="flex-1 overflow-y-auto px-5 pb-5">
+                <button
+                  onClick={() => setDetalleEj(null)}
+                  className="text-xs text-gray-400 hover:text-white mb-3 flex items-center gap-1">
+                  ← Volver a la lista
+                </button>
+
+                {detalleEj.imagenes && detalleEj.imagenes.length > 0 && (
+                  <div className="flex gap-2 mb-4 overflow-x-auto">
+                    {detalleEj.imagenes.slice(0, 3).map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`${detalleEj.nombre} ${i + 1}`}
+                        loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        className="h-40 w-auto rounded-xl border border-white/10 bg-black/30 object-contain shrink-0"
+                      />
+                    ))}
                   </div>
-                ) : visibles.map(ej => (
-                  <button
-                    key={ej.id}
-                    onClick={() => agregarEjercicioDirecto(ej)}
-                    disabled={insertandoEjId !== null}
-                    className="w-full text-left px-4 py-3.5 rounded-xl hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 disabled:opacity-60 flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium">{ej.nombre}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{ej.musculo_principal}</div>
+                )}
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
+                    💪 {detalleEj.musculo_principal}
+                  </span>
+                  {detalleEj.equipo && (
+                    <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
+                      🏋️ {detalleEj.equipo}
+                    </span>
+                  )}
+                </div>
+
+                {detalleEj.instrucciones && (
+                  <div className="mb-5">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Instrucciones</div>
+                    <p className="text-sm text-gray-300 leading-relaxed">{detalleEj.instrucciones}</p>
+                  </div>
+                )}
+
+                {errorEj && (
+                  <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{errorEj}</div>
+                )}
+
+                <button
+                  onClick={() => agregarEjercicioDirecto(detalleEj)}
+                  disabled={insertandoEjId !== null}
+                  className="w-full bg-[#F5C518] text-black font-bold py-3.5 rounded-xl text-sm disabled:opacity-60">
+                  {insertandoEjId === detalleEj.id ? 'Agregando…' : `＋ Agregar a ${modalEj.dia}`}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="px-5 pb-2 shrink-0">
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                    {GRUPOS_MUSCULARES.map(g => g.nombre).map(grupo => (
+                      <button key={grupo} onClick={() => setCatFiltro(grupo)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
+                          ${catFiltro === grupo ? 'bg-[#F5C518] text-black' : 'bg-[#1a1a1a] text-gray-400 border border-white/10'}`}>
+                        {grupo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-5 pb-3 shrink-0">
+                  <input
+                    value={busquedaEj}
+                    onChange={e => setBusquedaEj(e.target.value)}
+                    placeholder="Buscar por nombre o músculo..."
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#F5C518]/40"
+                  />
+                </div>
+                {errorEj && (
+                  <div className="mx-5 mb-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 shrink-0">{errorEj}</div>
+                )}
+                <div className="flex-1 overflow-y-auto px-5 pb-5">
+                  {cargandoCat ? (
+                    [...Array(6)].map((_, i) => <div key={i} className="h-14 bg-[#1a1a1a] rounded-xl animate-pulse mb-2" />)
+                  ) : ejsCat.length === 0 ? (
+                    <div className="text-center text-gray-600 text-sm py-10">
+                      Sin resultados
                     </div>
-                    {insertandoEjId === ej.id && (
-                      <span className="text-[#F5C518] text-xs ml-3 shrink-0">Agregando…</span>
-                    )}
-                  </button>
-                ))
-              })()}
-            </div>
+                  ) : ejsCat.map(ej => (
+                    <button
+                      key={ej.id}
+                      onClick={() => setDetalleEj(ej)}
+                      className="w-full text-left px-4 py-3.5 rounded-xl hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 flex items-center gap-3">
+                      {ej.imagenes && ej.imagenes[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={ej.imagenes[0]}
+                          alt={ej.nombre}
+                          loading="lazy"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          className="w-11 h-11 rounded-lg border border-white/10 bg-black/30 object-contain shrink-0"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg border border-white/10 bg-black/30 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{ej.nombre}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{ej.musculo_principal}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
