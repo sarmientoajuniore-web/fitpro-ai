@@ -1244,13 +1244,31 @@ export default function RutinasPage() {
                         {historial[ej.ejercicio_id] && (
                           <div className="text-[10px] text-[#F5C518]/60 mt-1 flex items-center gap-2 flex-wrap">
                             <span>{historial[ej.ejercicio_id]}</span>
-                            {ultimoPesos[ej.ejercicio_id] > 0 &&
-                             (registros[ej.id] || []).some(s => parseFloat(s.peso) > ultimoPesos[ej.ejercicio_id]) && (() => {
-                               const maxPeso = Math.max(...(registros[ej.id] || []).map(s => parseFloat(s.peso) || 0))
-                               const diff = (maxPeso - ultimoPesos[ej.ejercicio_id]).toFixed(1).replace(/\.0$/, '')
+                            {ultimoPesos[ej.ejercicio_id] > 0 && (() => {
+                               const pesosValidos = (registros[ej.id] || [])
+                                 .map(s => parseFloat(s.peso))
+                                 .filter(p => !isNaN(p) && p > 0)
+                               if (pesosValidos.length === 0) return null
+                               const maxPeso = Math.max(...pesosValidos)
+                               const anterior = ultimoPesos[ej.ejercicio_id]
+                               const diff = (maxPeso - anterior).toFixed(1).replace(/\.0$/, '')
+                               if (maxPeso > anterior) {
+                                 return (
+                                   <span className="bg-green-500/20 text-green-400 border border-green-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
+                                     ↑ Subiste +{diff}kg
+                                   </span>
+                                 )
+                               }
+                               if (maxPeso < anterior) {
+                                 return (
+                                   <span className="bg-red-500/20 text-red-400 border border-red-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
+                                     ↓ Bajaste {diff}kg
+                                   </span>
+                                 )
+                               }
                                return (
-                                 <span className="bg-green-500/20 text-green-400 border border-green-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
-                                   ↑ Subiste +{diff}kg
+                                 <span className="bg-white/10 text-gray-400 border border-white/15 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
+                                   = Igual
                                  </span>
                                )
                              })()}
