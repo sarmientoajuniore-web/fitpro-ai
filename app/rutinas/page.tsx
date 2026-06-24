@@ -37,16 +37,25 @@ type GrupoMuscular = { nombre: string; musculos?: string[]; categoria?: string }
 // Grupos musculares en español para el selector de ejercicios, sobre los valores
 // ya traducidos de musculo_principal/categoria en la base de datos.
 // "Cardio" no es un músculo: se filtra por la columna categoria en vez de musculo_principal.
+// Brazos y pantorrillas van como botones individuales (antes agrupados) para filtrar por músculo exacto.
 const GRUPOS_MUSCULARES: GrupoMuscular[] = [
   { nombre: 'Pecho', musculos: ['Pecho'] },
   { nombre: 'Espalda', musculos: ['Dorsales', 'Espalda baja', 'Espalda media', 'Trapecios'] },
   { nombre: 'Hombros', musculos: ['Hombros', 'Cuello'] },
-  { nombre: 'Brazos', musculos: ['Bíceps', 'Tríceps', 'Antebrazos'] },
-  { nombre: 'Piernas', musculos: ['Cuádriceps', 'Isquiotibiales', 'Pantorrillas', 'Aductores', 'Abductores'] },
+  { nombre: 'Bíceps', musculos: ['Bíceps'] },
+  { nombre: 'Tríceps', musculos: ['Tríceps'] },
+  { nombre: 'Antebrazos', musculos: ['Antebrazos'] },
+  { nombre: 'Piernas', musculos: ['Cuádriceps', 'Isquiotibiales', 'Aductores', 'Abductores'] },
   { nombre: 'Glúteos', musculos: ['Glúteos'] },
-  { nombre: 'Abdomen', musculos: ['Abdominales'] },
+  { nombre: 'Core', musculos: ['Abdominales'] },
+  { nombre: 'Pantorrillas', musculos: ['Pantorrillas'] },
   { nombre: 'Cardio', categoria: 'Cardio' },
 ]
+
+// Normaliza para comparar musculo_principal sin depender de mayúsculas/acentos.
+function normalizarMusculo(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
 
 const fechaRelativa = (fecha: string): string => {
   const dias = Math.floor((Date.now() - new Date(fecha + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
@@ -363,6 +372,7 @@ export default function RutinasPage() {
   // (se deja en la base de datos pero no aparece aquí hasta que se traduzca).
   useEffect(() => {
     if (!modalEj) return
+    let cancelado = false
     const texto = busquedaEj.trim().replace(/,/g, '')
     setCargandoCat(true)
     const timer = setTimeout(async () => {
@@ -371,16 +381,30 @@ export default function RutinasPage() {
         .select('id, nombre, musculo_principal, equipo, instrucciones, imagenes')
         .not('imagenes', 'is', null)
         .order('nombre')
-        .limit(50)
       const grupo = GRUPOS_MUSCULARES.find(g => g.nombre === catFiltro)
+      // Filtrar por músculo en la propia consulta (rápido: solo trae las filas del grupo,
+      // no las ~870 del catálogo completo). El .in() exige coincidencia exacta, así que
+      // además se vuelve a comparar abajo de forma normalizada (sin mayúsculas/acentos)
+      // por si algún registro tuviera el valor con distinto formato.
       if (grupo?.musculos) query = query.in('musculo_principal', grupo.musculos)
       if (grupo?.categoria) query = query.eq('categoria', grupo.categoria)
       if (texto.length >= 2) query = query.or(`nombre.ilike.%${texto}%,musculo_principal.ilike.%${texto}%`)
-      const { data } = await query
-      setEjsCat((data || []).filter(ej => ej.imagenes && ej.imagenes.length > 0))
+      const { data, error } = await query
+      if (cancelado) return // respuesta de un grupo/búsqueda ya superado: se descarta
+      if (error) console.error('[selector ejercicios] error de Supabase:', error.message)
+      const musculosGrupo = grupo?.musculos?.map(normalizarMusculo)
+      const filtrados = (data || []).filter(ej =>
+        ej.imagenes && ej.imagenes.length > 0 &&
+        (!musculosGrupo || musculosGrupo.includes(normalizarMusculo(ej.musculo_principal)))
+      )
+      console.log(`[selector ejercicios] grupo="${catFiltro}" → BD devolvió ${data?.length ?? 0} filas, ${filtrados.length} tras filtro de músculo/imagen`)
+      setEjsCat(filtrados)
       setCargandoCat(false)
     }, 300)
-    return () => clearTimeout(timer)
+    return () => {
+      cancelado = true
+      clearTimeout(timer)
+    }
   }, [catFiltro, busquedaEj, modalEj])
 
   const prevMes = (rutinaId: string) =>
