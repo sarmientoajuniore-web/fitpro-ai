@@ -70,6 +70,7 @@ type EjBasico = {
   id: string
   nombre: string
   musculo_principal: string
+  categoria?: string | null
   equipo: string | null
   instrucciones: string | null
   imagenes: string[] | null
@@ -93,7 +94,18 @@ type Rutina = {
   rutina_ejercicios: REjercicio[]
 }
 
-type SerieDato = { reps: string; peso: string; ok: boolean }
+type SerieDato = {
+  reps: string
+  peso: string
+  ok: boolean
+  duracionMin: string
+  calorias: string
+  intensidad: string
+}
+
+function esCardio(ej: REjercicio | undefined | null): boolean {
+  return ej?.ejercicios?.categoria === 'Cardio'
+}
 
 type SesionState = {
   rutina: Rutina
@@ -267,6 +279,48 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
   )
 }
 
+// Contenido de detalle de un ejercicio (foto, músculo, equipo, instrucciones).
+// Se reutiliza tanto en el selector de ejercicios como en la sesión en curso.
+function DetalleEjercicioContenido({ ej }: { ej: EjBasico }) {
+  return (
+    <>
+      {ej.imagenes && ej.imagenes.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto">
+          {ej.imagenes.slice(0, 3).map((url, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={url}
+              alt={`${ej.nombre} ${i + 1}`}
+              loading="lazy"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+              className="h-40 w-auto rounded-xl border border-white/10 bg-black/30 object-contain shrink-0"
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
+          💪 {ej.musculo_principal}
+        </span>
+        {ej.equipo && (
+          <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
+            🏋️ {ej.equipo}
+          </span>
+        )}
+      </div>
+
+      {ej.instrucciones && (
+        <div className="mb-5">
+          <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Instrucciones</div>
+          <p className="text-sm text-gray-300 leading-relaxed">{ej.instrucciones}</p>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function RutinasPage() {
   const [rutinas, setRutinas]   = useState<Rutina[]>([])
   const [cargando, setCargando] = useState(true)
@@ -307,6 +361,7 @@ export default function RutinasPage() {
   const [ultimoPesos, setUltimoPesos]     = useState<Record<string, number>>({})
   const [guardandoSesion, setGuardandoSesion] = useState(false)
   const [sesionOk, setSesionOk]           = useState(false)
+  const [detalleSesionEj, setDetalleSesionEj] = useState<EjBasico | null>(null)
 
   const hoyStr = toLocalDate(new Date())
 
@@ -323,7 +378,7 @@ export default function RutinasPage() {
     const [{ data: rutinaData }, { data: sesionesData }] = await Promise.all([
       supabase
         .from('rutinas')
-        .select('id, nombre, dias_semana, rutina_ejercicios(id, ejercicio_id, dia_semana, orden, series, repeticiones, descanso_segundos, ejercicios(id, nombre, musculo_principal))')
+        .select('id, nombre, dias_semana, rutina_ejercicios(id, ejercicio_id, dia_semana, orden, series, repeticiones, descanso_segundos, ejercicios(id, nombre, musculo_principal, categoria, equipo, instrucciones, imagenes))')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
       supabase
@@ -538,7 +593,7 @@ export default function RutinasPage() {
 
     const { data: sesionFecha } = await supabase
       .from('sesiones')
-      .select('ejercicio_id, numero_serie, peso_kg, repeticiones, completada')
+      .select('ejercicio_id, numero_serie, peso_kg, repeticiones, completada, duracion_minutos, calorias_quemadas, intensidad')
       .eq('user_id', userId)
       .eq('rutina_id', rutina.id)
       .in('ejercicio_id', ejIds)
@@ -548,19 +603,28 @@ export default function RutinasPage() {
 
     const { data: referenciaRaw } = await supabase
       .from('sesiones')
-      .select('ejercicio_id, peso_kg, repeticiones, fecha, dia_semana')
+      .select('ejercicio_id, peso_kg, repeticiones, duracion_minutos, calorias_quemadas, intensidad, fecha, dia_semana')
       .eq('user_id', userId)
       .eq('rutina_id', rutina.id)
       .in('ejercicio_id', ejIds)
       .order('fecha', { ascending: false })
 
-    const sesionFechaMap: Record<string, Array<{ numero_serie: number; peso_kg: number | null; repeticiones: string | null; completada: boolean | null }>> = {}
+    type FilaSesion = {
+      numero_serie: number; peso_kg: number | null; repeticiones: string | null; completada: boolean | null
+      duracion_minutos: number | null; calorias_quemadas: number | null; intensidad: string | null
+    }
+    const sesionFechaMap: Record<string, FilaSesion[]> = {}
     for (const d of sesionFecha ?? []) {
       if (!sesionFechaMap[d.ejercicio_id]) sesionFechaMap[d.ejercicio_id] = []
       sesionFechaMap[d.ejercicio_id].push(d)
     }
 
-    const refMap: Record<string, { peso_kg: number | null; repeticiones: string | null; fecha: string }> = {}
+    type FilaRef = {
+      peso_kg: number | null; repeticiones: string | null
+      duracion_minutos: number | null; calorias_quemadas: number | null; intensidad: string | null
+      fecha: string
+    }
+    const refMap: Record<string, FilaRef> = {}
     for (const d of referenciaRaw ?? []) {
       if (d.fecha === fecha && d.dia_semana === dia) continue
       if (!refMap[d.ejercicio_id]) refMap[d.ejercicio_id] = d
@@ -568,33 +632,51 @@ export default function RutinasPage() {
 
     const histMap: Record<string, string> = {}
     const pesosNum: Record<string, number> = {}
-    for (const ejId of ejIds) {
-      const ref = refMap[ejId]
-      if (ref) {
+    ejercicios.forEach(ej => {
+      const ref = refMap[ej.ejercicio_id]
+      if (!ref) return
+      const rel = ref.fecha ? ` · ${fechaRelativa(ref.fecha)}` : ''
+      if (esCardio(ej)) {
+        const partes: string[] = []
+        if (ref.duracion_minutos) partes.push(`${ref.duracion_minutos} min`)
+        if (ref.calorias_quemadas) partes.push(`${ref.calorias_quemadas} kcal`)
+        if (ref.intensidad) partes.push(ref.intensidad)
+        if (partes.length) histMap[ej.ejercicio_id] = `Última vez: ${partes.join(' · ')}${rel}`
+      } else {
         const partes: string[] = []
         if (ref.peso_kg) partes.push(`${ref.peso_kg}kg`)
         if (ref.repeticiones) partes.push(`${ref.repeticiones} reps`)
-        const rel = ref.fecha ? ` · ${fechaRelativa(ref.fecha)}` : ''
-        if (partes.length) histMap[ejId] = `Última vez: ${partes.join(' × ')}${rel}`
-        if (ref.peso_kg) pesosNum[ejId] = Number(ref.peso_kg)
+        if (partes.length) histMap[ej.ejercicio_id] = `Última vez: ${partes.join(' × ')}${rel}`
+        if (ref.peso_kg) pesosNum[ej.ejercicio_id] = Number(ref.peso_kg)
       }
-    }
+    })
 
     setHistorial(histMap)
     setUltimoPesos(pesosNum)
 
     const init: Record<string, SerieDato[]> = {}
     ejercicios.forEach(ej => {
+      const cardio = esCardio(ej)
       const seriesGuardadas = sesionFechaMap[ej.ejercicio_id]
       if (seriesGuardadas && seriesGuardadas.length > 0) {
         init[ej.id] = seriesGuardadas.map(s => ({
           reps: s.repeticiones ?? ej.repeticiones,
           peso: s.peso_kg != null ? String(s.peso_kg) : '',
           ok: Boolean(s.completada),
+          duracionMin: s.duracion_minutos != null ? String(s.duracion_minutos) : '',
+          calorias: s.calorias_quemadas != null ? String(s.calorias_quemadas) : '',
+          intensidad: s.intensidad ?? '',
         }))
       } else {
         const ref = refMap[ej.ejercicio_id]
-        init[ej.id] = [{ reps: ej.repeticiones, peso: ref?.peso_kg != null ? String(ref.peso_kg) : '', ok: false }]
+        init[ej.id] = [{
+          reps: ej.repeticiones,
+          peso: !cardio && ref?.peso_kg != null ? String(ref.peso_kg) : '',
+          ok: false,
+          duracionMin: '',
+          calorias: '',
+          intensidad: cardio ? (ref?.intensidad ?? '') : '',
+        }]
       }
     })
 
@@ -612,8 +694,14 @@ export default function RutinasPage() {
   const agregarSerie = (ejId: string) =>
     setRegistros(prev => {
       const series = prev[ejId] || []
-      const ultimoPeso = series.length > 0 ? series[series.length - 1].peso : ''
-      return { ...prev, [ejId]: [...series, { reps: '', peso: ultimoPeso, ok: false }] }
+      const ultima = series[series.length - 1]
+      return {
+        ...prev,
+        [ejId]: [...series, {
+          reps: '', peso: ultima?.peso ?? '', ok: false,
+          duracionMin: '', calorias: '', intensidad: ultima?.intensidad ?? '',
+        }],
+      }
     })
 
   const eliminarSerie = (ejId: string, idx: number) =>
@@ -630,16 +718,20 @@ export default function RutinasPage() {
     const filas: object[] = []
 
     sesion.ejercicios.forEach(ej => {
+      const cardio = esCardio(ej)
       ;(registros[ej.id] || []).forEach((dato, i) => {
         filas.push({
-          user_id:      userId,
-          rutina_id:    sesion.rutina.id,
-          ejercicio_id: ej.ejercicio_id,
-          dia_semana:   sesion.dia,
-          numero_serie: i + 1,
-          repeticiones: dato.reps,
-          peso_kg:      parseFloat(dato.peso) || null,
-          completada:   dato.ok,
+          user_id:           userId,
+          rutina_id:         sesion.rutina.id,
+          ejercicio_id:      ej.ejercicio_id,
+          dia_semana:        sesion.dia,
+          numero_serie:      i + 1,
+          repeticiones:      cardio ? null : dato.reps,
+          peso_kg:           cardio ? null : (parseFloat(dato.peso) || null),
+          duracion_minutos:  cardio ? (parseInt(dato.duracionMin, 10) || null) : null,
+          calorias_quemadas: cardio ? (parseInt(dato.calorias, 10) || null) : null,
+          intensidad:        cardio ? (dato.intensidad || null) : null,
+          completada:        dato.ok,
           fecha,
         })
       })
@@ -829,9 +921,15 @@ export default function RutinasPage() {
                               <div className="text-[10px] text-gray-500 mt-0.5">{ej.ejercicios?.musculo_principal}</div>
                             </div>
                             <div className="text-right shrink-0">
-                              <div className="text-xs text-gray-400 font-medium">{ej.series}×{ej.repeticiones}</div>
-                              {ej.descanso_segundos > 0 && (
-                                <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s</div>
+                              {esCardio(ej) ? (
+                                <div className="text-xs text-gray-400 font-medium">🏃 Cardio</div>
+                              ) : (
+                                <>
+                                  <div className="text-xs text-gray-400 font-medium">{ej.series}×{ej.repeticiones}</div>
+                                  {ej.descanso_segundos > 0 && (
+                                    <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s</div>
+                                  )}
+                                </>
                               )}
                             </div>
                             {confirmBorrarEj === ej.id ? (
@@ -1045,7 +1143,7 @@ export default function RutinasPage() {
                           <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
                           <div className="text-[10px] text-gray-500 mt-0.5">{ej.ejercicios?.musculo_principal}</div>
                         </div>
-                        <div className="text-xs text-gray-500 shrink-0">{ej.series}×{ej.repeticiones}</div>
+                        <div className="text-xs text-gray-500 shrink-0">{esCardio(ej) ? '🏃 Cardio' : `${ej.series}×${ej.repeticiones}`}</div>
                         {confirmBorrarEj === ej.id ? (
                           <div className="flex items-center gap-1 shrink-0 ml-1">
                             <button
@@ -1107,7 +1205,9 @@ export default function RutinasPage() {
                 </div>
                 <div className="text-xs text-[#F5C518]">{modalEj.dia}</div>
               </div>
-              <button onClick={cerrarModalEj} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+              <button
+                onClick={() => detalleEj ? setDetalleEj(null) : cerrarModalEj()}
+                className="text-gray-500 hover:text-white text-xl leading-none">×</button>
             </div>
             {agregadosCount > 0 && (
               <div className="mx-5 mb-3 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl text-xs text-green-400 shrink-0">
@@ -1124,39 +1224,7 @@ export default function RutinasPage() {
                   ← Volver a la lista
                 </button>
 
-                {detalleEj.imagenes && detalleEj.imagenes.length > 0 && (
-                  <div className="flex gap-2 mb-4 overflow-x-auto">
-                    {detalleEj.imagenes.slice(0, 3).map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={i}
-                        src={url}
-                        alt={`${detalleEj.nombre} ${i + 1}`}
-                        loading="lazy"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        className="h-40 w-auto rounded-xl border border-white/10 bg-black/30 object-contain shrink-0"
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
-                    💪 {detalleEj.musculo_principal}
-                  </span>
-                  {detalleEj.equipo && (
-                    <span className="text-xs bg-[#1a1a1a] border border-white/10 rounded-full px-3 py-1 text-gray-300">
-                      🏋️ {detalleEj.equipo}
-                    </span>
-                  )}
-                </div>
-
-                {detalleEj.instrucciones && (
-                  <div className="mb-5">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Instrucciones</div>
-                    <p className="text-sm text-gray-300 leading-relaxed">{detalleEj.instrucciones}</p>
-                  </div>
-                )}
+                <DetalleEjercicioContenido ej={detalleEj} />
 
                 {errorEj && (
                   <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{errorEj}</div>
@@ -1243,7 +1311,7 @@ export default function RutinasPage() {
               </div>
               <div className="font-bold text-sm mt-0.5">{sesion.rutina.nombre}</div>
             </div>
-            <button onClick={() => setSesion(null)}
+            <button onClick={() => { setSesion(null); setDetalleSesionEj(null) }}
               className="text-xs text-gray-500 hover:text-white border border-white/10 rounded-lg px-3 py-1.5">
               Salir
             </button>
@@ -1259,16 +1327,37 @@ export default function RutinasPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-5">
-                {sesion.ejercicios.map((ej, idx) => (
+                {sesion.ejercicios.map((ej, idx) => {
+                  const cardio = esCardio(ej)
+                  return (
                   <div key={ej.id} className="mb-7">
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <button
+                          onClick={() => ej.ejercicios && setDetalleSesionEj(ej.ejercicios)}
+                          className="shrink-0 mt-0.5">
+                          {ej.ejercicios?.imagenes && ej.ejercicios.imagenes[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={ej.ejercicios.imagenes[0]}
+                              alt={ej.ejercicios?.nombre}
+                              loading="lazy"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              className="w-10 h-10 rounded-lg border border-white/10 bg-black/30 object-contain"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg border border-white/10 bg-black/30 flex items-center justify-center text-gray-600 text-sm">
+                              🏋️
+                            </div>
+                          )}
+                        </button>
+                        <div className="min-w-0">
                         <div className="text-base font-black">{ej.ejercicios?.nombre}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{ej.ejercicios?.musculo_principal}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{cardio ? 'Cardio' : ej.ejercicios?.musculo_principal}</div>
                         {historial[ej.ejercicio_id] && (
                           <div className="text-[10px] text-[#F5C518]/60 mt-1 flex items-center gap-2 flex-wrap">
                             <span>{historial[ej.ejercicio_id]}</span>
-                            {ultimoPesos[ej.ejercicio_id] > 0 && (() => {
+                            {!cardio && ultimoPesos[ej.ejercicio_id] > 0 && (() => {
                                const pesosValidos = (registros[ej.id] || [])
                                  .map(s => parseFloat(s.peso))
                                  .filter(p => !isNaN(p) && p > 0)
@@ -1298,58 +1387,132 @@ export default function RutinasPage() {
                              })()}
                           </div>
                         )}
+                        </div>
                       </div>
                       <div className="text-right shrink-0 ml-3">
                         <div className="text-[10px] text-gray-600 uppercase">Plan</div>
-                        <div className="text-sm font-bold text-[#F5C518]">{ej.series}×{ej.repeticiones}</div>
-                        {ej.descanso_segundos > 0 && (
-                          <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s desc.</div>
+                        {cardio ? (
+                          <div className="text-sm font-bold text-[#F5C518]">🏃 Cardio</div>
+                        ) : (
+                          <>
+                            <div className="text-sm font-bold text-[#F5C518]">{ej.series}×{ej.repeticiones}</div>
+                            {ej.descanso_segundos > 0 && (
+                              <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s desc.</div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-1.5 px-0.5">
-                      {['#', 'Reps', 'kg', '✓', ''].map(h => (
-                        <div key={h} className="text-[9px] text-gray-700 uppercase text-center">{h}</div>
-                      ))}
-                    </div>
-
-                    {(registros[ej.id] || []).map((serie, i) => (
-                      <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-2 items-center">
-                        <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#F5C518]' : 'text-gray-600'}`}>
-                          {i + 1}
+                    {cardio ? (
+                      <>
+                        {(registros[ej.id] || []).map((serie, i) => (
+                          <div key={i} className={`rounded-xl p-3 mb-2 border transition-colors
+                            ${serie.ok ? 'border-[#F5C518]/30 bg-[#F5C518]/5' : 'border-white/10 bg-black/30'}`}>
+                            <div className="grid grid-cols-3 gap-2 mb-2.5">
+                              <div>
+                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Min</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  inputMode="numeric"
+                                  value={serie.duracionMin}
+                                  onChange={e => updateSerie(ej.id, i, 'duracionMin', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#F5C518]/40"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Kcal</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  inputMode="numeric"
+                                  value={serie.calorias}
+                                  onChange={e => updateSerie(ej.id, i, 'calorias', e.target.value)}
+                                  placeholder="—"
+                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#F5C518]/40"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Intensidad</label>
+                                <input
+                                  type="text"
+                                  value={serie.intensidad}
+                                  onChange={e => updateSerie(ej.id, i, 'intensidad', e.target.value)}
+                                  placeholder="ej. nivel 6"
+                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#F5C518]/40"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-bold ${serie.ok ? 'text-[#F5C518]' : 'text-gray-600'}`}>
+                                Bloque {i + 1}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
+                                  className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                    ${serie.ok ? 'bg-[#F5C518] text-black scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => eliminarSerie(ej.id, i)}
+                                  disabled={(registros[ej.id] || []).length <= 1}
+                                  className="w-7 h-7 flex items-center justify-center text-sm text-gray-700 hover:text-red-400 transition-colors disabled:opacity-0">
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-1.5 px-0.5">
+                          {['#', 'Reps', 'kg', '✓', ''].map(h => (
+                            <div key={h} className="text-[9px] text-gray-700 uppercase text-center">{h}</div>
+                          ))}
                         </div>
-                        <input
-                          type="text"
-                          value={serie.reps}
-                          onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
-                          className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold focus:outline-none transition-colors
-                            ${serie.ok ? 'border-[#F5C518]/30 bg-[#F5C518]/5' : 'border-white/10'}`}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={serie.peso}
-                          onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)}
-                          placeholder="—"
-                          className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
-                            ${serie.ok ? 'border-[#F5C518]/30 bg-[#F5C518]/5' : 'border-white/10'}`}
-                        />
-                        <button
-                          onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                            ${serie.ok ? 'bg-[#F5C518] text-black scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => eliminarSerie(ej.id, i)}
-                          disabled={(registros[ej.id] || []).length <= 1}
-                          className="w-5 h-5 flex items-center justify-center text-xs text-gray-700 hover:text-red-400 transition-colors disabled:opacity-0">
-                          ×
-                        </button>
-                      </div>
-                    ))}
+
+                        {(registros[ej.id] || []).map((serie, i) => (
+                          <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-2 items-center">
+                            <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#F5C518]' : 'text-gray-600'}`}>
+                              {i + 1}
+                            </div>
+                            <input
+                              type="text"
+                              value={serie.reps}
+                              onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
+                              className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold focus:outline-none transition-colors
+                                ${serie.ok ? 'border-[#F5C518]/30 bg-[#F5C518]/5' : 'border-white/10'}`}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={serie.peso}
+                              onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)}
+                              placeholder="—"
+                              className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
+                                ${serie.ok ? 'border-[#F5C518]/30 bg-[#F5C518]/5' : 'border-white/10'}`}
+                            />
+                            <button
+                              onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
+                              className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                ${serie.ok ? 'bg-[#F5C518] text-black scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => eliminarSerie(ej.id, i)}
+                              disabled={(registros[ej.id] || []).length <= 1}
+                              className="w-5 h-5 flex items-center justify-center text-xs text-gray-700 hover:text-red-400 transition-colors disabled:opacity-0">
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
 
                     <button
                       onClick={() => agregarSerie(ej.id)}
@@ -1361,7 +1524,8 @@ export default function RutinasPage() {
                       <div className="border-b border-white/5 mt-5" />
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
 
               <div className="px-5 pb-8 pt-3 shrink-0">
@@ -1389,6 +1553,26 @@ export default function RutinasPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════
+          DETALLE DE EJERCICIO (desde la sesión en curso)
+      ══════════════════════════════════ */}
+      {detalleSesionEj && (
+        <div className="fixed inset-0 bg-black/85 z-[60] flex items-end justify-center">
+          <div className="bg-[#111] border border-white/10 rounded-t-3xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-white/20 rounded-full" />
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+              <div className="font-bold text-sm">{detalleSesionEj.nombre}</div>
+              <button
+                onClick={() => setDetalleSesionEj(null)}
+                className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pb-5">
+              <DetalleEjercicioContenido ej={detalleSesionEj} />
+            </div>
+          </div>
         </div>
       )}
     </div>
