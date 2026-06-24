@@ -26,6 +26,63 @@ function formatDiaLabel(fecha: string): string {
   const d = new Date(fecha + 'T00:00:00')
   return `${DIAS_CORTOS[d.getDay()]} ${d.getDate()}`
 }
+function formatFechaDDMMYYYY(fecha: string): string {
+  const [y, m, d] = fecha.split('-')
+  return `${d}/${m}/${y}`
+}
+function formatNumeroEs(n: number, decimales = 1): string {
+  return n.toFixed(decimales).replace('.', ',')
+}
+
+type PeriodoNutri = 'dia' | 'semana' | 'mes'
+
+const PERIODOS_NUTRI: { key: PeriodoNutri; label: string }[] = [
+  { key: 'dia',    label: 'Día'    },
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes',    label: 'Mes'    },
+]
+
+const RESUMEN_NUTRI_TXT: Record<PeriodoNutri, { titulo: string }> = {
+  dia:    { titulo: 'Resumen del día'      },
+  semana: { titulo: 'Resumen de la semana' },
+  mes:    { titulo: 'Resumen del mes'      },
+}
+
+function rangoPeriodoNutri(periodo: PeriodoNutri, fechaDia: string, hoyStr: string): { inicio: string; fin: string; dias: number; diasTotal: number } {
+  if (periodo === 'dia') return { inicio: fechaDia, fin: fechaDia, dias: 1, diasTotal: 1 }
+  const hoy = new Date(hoyStr + 'T00:00:00')
+  if (periodo === 'semana') {
+    const diaSemana = hoy.getDay()
+    const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana
+    const lunes = new Date(hoy)
+    lunes.setDate(hoy.getDate() + diffLunes)
+    const domingo = new Date(lunes)
+    domingo.setDate(lunes.getDate() + 6)
+    const dias = Math.round((hoy.getTime() - lunes.getTime()) / 86400000) + 1
+    return { inicio: toLocalDateStr(lunes), fin: toLocalDateStr(domingo), dias, diasTotal: 7 }
+  }
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  const finMes    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  return { inicio: toLocalDateStr(inicioMes), fin: toLocalDateStr(finMes), dias: hoy.getDate(), diasTotal: finMes.getDate() }
+}
+
+type ObjetivoPersona = 'bajar' | 'mantener' | 'subir'
+
+function evaluarNutricion(valor: number, objetivo: number, metaPersona: ObjetivoPersona): {
+  estado: 'debajo' | 'meta' | 'encima'
+  color: 'verde' | 'rojo'
+} {
+  if (!objetivo) return { estado: 'meta', color: 'verde' }
+  const tolerancia = metaPersona === 'mantener' ? 0.10 : 0.05
+  const diffPct = (valor - objetivo) / objetivo
+  const estado: 'debajo' | 'meta' | 'encima' =
+    diffPct < -tolerancia ? 'debajo' : diffPct > tolerancia ? 'encima' : 'meta'
+  const color: 'verde' | 'rojo' =
+    metaPersona === 'bajar'  ? (estado === 'encima' ? 'rojo' : 'verde') :
+    metaPersona === 'subir'  ? (estado === 'debajo' ? 'rojo' : 'verde') :
+    /* mantener */              (estado === 'meta'   ? 'verde' : 'rojo')
+  return { estado, color }
+}
 
 type RegistroPeso = { fecha: string; peso_kg: number }
 type SesionRow = {
@@ -72,6 +129,15 @@ export default function ProgresoPage() {
   const [nutriData, setNutriData]   = useState<NutriDia[]>([])
   const [metaDiaria, setMetaDiaria] = useState<number>(0)
   const [tdee, setTdee]             = useState<number>(0)
+  const [metaProteina, setMetaProteina] = useState<number>(0)
+  const [metaCarbos, setMetaCarbos]     = useState<number>(0)
+  const [metaGrasas, setMetaGrasas]     = useState<number>(0)
+  const [objetivoPersona, setObjetivoPersona] = useState<ObjetivoPersona>('mantener')
+
+  const [periodoNutri, setPeriodoNutri]   = useState<PeriodoNutri>('semana')
+  const [fechaDiaNutri, setFechaDiaNutri] = useState<string>(() => toLocalDateStr(new Date()))
+  const [resumenPeriodo, setResumenPeriodo] = useState({ calorias: 0, proteina: 0, carbos: 0, grasas: 0, diasConRegistro: 0 })
+  const [cargandoResumenPeriodo, setCargandoResumenPeriodo] = useState(false)
 
   const hoyStr = useMemo(() => toLocalDateStr(new Date()), [])
 
@@ -112,7 +178,7 @@ export default function ProgresoPage() {
           .in('fecha', ultimos7),
         supabase
           .from('perfiles')
-          .select('calorias_objetivo, tdee')
+          .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo')
           .eq('id', user.id)
           .single(),
       ])
@@ -141,6 +207,10 @@ export default function ProgresoPage() {
       // — Nutrición —
       setMetaDiaria(perfilData?.calorias_objetivo ?? 0)
       setTdee(perfilData?.tdee ?? 0)
+      setMetaProteina(perfilData?.proteina_objetivo ?? 0)
+      setMetaCarbos(perfilData?.carbos_objetivo ?? 0)
+      setMetaGrasas(perfilData?.grasas_objetivo ?? 0)
+      setObjetivoPersona((perfilData?.objetivo as ObjetivoPersona) ?? 'mantener')
       const comidasMap = new Map<string, number>()
       ;(comidasData ?? []).forEach(r => {
         comidasMap.set(r.fecha, (comidasMap.get(r.fecha) ?? 0) + (r.calorias ?? 0))
@@ -155,6 +225,34 @@ export default function ProgresoPage() {
     }
     init()
   }, [hoyStr])
+
+  // ── Resumen nutricional por período (Día/Semana/Mes) ──
+  const rangoNutri = useMemo(
+    () => rangoPeriodoNutri(periodoNutri, fechaDiaNutri, hoyStr),
+    [periodoNutri, fechaDiaNutri, hoyStr]
+  )
+
+  useEffect(() => {
+    if (!userId) return
+    setCargandoResumenPeriodo(true)
+    supabase
+      .from('registro_comidas')
+      .select('fecha, calorias, proteina, carbos, grasas')
+      .eq('user_id', userId)
+      .gte('fecha', rangoNutri.inicio)
+      .lte('fecha', rangoNutri.fin)
+      .then(({ data }) => {
+        const totales = (data ?? []).reduce((acc, r) => ({
+          calorias: acc.calorias + (r.calorias || 0),
+          proteina: acc.proteina + (r.proteina || 0),
+          carbos:   acc.carbos   + (r.carbos   || 0),
+          grasas:   acc.grasas   + (r.grasas   || 0),
+        }), { calorias: 0, proteina: 0, carbos: 0, grasas: 0 })
+        const diasConRegistro = new Set((data ?? []).map(r => r.fecha)).size
+        setResumenPeriodo({ ...totales, diasConRegistro })
+        setCargandoResumenPeriodo(false)
+      })
+  }, [userId, rangoNutri.inicio, rangoNutri.fin])
 
   // ── Guardar peso ──
   const guardarPeso = async () => {
@@ -201,7 +299,7 @@ export default function ProgresoPage() {
       })
     return Array.from(porFecha.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([fecha, peso]) => ({ fecha: formatFechaCorta(fecha), peso }))
+      .map(([fecha, peso]) => ({ fecha: formatFechaCorta(fecha), fechaRaw: fecha, peso }))
   }, [sesiones, ejercicioSel])
 
   const recordEjercicio = useMemo(() => {
@@ -212,17 +310,76 @@ export default function ProgresoPage() {
     return vals.length > 0 ? Math.max(...vals) : null
   }, [sesiones, ejercicioSel])
 
+  const recordFecha = useMemo(() => {
+    if (!ejercicioSel || recordEjercicio == null) return null
+    const fechas = sesiones
+      .filter(s => s.ejercicio_id === ejercicioSel && s.peso_kg === recordEjercicio)
+      .map(s => s.fecha)
+      .sort()
+    return fechas.length > 0 ? fechas[0] : null
+  }, [sesiones, ejercicioSel, recordEjercicio])
+
   const ejArr = chartEjercicio.map(d => d.peso)
   const yMinEj = ejArr.length > 0 ? Math.floor(Math.min(...ejArr) - 2.5) : 0
   const yMaxEj = ejArr.length > 0 ? Math.ceil(Math.max(...ejArr)  + 2.5) : 100
 
   // ── Datos derivados: nutrición ──
-  const consumidoSemana     = nutriData.reduce((s, d) => s + d.consumido, 0)
-  const metaSemana          = metaDiaria * 7
-  const mantenimientoSemana = tdee * 7
-  const deficitSuperavit    = mantenimientoSemana - consumidoSemana
   const comidasMax = Math.max(...nutriData.map(d => d.consumido), metaDiaria, 1)
   const yMaxNutri  = Math.ceil(comidasMax * 1.2)
+
+  // Objetivo prorrateado a los días ya transcurridos (para comparar de forma justa contra lo ya consumido)
+  const objCalorias = metaDiaria   * rangoNutri.dias
+  const objProteina = metaProteina * rangoNutri.dias
+  const objCarbos   = metaCarbos   * rangoNutri.dias
+  const objGrasas   = metaGrasas   * rangoNutri.dias
+
+  // Objetivo total del período completo (para el número grande/destacado)
+  const objCaloriasPeriodo = metaDiaria   * rangoNutri.diasTotal
+  const objProteinaPeriodo = metaProteina * rangoNutri.diasTotal
+  const objCarbosPeriodo   = metaCarbos   * rangoNutri.diasTotal
+  const objGrasasPeriodo   = metaGrasas   * rangoNutri.diasTotal
+
+  // Resumen del período activo (Día/Semana/Mes)
+  // GRUPO A — mantenimiento y objetivo del período: informativos, siempre con valor,
+  // calculados sobre TODOS los días del período (no dependen de lo que se haya comido).
+  // GRUPO B — consumido, déficit/superávit y peso estimado: el avance real, calculado
+  // SOLO sobre los días que sí tienen comida registrada, para que sea realista.
+  const consumidoPeriodo        = resumenPeriodo.calorias
+  const diasConRegistro         = resumenPeriodo.diasConRegistro
+  const mantenimientoPeriodo    = tdee * rangoNutri.diasTotal
+  const promedioConsumidoDia    = diasConRegistro > 0 ? consumidoPeriodo / diasConRegistro : 0
+  const mantenimientoRegistrado = tdee * diasConRegistro
+  const deficitSuperavitPeriodo = mantenimientoRegistrado - consumidoPeriodo
+  const pesoEstimadoKg          = diasConRegistro > 0 ? deficitSuperavitPeriodo / 7700 : null
+
+  // Déficit/superávit: verde si va bien según su objetivo (bajar/mantener/subir), rojo si va mal
+  const deficitColorClass = diasConRegistro === 0
+    ? 'text-gray-500'
+    : evaluarNutricion(consumidoPeriodo, mantenimientoRegistrado, objetivoPersona).color === 'verde'
+      ? 'text-green-400'
+      : 'text-red-400'
+  const pesoEstimadoColorClass = pesoEstimadoKg === null ? 'text-gray-500' : 'text-green-400'
+
+  const pesoEstimadoLabel = pesoEstimadoKg === null
+    ? 'Peso estimado'
+    : objetivoPersona === 'mantener'
+      ? 'Diferencia de peso estimada'
+      : pesoEstimadoKg >= 0 ? 'Peso perdido estimado' : 'Peso ganado estimado'
+  const pesoEstimadoTexto = pesoEstimadoKg === null
+    ? '— sin datos suficientes'
+    : `≈ ${objetivoPersona === 'mantener'
+        ? `${pesoEstimadoKg >= 0 ? '+' : ''}${formatNumeroEs(pesoEstimadoKg)}`
+        : formatNumeroEs(Math.abs(pesoEstimadoKg))} kg`
+
+  // Etiquetas del bloque "Resumen del período activo", acordes a la pestaña elegida
+  const periodoTxt = periodoNutri === 'dia' ? 'del día' : periodoNutri === 'semana' ? 'de la semana' : 'del mes'
+  const mantenimientoLabel = `Mantenimiento ${periodoTxt} (TDEE)`
+  const objetivoPeriodoLabel = `Objetivo ${periodoTxt}`
+  const promedioConsumidoLabel = periodoNutri === 'dia' ? 'Consumido del día' : `Promedio consumido/día ${periodoTxt}`
+  const deficitLabelBase = diasConRegistro === 0
+    ? 'Déficit / superávit'
+    : deficitSuperavitPeriodo >= 0 ? 'Déficit real' : 'Superávit real'
+  const deficitLabel = `${deficitLabelBase} ${periodoTxt}`
 
   // ── UI helpers ──
   const TABS = [
@@ -306,6 +463,11 @@ export default function ProgresoPage() {
                           {pesoActual}
                           <span className="text-sm text-gray-500 font-normal"> kg</span>
                         </p>
+                        {historialPeso.length > 0 && (
+                          <p className="text-[10px] text-gray-600 mt-0.5">
+                            {formatFechaDDMMYYYY(historialPeso[historialPeso.length - 1].fecha)}
+                          </p>
+                        )}
                       </div>
                       {cambioPeso != null && (
                         <div className="text-right">
@@ -383,12 +545,18 @@ export default function ProgresoPage() {
                               {recordEjercicio}
                               <span className="text-sm text-gray-500 font-normal"> kg</span>
                             </p>
+                            {recordFecha && (
+                              <p className="text-[10px] text-gray-600 mt-0.5">{formatFechaDDMMYYYY(recordFecha)}</p>
+                            )}
                           </div>
                           {chartEjercicio.length > 0 && (
                             <div className="text-right">
                               <p className="text-xs text-gray-500 mb-0.5">Último registro</p>
                               <p className="text-lg font-bold text-white">
                                 {chartEjercicio[chartEjercicio.length - 1].peso} kg
+                              </p>
+                              <p className="text-[10px] text-gray-600 mt-0.5">
+                                {formatFechaDDMMYYYY(chartEjercicio[chartEjercicio.length - 1].fechaRaw)}
                               </p>
                             </div>
                           )}
@@ -435,30 +603,132 @@ export default function ProgresoPage() {
                   </p>
                 ) : (
                   <>
-                    {/* Resumen semanal */}
+                    {/* Selector de período */}
+                    <div className="flex gap-2">
+                      {PERIODOS_NUTRI.map(p => (
+                        <button
+                          key={p.key}
+                          onClick={() => setPeriodoNutri(p.key)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                            periodoNutri === p.key
+                              ? 'bg-[#F5C518] text-black'
+                              : 'bg-[#1a1a1a] text-gray-400 border border-white/10'
+                          }`}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {periodoNutri === 'dia' && (
+                      <input
+                        type="date"
+                        value={fechaDiaNutri}
+                        max={hoyStr}
+                        onChange={e => setFechaDiaNutri(e.target.value)}
+                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#F5C518]/60"
+                      />
+                    )}
+
+                    {/* Resumen detallado: objetivo del período vs. consumido real */}
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Resumen — últimos 7 días</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">
+                        {periodoNutri === 'dia'
+                          ? formatFechaDDMMYYYY(fechaDiaNutri)
+                          : periodoNutri === 'semana' ? 'Semana actual' : 'Mes actual'}
+                      </p>
+                      <div className="flex flex-col gap-5">
+                        {([
+                          { lbl: 'Calorías',      objPeriodo: objCaloriasPeriodo, objTranscurrido: objCalorias, consumido: resumenPeriodo.calorias, unidad: 'kcal' },
+                          { lbl: 'Proteína',      objPeriodo: objProteinaPeriodo, objTranscurrido: objProteina, consumido: resumenPeriodo.proteina, unidad: 'g'    },
+                          { lbl: 'Carbohidratos', objPeriodo: objCarbosPeriodo,   objTranscurrido: objCarbos,   consumido: resumenPeriodo.carbos,   unidad: 'g'    },
+                          { lbl: 'Grasas',        objPeriodo: objGrasasPeriodo,   objTranscurrido: objGrasas,   consumido: resumenPeriodo.grasas,   unidad: 'g'    },
+                        ] as const).map(m => {
+                          const { estado, color } = evaluarNutricion(m.consumido, m.objTranscurrido, objetivoPersona)
+                          const pct = m.objTranscurrido > 0 ? Math.min((m.consumido / m.objTranscurrido) * 100, 100) : 0
+                          const colorTexto = color === 'rojo' ? 'text-red-400' : 'text-green-400'
+                          const colorBarra = color === 'rojo' ? 'bg-red-500'  : 'bg-green-500'
+                          const etiqueta =
+                            estado === 'encima' ? 'por encima' :
+                            estado === 'debajo' ? 'por debajo' : 'en la meta'
+                          return (
+                            <div key={m.lbl}>
+                              <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
+                                {m.lbl} · objetivo {periodoNutri === 'dia' ? 'del día' : periodoNutri === 'semana' ? 'de la semana' : 'del mes'}
+                              </p>
+                              <p className="text-2xl font-black text-[#F5C518] mb-2">
+                                {Math.round(m.objPeriodo).toLocaleString()}
+                                <span className="text-sm text-gray-500 font-normal"> {m.unidad}</span>
+                              </p>
+                              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mb-1.5">
+                                <div className={`h-full rounded-full ${colorBarra}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <p className="text-[11px] text-gray-500">
+                                {periodoNutri === 'dia' ? (
+                                  <>Has comido {Math.round(m.consumido).toLocaleString()} de {Math.round(m.objTranscurrido).toLocaleString()} {m.unidad} · vas{' '}
+                                    <span className={`font-semibold ${colorTexto}`}>{etiqueta}</span></>
+                                ) : (
+                                  <>Llevas {rangoNutri.dias} de {rangoNutri.diasTotal} días · has comido {Math.round(m.consumido).toLocaleString()} de {Math.round(m.objTranscurrido).toLocaleString()} {m.unidad} · vas{' '}
+                                    <span className={`font-semibold ${colorTexto}`}>{etiqueta}</span></>
+                                )}
+                              </p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {cargandoResumenPeriodo && (
+                        <p className="text-[10px] text-gray-600 mt-3">Actualizando…</p>
+                      )}
+                    </div>
+
+                    {/* Resumen del período activo */}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">
+                        {RESUMEN_NUTRI_TXT[periodoNutri].titulo}
+                      </p>
+
+                      {/* a) y b) — GRUPO A: mantenimiento y objetivo del período, siempre con valor */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Meta semanal</p>
-                          <p className="text-base font-bold text-white">{metaSemana.toLocaleString()} kcal</p>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Consumido</p>
-                          <p className="text-base font-bold text-[#F5C518]">{consumidoSemana.toLocaleString()} kcal</p>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Mantenimiento sem.</p>
-                          <p className="text-base font-bold text-white">{mantenimientoSemana.toLocaleString()} kcal</p>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
-                            {deficitSuperavit >= 0 ? 'Déficit total' : 'Superávit total'}
-                          </p>
-                          <p className={`text-base font-bold ${deficitSuperavit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {Math.abs(deficitSuperavit).toLocaleString()} kcal
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{mantenimientoLabel}</p>
+                          <p className="text-lg font-bold text-sky-400">
+                            {Math.round(mantenimientoPeriodo).toLocaleString()} kcal
                           </p>
                         </div>
+                        <div className="bg-black/30 rounded-xl p-3">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{objetivoPeriodoLabel}</p>
+                          <p className="text-lg font-bold text-[#F5C518]">{Math.round(objCaloriasPeriodo).toLocaleString()} kcal</p>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-gray-600 mt-3 mb-2">
+                        {diasConRegistro > 0
+                          ? `Calculado sobre ${diasConRegistro} día${diasConRegistro !== 1 ? 's' : ''} con registro`
+                          : 'Sin días con registro en este período'}
+                      </p>
+
+                      {/* c) y d) — GRUPO B: avance real, solo sobre días con registro */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-black/30 rounded-xl p-3">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{promedioConsumidoLabel}</p>
+                          <p className={`text-lg font-bold ${diasConRegistro > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
+                            {diasConRegistro > 0 ? `${Math.round(promedioConsumidoDia).toLocaleString()} kcal` : '—'}
+                          </p>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-3">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{deficitLabel}</p>
+                          <p className={`text-lg font-bold ${deficitColorClass}`}>
+                            {diasConRegistro > 0 ? `${Math.abs(Math.round(deficitSuperavitPeriodo)).toLocaleString()} kcal` : '—'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* e) Peso estimado */}
+                      <div className="mt-3 pt-3 border-t border-white/5">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{pesoEstimadoLabel}</p>
+                        <p className={`text-xl font-bold ${pesoEstimadoColorClass}`}>{pesoEstimadoTexto}</p>
+                        <p className="text-[10px] text-gray-600 mt-1.5">
+                          Es una estimación. El resultado real depende de tu metabolismo y otros factores.
+                        </p>
                       </div>
                     </div>
 
