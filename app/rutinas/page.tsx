@@ -91,7 +91,21 @@ type Rutina = {
   id: string
   nombre: string
   dias_semana: number
+  codigo_compartir?: string | null
   rutina_ejercicios: REjercicio[]
+}
+
+type RutinaImport = {
+  nombre: string
+  dias_semana: number
+  rutina_ejercicios: Array<{
+    ejercicio_id: string
+    dia_semana: string | null
+    orden: number
+    series: number
+    repeticiones: string
+    descanso_segundos: number
+  }>
 }
 
 type SerieDato = {
@@ -363,6 +377,20 @@ export default function RutinasPage() {
   const [sesionOk, setSesionOk]           = useState(false)
   const [detalleSesionEj, setDetalleSesionEj] = useState<EjBasico | null>(null)
 
+  // Compartir rutina por código
+  const [modalCompartir, setModalCompartir] = useState<string | null>(null)
+  const [codigoCompartir, setCodigoCompartir] = useState<string | null>(null)
+  const [generandoCodigo, setGenerandoCodigo] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+
+  // Importar rutina por código
+  const [inputImportar, setInputImportar] = useState('')
+  const [buscandoCodigo, setBuscandoCodigo] = useState(false)
+  const [errorImportar, setErrorImportar] = useState<string | null>(null)
+  const [previewImport, setPreviewImport] = useState<RutinaImport | null>(null)
+  const [importando, setImportando] = useState(false)
+  const [importOk, setImportOk] = useState(false)
+
   const hoyStr = toLocalDate(new Date())
 
   useEffect(() => {
@@ -378,7 +406,7 @@ export default function RutinasPage() {
     const [{ data: rutinaData }, { data: sesionesData }] = await Promise.all([
       supabase
         .from('rutinas')
-        .select('id, nombre, dias_semana, rutina_ejercicios(id, ejercicio_id, dia_semana, orden, series, repeticiones, descanso_segundos, ejercicios(id, nombre, musculo_principal, categoria, equipo, instrucciones, imagenes))')
+        .select('id, nombre, dias_semana, codigo_compartir, rutina_ejercicios(id, ejercicio_id, dia_semana, orden, series, repeticiones, descanso_segundos, ejercicios(id, nombre, musculo_principal, categoria, equipo, instrucciones, imagenes))')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
       supabase
@@ -749,6 +777,79 @@ export default function RutinasPage() {
     setSesionOk(true)
   }
 
+  // ── Compartir rutina ──
+  const generarCodigoCompartir = async (rutinaId: string) => {
+    setModalCompartir(rutinaId)
+    setCopiado(false)
+    const rutina = rutinas.find(r => r.id === rutinaId)
+    if (rutina?.codigo_compartir?.startsWith('FIT-')) {
+      setCodigoCompartir(rutina.codigo_compartir)
+      return
+    }
+    setCodigoCompartir(null)
+    setGenerandoCodigo(true)
+    const res = await fetch('/api/rutinas/compartir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rutina_id: rutinaId }),
+    })
+    const json = await res.json()
+    setGenerandoCodigo(false)
+    if (json.codigo) {
+      setCodigoCompartir(json.codigo)
+      setRutinas(prev => prev.map(r => r.id === rutinaId ? { ...r, codigo_compartir: json.codigo } : r))
+    }
+  }
+
+  const copiarCodigo = async () => {
+    if (!codigoCompartir) return
+    await navigator.clipboard.writeText(codigoCompartir).catch(() => {})
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2500)
+  }
+
+  // ── Importar rutina ──
+  const buscarPorCodigo = async () => {
+    const codigo = inputImportar.trim().toUpperCase()
+    if (!codigo) return
+    setBuscandoCodigo(true)
+    setErrorImportar(null)
+    setPreviewImport(null)
+    setImportOk(false)
+    const res = await fetch(`/api/rutinas/compartir?codigo=${encodeURIComponent(codigo)}`)
+    const json = await res.json()
+    setBuscandoCodigo(false)
+    if (!res.ok) { setErrorImportar(json.error); return }
+    setPreviewImport(json.rutina)
+  }
+
+  const importarRutina = async () => {
+    if (!previewImport || !userId) return
+    setImportando(true)
+    const { data: nueva, error: errRut } = await supabase
+      .from('rutinas')
+      .insert({ user_id: userId, nombre: previewImport.nombre, dias_semana: previewImport.dias_semana })
+      .select('id')
+      .single()
+    if (errRut || !nueva) { setImportando(false); setErrorImportar('Error al crear la rutina'); return }
+    const filas = previewImport.rutina_ejercicios.map(e => ({
+      rutina_id: nueva.id,
+      ejercicio_id: e.ejercicio_id,
+      dia_semana: e.dia_semana,
+      orden: e.orden,
+      series: e.series,
+      repeticiones: e.repeticiones,
+      descanso_segundos: e.descanso_segundos,
+    }))
+    const { error: errEj } = await supabase.from('rutina_ejercicios').insert(filas)
+    setImportando(false)
+    if (errEj) { setErrorImportar('Error al copiar ejercicios: ' + errEj.message); return }
+    setImportOk(true)
+    setPreviewImport(null)
+    setInputImportar('')
+    cargarRutinas()
+  }
+
   // Datos del wizard paso 2
   const wizardRutina = wizard?.rutinaId ? rutinas.find(r => r.id === wizard.rutinaId) : null
   const wizardEjsDia = (wizardRutina?.rutina_ejercicios ?? [])
@@ -833,12 +934,20 @@ export default function RutinasPage() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setConfirmBorrar(rutina.id)}
-                        className="text-gray-600 hover:text-red-400 transition-colors ml-3 mt-0.5 text-lg leading-none shrink-0"
-                        title="Eliminar rutina">
-                        🗑
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
+                        <button
+                          onClick={() => generarCodigoCompartir(rutina.id)}
+                          title="Compartir rutina"
+                          className="text-gray-500 hover:text-sky-400 transition-colors text-lg leading-none">
+                          ↗
+                        </button>
+                        <button
+                          onClick={() => setConfirmBorrar(rutina.id)}
+                          className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none"
+                          title="Eliminar rutina">
+                          🗑
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -977,6 +1086,53 @@ export default function RutinasPage() {
             })}
           </div>
         )}
+
+        {/* ── IMPORTAR RUTINA ── */}
+        <div className="border border-white/10 rounded-2xl p-5 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-bold">Importar rutina con código</span>
+          </div>
+          <div className="text-xs text-gray-500 mb-3">Escribe el código que te compartieron (ej. FIT-X3K7)</div>
+          <div className="flex gap-2 mb-2">
+            <input
+              value={inputImportar}
+              onChange={e => { setInputImportar(e.target.value.toUpperCase()); setErrorImportar(null); setImportOk(false) }}
+              onKeyDown={e => e.key === 'Enter' && buscarPorCodigo()}
+              placeholder="FIT-XXXX"
+              maxLength={8}
+              className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-white/25 tracking-widest"
+            />
+            <button
+              onClick={buscarPorCodigo}
+              disabled={!inputImportar.trim() || buscandoCodigo}
+              className="bg-white/10 text-white font-semibold rounded-xl px-4 py-2.5 text-xs hover:bg-white/15 transition-colors disabled:opacity-40">
+              {buscandoCodigo ? '...' : 'Buscar'}
+            </button>
+          </div>
+          {errorImportar && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-2">{errorImportar}</div>
+          )}
+          {previewImport && (
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4">
+              <div className="text-sm font-bold mb-0.5">{previewImport.nombre}</div>
+              <div className="text-xs text-gray-500 mb-3">
+                {previewImport.dias_semana} días/semana · {previewImport.rutina_ejercicios.length} ejercicios
+              </div>
+              <button
+                onClick={importarRutina}
+                disabled={importando}
+                className="w-full bg-[#F5C518] text-black font-bold py-2.5 rounded-xl text-sm disabled:opacity-40">
+                {importando ? 'Importando...' : '↙ Importar como mi rutina'}
+              </button>
+            </div>
+          )}
+          {importOk && (
+            <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2 flex items-center gap-2">
+              <span>✓</span>
+              <span>¡Rutina importada! Ya aparece en tu lista.</span>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={abrirWizard}
@@ -1553,6 +1709,63 @@ export default function RutinasPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════
+          MODAL COMPARTIR RUTINA
+      ══════════════════════════════════ */}
+      {modalCompartir && (
+        <div className="fixed inset-0 bg-black/85 z-50 flex items-end justify-center">
+          <div className="bg-[#111] border border-white/10 rounded-t-3xl w-full max-w-lg flex flex-col">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-white/20 rounded-full" />
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
+              <div>
+                <div className="font-bold text-sm">Compartir rutina</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {rutinas.find(r => r.id === modalCompartir)?.nombre}
+                </div>
+              </div>
+              <button
+                onClick={() => { setModalCompartir(null); setCodigoCompartir(null) }}
+                className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+            </div>
+
+            <div className="px-5 pb-8">
+              {generandoCodigo ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="text-gray-500 text-sm">Generando código...</div>
+                </div>
+              ) : codigoCompartir ? (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Código de rutina</div>
+                    <div className="text-5xl font-black font-mono tracking-widest text-[#F5C518] mb-5">
+                      {codigoCompartir}
+                    </div>
+                    <button
+                      onClick={copiarCodigo}
+                      className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                        copiado
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                          : 'bg-[#F5C518] text-black'
+                      }`}>
+                      {copiado ? '✓ ¡Copiado!' : '📋 Copiar código'}
+                    </button>
+                  </div>
+                  <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 text-xs text-gray-400 leading-relaxed space-y-1">
+                    <div className="font-semibold text-gray-300 mb-2">¿Cómo compartir?</div>
+                    <div>1. Copia el código de arriba.</div>
+                    <div>2. Mándalo a tu amigo/a por WhatsApp o como prefieras.</div>
+                    <div>3. En FitPro → Rutinas → &ldquo;Importar rutina con código&rdquo;, pegan el código.</div>
+                    <div className="pt-1 text-gray-600">Recibirán una copia independiente de tu rutina.</div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-red-400 py-10 text-center">Error al generar el código. Intenta de nuevo.</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
