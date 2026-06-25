@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -938,8 +939,9 @@ export default function RutinasPage() {
                         <button
                           onClick={() => generarCodigoCompartir(rutina.id)}
                           title="Compartir rutina"
-                          className="text-gray-500 hover:text-sky-400 transition-colors text-lg leading-none">
-                          ↗
+                          className="flex items-center gap-1 text-[11px] font-semibold text-[#F5C518]/80 hover:text-[#F5C518] bg-[#F5C518]/8 hover:bg-[#F5C518]/15 border border-[#F5C518]/20 hover:border-[#F5C518]/45 rounded-lg px-2 py-1.5 transition-all">
+                          <Share2 className="w-3 h-3" />
+                          <span>{rutina.codigo_compartir?.startsWith('FIT-') ? rutina.codigo_compartir : 'Compartir'}</span>
                         </button>
                         <button
                           onClick={() => setConfirmBorrar(rutina.id)}
@@ -1088,48 +1090,64 @@ export default function RutinasPage() {
         )}
 
         {/* ── IMPORTAR RUTINA ── */}
-        <div className="border border-white/10 rounded-2xl p-5 mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-bold">Importar rutina con código</span>
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#1c1608] via-[#141410] to-[#0f0f0f] border border-[#F5C518]/25 rounded-2xl p-5 mb-4">
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#F5C518]/6 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex items-start gap-3 mb-4 relative">
+            <div className="w-11 h-11 rounded-xl bg-[#F5C518]/10 border border-[#F5C518]/20 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-[#F5C518]" />
+            </div>
+            <div>
+              <div className="text-[15px] font-bold leading-tight text-white">¿Te compartieron una rutina?</div>
+              <div className="text-xs text-gray-400 mt-1 leading-relaxed">Pega el código y entrena la misma rutina — queda como copia tuya</div>
+            </div>
           </div>
-          <div className="text-xs text-gray-500 mb-3">Escribe el código que te compartieron (ej. FIT-X3K7)</div>
-          <div className="flex gap-2 mb-2">
+
+          <div className="flex gap-2 mb-3 relative">
             <input
               value={inputImportar}
               onChange={e => { setInputImportar(e.target.value.toUpperCase()); setErrorImportar(null); setImportOk(false) }}
               onKeyDown={e => e.key === 'Enter' && buscarPorCodigo()}
               placeholder="FIT-XXXX"
               maxLength={8}
-              className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-white/25 tracking-widest"
+              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 font-mono tracking-[0.2em] focus:outline-none focus:border-[#F5C518]/40 transition-colors"
             />
             <button
               onClick={buscarPorCodigo}
               disabled={!inputImportar.trim() || buscandoCodigo}
-              className="bg-white/10 text-white font-semibold rounded-xl px-4 py-2.5 text-xs hover:bg-white/15 transition-colors disabled:opacity-40">
-              {buscandoCodigo ? '...' : 'Buscar'}
+              className="flex items-center gap-1.5 bg-[#F5C518] text-black font-bold rounded-xl px-4 py-2.5 text-xs hover:bg-[#f0b800] transition-colors disabled:opacity-40 whitespace-nowrap">
+              <Search className="w-3.5 h-3.5" />
+              {buscandoCodigo ? 'Buscando...' : 'Buscar'}
             </button>
           </div>
+
           {errorImportar && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-2">{errorImportar}</div>
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-2 relative">{errorImportar}</div>
           )}
+
           {previewImport && (
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4">
-              <div className="text-sm font-bold mb-0.5">{previewImport.nombre}</div>
-              <div className="text-xs text-gray-500 mb-3">
+            <div className="bg-black/30 border border-[#F5C518]/20 rounded-xl p-4 relative">
+              <div className="flex items-center gap-2 mb-1">
+                <Dumbbell className="w-4 h-4 text-[#F5C518] shrink-0" />
+                <div className="text-sm font-bold text-white">{previewImport.nombre}</div>
+              </div>
+              <div className="text-xs text-gray-500 mb-3 pl-6">
                 {previewImport.dias_semana} días/semana · {previewImport.rutina_ejercicios.length} ejercicios
               </div>
               <button
                 onClick={importarRutina}
                 disabled={importando}
-                className="w-full bg-[#F5C518] text-black font-bold py-2.5 rounded-xl text-sm disabled:opacity-40">
-                {importando ? 'Importando...' : '↙ Importar como mi rutina'}
+                className="w-full bg-[#F5C518] text-black font-bold py-2.5 rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-[#f0b800] transition-colors">
+                <Download className="w-4 h-4" />
+                {importando ? 'Importando...' : 'Añadir a mis rutinas'}
               </button>
             </div>
           )}
+
           {importOk && (
-            <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2 flex items-center gap-2">
-              <span>✓</span>
-              <span>¡Rutina importada! Ya aparece en tu lista.</span>
+            <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/25 rounded-xl px-3 py-2.5 flex items-center gap-2 relative">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>¡Rutina añadida! Ya aparece en tu lista arriba.</span>
             </div>
           )}
         </div>
@@ -1719,11 +1737,18 @@ export default function RutinasPage() {
         <div className="fixed inset-0 bg-black/85 z-50 flex items-end justify-center">
           <div className="bg-[#111] border border-white/10 rounded-t-3xl w-full max-w-lg flex flex-col">
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-white/20 rounded-full" />
+
+            {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
-              <div>
-                <div className="font-bold text-sm">Compartir rutina</div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {rutinas.find(r => r.id === modalCompartir)?.nombre}
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F5C518]/10 border border-[#F5C518]/20 flex items-center justify-center">
+                  <Share2 className="w-4 h-4 text-[#F5C518]" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm">Comparte tu rutina 💪</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {rutinas.find(r => r.id === modalCompartir)?.nombre}
+                  </div>
                 </div>
               </div>
               <button
@@ -1733,32 +1758,48 @@ export default function RutinasPage() {
 
             <div className="px-5 pb-8">
               {generandoCodigo ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="text-gray-500 text-sm">Generando código...</div>
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <div className="w-8 h-8 border-2 border-[#F5C518]/20 border-t-[#F5C518] rounded-full animate-spin" />
+                  <div className="text-gray-500 text-sm">Generando tu código único...</div>
                 </div>
               ) : codigoCompartir ? (
                 <>
-                  <div className="text-center mb-6">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Código de rutina</div>
-                    <div className="text-5xl font-black font-mono tracking-widest text-[#F5C518] mb-5">
+                  {/* Código con card dorada */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#1c1608] to-[#111] border border-[#F5C518]/30 rounded-2xl px-5 py-7 text-center mb-4">
+                    <div className="absolute -top-8 -right-8 w-28 h-28 bg-[#F5C518]/8 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-[#F5C518]/5 rounded-full blur-2xl pointer-events-none" />
+                    <div className="text-[9px] text-[#F5C518]/50 uppercase tracking-[0.3em] mb-3 font-semibold">Código de tu rutina</div>
+                    <div className="text-5xl font-black font-mono tracking-[0.12em] text-[#F5C518] mb-6"
+                      style={{ textShadow: '0 0 30px rgba(245,197,24,0.25)' }}>
                       {codigoCompartir}
                     </div>
                     <button
                       onClick={copiarCodigo}
-                      className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                      className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                         copiado
                           ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          : 'bg-[#F5C518] text-black'
+                          : 'bg-[#F5C518] text-black hover:bg-[#f0b800]'
                       }`}>
-                      {copiado ? '✓ ¡Copiado!' : '📋 Copiar código'}
+                      {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copiado ? '¡Copiado!' : 'Copiar código'}
                     </button>
                   </div>
-                  <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 text-xs text-gray-400 leading-relaxed space-y-1">
-                    <div className="font-semibold text-gray-300 mb-2">¿Cómo compartir?</div>
-                    <div>1. Copia el código de arriba.</div>
-                    <div>2. Mándalo a tu amigo/a por WhatsApp o como prefieras.</div>
-                    <div>3. En FitPro → Rutinas → &ldquo;Importar rutina con código&rdquo;, pegan el código.</div>
-                    <div className="pt-1 text-gray-600">Recibirán una copia independiente de tu rutina.</div>
+
+                  {/* Instrucciones */}
+                  <div className="bg-[#1a1a1a] border border-white/8 rounded-xl p-4 space-y-2.5">
+                    <div className="text-xs font-semibold text-gray-200">¿Cómo lo comparto?</div>
+                    <div className="flex items-start gap-2 text-xs text-gray-400">
+                      <span className="text-[#F5C518] font-bold shrink-0">1.</span>
+                      <span>Copia el código y mándalo por WhatsApp, mensaje o como quieras.</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-gray-400">
+                      <span className="text-[#F5C518] font-bold shrink-0">2.</span>
+                      <span>Tu amigo/a abre FitPro → Rutinas → &ldquo;¿Te compartieron una rutina?&rdquo;</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-gray-400">
+                      <span className="text-[#F5C518] font-bold shrink-0">3.</span>
+                      <span>Pega el código y listo — recibirán su propia copia para editar.</span>
+                    </div>
                   </div>
                 </>
               ) : (
