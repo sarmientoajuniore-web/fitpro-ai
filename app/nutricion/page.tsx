@@ -80,6 +80,8 @@ type RegistroComida = {
   id: string
   tipo_comida: string
   cantidad_gramos: number
+  unidades: number | null
+  gramos_por_unidad: number | null
   calorias: number
   proteina: number
   carbos: number
@@ -87,6 +89,15 @@ type RegistroComida = {
   fecha: string
   nombre_comida: string
   alimentos: { nombre: string } | null
+}
+
+// Texto descriptivo de cómo se añadió el alimento, ej. "2 porciones (22 g)" o "150 g"
+function formatCantidad(item: RegistroComida): string {
+  if (item.unidades && item.gramos_por_unidad) {
+    const porciones = item.unidades === 1 ? '1 porción' : `${item.unidades} porciones`
+    return `${porciones} (${item.cantidad_gramos} g)`
+  }
+  return `${item.cantidad_gramos} g`
 }
 
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
@@ -134,6 +145,7 @@ export default function NutricionPage() {
   const [modo, setModo] = useState<'gramos' | 'unidades'>('gramos')
   const [gramos, setGramos] = useState('100')
   const [unidades, setUnidades] = useState('1')
+  const [pesoPorcion, setPesoPorcion] = useState('100')
   const [guardando, setGuardando] = useState(false)
   const [errorGuardando, setErrorGuardando] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -264,6 +276,7 @@ export default function NutricionPage() {
     setModo('gramos')
     setGramos('100')
     setUnidades('1')
+    setPesoPorcion('100')
     setErrorGuardando(null)
     setOrigenBusqueda('local')
     setBusquedaOff('')
@@ -306,7 +319,7 @@ export default function NutricionPage() {
         setCodigoNoEncontrado(codigo)
         return
       }
-      setSeleccionado(offProductoAAlimento(data.product, codigo))
+      seleccionarAlimento(offProductoAAlimento(data.product, codigo))
     } catch {
       setErrorOff('No se pudo conectar con el servidor. Revisa tu conexión.')
     } finally {
@@ -315,7 +328,7 @@ export default function NutricionPage() {
   }
 
   const agregarOffManual = () => {
-    setSeleccionado({
+    seleccionarAlimento({
       origen: 'off',
       id: `off-manual-${Date.now()}`,
       codigoBarras: codigoNoEncontrado,
@@ -380,10 +393,16 @@ export default function NutricionPage() {
     return 100
   }
 
+  // Fija el alimento elegido y sugiere un peso por porción inicial (editable por el usuario)
+  const seleccionarAlimento = (sel: Seleccion) => {
+    setSeleccionado(sel)
+    setPesoPorcion(String(gramosPorUnidad(sel.nombre)))
+  }
+
   const totalGramos =
     modo === 'gramos'
       ? parseFloat(gramos) || 0
-      : (parseFloat(unidades) || 0) * (seleccionado ? gramosPorUnidad(seleccionado.nombre) : 100)
+      : (parseFloat(unidades) || 0) * (parseFloat(pesoPorcion) || 0)
 
   const calcularMacros = (
     alimento: { calorias_100g: number; proteina_100g: number; carbos_100g: number; grasas_100g: number },
@@ -443,6 +462,8 @@ export default function NutricionPage() {
       nombre_comida: nombreFinal,
       tipo_comida: modal,
       cantidad_gramos: g,
+      unidades: modo === 'unidades' ? (parseFloat(unidades) || null) : null,
+      gramos_por_unidad: modo === 'unidades' ? (parseFloat(pesoPorcion) || null) : null,
       calorias: macros.calorias,
       proteina: macros.proteina,
       carbos: macros.carbos,
@@ -501,6 +522,8 @@ export default function NutricionPage() {
       alimento_id: null,
       nombre_comida: editNombre.trim(),
       cantidad_gramos: parseFloat(editGramos) || 0,
+      unidades: null,
+      gramos_por_unidad: null,
       calorias: parseFloat(editCalorias) || 0,
       proteina: parseFloat(editProteina) || 0,
       carbos: parseFloat(editCarbos) || 0,
@@ -613,7 +636,7 @@ export default function NutricionPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{item.alimentos?.nombre ?? item.nombre_comida}</div>
-                          <div className="text-xs text-gray-500">{item.cantidad_gramos}g</div>
+                          <div className="text-xs text-gray-500">{formatCantidad(item)}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-sm font-bold text-[#F5C518]">{item.calorias} kcal</div>
@@ -690,7 +713,7 @@ export default function NutricionPage() {
                 {alimentos.length > 0 && (
                   <div className="max-h-48 overflow-y-auto mb-3 rounded-xl border border-white/10 divide-y divide-white/5">
                     {alimentos.map(a => (
-                      <button key={a.id} onClick={() => setSeleccionado({ ...a, origen: 'local' })}
+                      <button key={a.id} onClick={() => seleccionarAlimento({ ...a, origen: 'local' })}
                         className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
                         <div className="text-sm font-medium">{a.nombre}</div>
                         <div className="text-xs text-gray-500">{a.calorias_100g} kcal · P{a.proteina_100g} · C{a.carbos_100g} · G{a.grasas_100g} (por 100g)</div>
@@ -732,7 +755,7 @@ export default function NutricionPage() {
                     {resultadosOff.map((p, i) => {
                       const a = offProductoAAlimento(p)
                       return (
-                        <button key={`${a.codigoBarras ?? 'sc'}-${i}`} onClick={() => setSeleccionado(a)}
+                        <button key={`${a.codigoBarras ?? 'sc'}-${i}`} onClick={() => seleccionarAlimento(a)}
                           className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors">
                           <div className="text-sm font-medium">{a.nombre}</div>
                           <div className="text-xs text-gray-500">
@@ -897,7 +920,7 @@ export default function NutricionPage() {
                           ? 'bg-[#F5C518] text-black'
                           : 'bg-[#111] text-gray-400 border border-white/10'
                       }`}>
-                      {m === 'gramos' ? 'Por gramos' : 'Por unidades'}
+                      {m === 'gramos' ? 'Gramos' : 'Porción/unidad'}
                     </button>
                   ))}
                 </div>
@@ -914,8 +937,8 @@ export default function NutricionPage() {
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm text-gray-400 whitespace-nowrap">Unidades</label>
+                    <div className="flex items-center gap-3 mb-2">
+                      <label className="text-sm text-gray-400 whitespace-nowrap w-32">Porciones</label>
                       <input
                         type="number"
                         value={unidades}
@@ -923,9 +946,17 @@ export default function NutricionPage() {
                         className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#F5C518]/50"
                       />
                     </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-400 whitespace-nowrap w-32">Peso c/u (g)</label>
+                      <input
+                        type="number"
+                        value={pesoPorcion}
+                        onChange={e => setPesoPorcion(e.target.value)}
+                        className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#F5C518]/50"
+                      />
+                    </div>
                     <p className="text-[11px] text-gray-600 mt-1.5 pl-1">
-                      1 unidad ≈ {seleccionado ? gramosPorUnidad(seleccionado.nombre) : 100}g
-                      · total: {totalGramos}g
+                      Total: {unidades || 0} × {pesoPorcion || 0}g = {totalGramos}g
                     </p>
                   </div>
                 )}
