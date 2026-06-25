@@ -340,13 +340,42 @@ export default function NutricionPage() {
   ) =>
     setSeleccionado(prev => prev && prev.origen === 'off' ? { ...prev, [campo]: parseFloat(valor) || 0 } : prev)
 
+  const TIMEOUT_CAMARA_MS = 10000
+
   const iniciarEscaneo = async () => {
     setErrorCamara(null)
     setErrorOff(null)
     setCodigoDetectado(null)
     if (!videoRef.current) return
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setErrorCamara('Este navegador no permite acceder a la cámara.')
+      return
+    }
+
     setEscaneando(true)
+
+    let stream: MediaStream | null = null
     try {
+      // Pedimos la cámara nosotros mismos (en vez de dejar que decodeFromVideoDevice lo haga
+      // internamente) para poder mostrar un error claro si el permiso nunca se resuelve, en vez
+      // de quedar con el video en negro indefinidamente (visto en PWA instalada en Android).
+      const streamPromise = navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      })
+
+      stream = await Promise.race([
+        streamPromise,
+        new Promise<MediaStream>((_, reject) => {
+          setTimeout(() => reject(new Error('timeout_camara')), TIMEOUT_CAMARA_MS)
+        }),
+      ])
+
+      // Si el timeout ganó la carrera pero el permiso se concede más tarde, liberamos
+      // ese stream tardío para no dejar la cámara encendida sin que nadie la use.
+      streamPromise.then(s => { if (s !== stream) s.getTracks().forEach(t => t.stop()) }).catch(() => {})
+
       const hints = new Map<DecodeHintType, unknown>()
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128,
@@ -355,7 +384,7 @@ export default function NutricionPage() {
       // por lo que un código bien enfocado pero no perfectamente centrado nunca se detecta.
       hints.set(DecodeHintType.TRY_HARDER, true)
       const lector = new BrowserMultiFormatOneDReader(hints)
-      const controls = await lector.decodeFromVideoDevice(undefined, videoRef.current, (resultado) => {
+      const controls = await lector.decodeFromStream(stream, videoRef.current, (resultado) => {
         if (resultado) {
           const codigo = resultado.getText()
           setCodigoDetectado(codigo)
@@ -364,8 +393,20 @@ export default function NutricionPage() {
         }
       })
       controlsRef.current = controls
-    } catch {
-      setErrorCamara('No se pudo acceder a la cámara. Revisa los permisos del navegador.')
+    } catch (err) {
+      stream?.getTracks().forEach(t => t.stop())
+      let mensaje = 'No se pudo acceder a la cámara. Revisa los permisos del navegador.'
+      const nombre = err instanceof Error ? err.name : ''
+      if (nombre === 'NotAllowedError') {
+        mensaje = 'Permiso de cámara denegado. Habilítalo en los ajustes de la app o del navegador y vuelve a intentar.'
+      } else if (nombre === 'NotFoundError') {
+        mensaje = 'No se encontró ninguna cámara en este dispositivo.'
+      } else if (nombre === 'NotReadableError') {
+        mensaje = 'La cámara está siendo usada por otra app. Cierra otras apps que la usen e intenta de nuevo.'
+      } else if (err instanceof Error && err.message === 'timeout_camara') {
+        mensaje = 'La cámara no respondió. Cierra y vuelve a abrir el escáner, o revisa los permisos de la app.'
+      }
+      setErrorCamara(mensaje)
       setEscaneando(false)
     }
   }
