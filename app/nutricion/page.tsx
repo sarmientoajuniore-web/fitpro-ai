@@ -89,6 +89,28 @@ type RegistroComida = {
   alimentos: { nombre: string } | null
 }
 
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function sumarDias(fechaStr: string, dias: number): string {
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const fecha = new Date(y, m - 1, d)
+  fecha.setDate(fecha.getDate() + dias)
+  return toLocalDateStr(fecha)
+}
+
+function formatFechaLarga(fechaStr: string): string {
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const fecha = new Date(y, m - 1, d)
+  const diaSemana = DIAS_SEMANA[fecha.getDay()]
+  const mes = MESES[fecha.getMonth()]
+  return `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${d} de ${mes} de ${y}`
+}
+
 const TIPOS = [
   { key: 'desayuno', label: 'Desayuno', icono: '🍳', hora: '8:30 AM' },
   { key: 'almuerzo', label: 'Almuerzo', icono: '🥗', hora: '1:00 PM' },
@@ -127,10 +149,24 @@ export default function NutricionPage() {
   // Lector de código de barras (cámara)
   const [escaneando, setEscaneando] = useState(false)
   const [errorCamara, setErrorCamara] = useState<string | null>(null)
+  const [codigoDetectado, setCodigoDetectado] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
 
-  const hoyStr = new Date().toISOString().split('T')[0]
+  // Edición de un alimento ya registrado
+  const [editando, setEditando] = useState<RegistroComida | null>(null)
+  const [editNombre, setEditNombre] = useState('')
+  const [editGramos, setEditGramos] = useState('')
+  const [editCalorias, setEditCalorias] = useState('')
+  const [editProteina, setEditProteina] = useState('')
+  const [editCarbos, setEditCarbos] = useState('')
+  const [editGrasas, setEditGrasas] = useState('')
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+  const [errorEdicion, setErrorEdicion] = useState<string | null>(null)
+
+  const hoyStr = toLocalDateStr(new Date())
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyStr)
+  const esHoy = fechaSeleccionada === hoyStr
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -140,20 +176,24 @@ export default function NutricionPage() {
 
   const cargarRegistros = useCallback(async () => {
     if (!userId) return
-    const hoy = hoyStr
     const { data } = await supabase
       .from('registro_comidas')
       .select('*, alimentos(nombre)')
       .eq('user_id', userId)
-      .gte('fecha', `${hoy}T00:00:00`)
-      .lte('fecha', `${hoy}T23:59:59`)
-      .order('fecha', { ascending: true })
+      .eq('fecha', fechaSeleccionada)
+      .order('created_at', { ascending: true })
     if (data) setRegistros(data)
-  }, [userId, hoyStr])
+  }, [userId, fechaSeleccionada])
 
   useEffect(() => {
     cargarRegistros()
   }, [cargarRegistros])
+
+  const irDiaAnterior = () => setFechaSeleccionada(f => sumarDias(f, -1))
+  const irDiaSiguiente = () => setFechaSeleccionada(f => {
+    const siguiente = sumarDias(f, 1)
+    return siguiente > hoyStr ? f : siguiente
+  })
 
   // Búsqueda local (tabla "alimentos") — entrada manual existente, sin cambios
   useEffect(() => {
@@ -231,6 +271,7 @@ export default function NutricionPage() {
     setErrorOff(null)
     setCodigoNoEncontrado(null)
     setErrorCamara(null)
+    setCodigoDetectado(null)
     detenerEscaneo()
   }
 
@@ -245,6 +286,7 @@ export default function NutricionPage() {
     setSeleccionado(null)
     setErrorOff(null)
     setErrorCamara(null)
+    setCodigoDetectado(null)
     setCodigoNoEncontrado(null)
   }
 
@@ -301,17 +343,22 @@ export default function NutricionPage() {
   const iniciarEscaneo = async () => {
     setErrorCamara(null)
     setErrorOff(null)
+    setCodigoDetectado(null)
     if (!videoRef.current) return
     setEscaneando(true)
     try {
       const hints = new Map<DecodeHintType, unknown>()
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+        BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128,
       ])
+      // Sin TRY_HARDER, OneDReader solo escanea ~15 filas centrales y nunca rota la imagen,
+      // por lo que un código bien enfocado pero no perfectamente centrado nunca se detecta.
+      hints.set(DecodeHintType.TRY_HARDER, true)
       const lector = new BrowserMultiFormatOneDReader(hints)
       const controls = await lector.decodeFromVideoDevice(undefined, videoRef.current, (resultado) => {
         if (resultado) {
           const codigo = resultado.getText()
+          setCodigoDetectado(codigo)
           detenerEscaneo()
           buscarPorCodigoBarras(codigo)
         }
@@ -400,7 +447,7 @@ export default function NutricionPage() {
       proteina: macros.proteina,
       carbos: macros.carbos,
       grasas: macros.grasas,
-      fecha: new Date().toISOString(),
+      fecha: fechaSeleccionada,
     }
     console.log('[guardarRegistro] payload →', payload)
 
@@ -424,6 +471,55 @@ export default function NutricionPage() {
     cargarRegistros()
   }
 
+  const abrirEdicion = (item: RegistroComida) => {
+    setEditando(item)
+    setEditNombre(item.alimentos?.nombre ?? item.nombre_comida)
+    setEditGramos(String(item.cantidad_gramos))
+    setEditCalorias(String(item.calorias))
+    setEditProteina(String(item.proteina))
+    setEditCarbos(String(item.carbos))
+    setEditGrasas(String(item.grasas))
+    setErrorEdicion(null)
+  }
+
+  const cerrarEdicion = () => {
+    setEditando(null)
+    setErrorEdicion(null)
+  }
+
+  const guardarEdicion = async () => {
+    if (!editando) return
+    if (!editNombre.trim()) {
+      setErrorEdicion('Ingresa un nombre para el alimento.')
+      return
+    }
+
+    setGuardandoEdicion(true)
+    setErrorEdicion(null)
+
+    const payload = {
+      alimento_id: null,
+      nombre_comida: editNombre.trim(),
+      cantidad_gramos: parseFloat(editGramos) || 0,
+      calorias: parseFloat(editCalorias) || 0,
+      proteina: parseFloat(editProteina) || 0,
+      carbos: parseFloat(editCarbos) || 0,
+      grasas: parseFloat(editGrasas) || 0,
+    }
+
+    const { error } = await supabase.from('registro_comidas').update(payload).eq('id', editando.id)
+
+    if (error) {
+      setErrorEdicion(`Error al guardar: ${error.message}`)
+      setGuardandoEdicion(false)
+      return
+    }
+
+    setGuardandoEdicion(false)
+    cerrarEdicion()
+    cargarRegistros()
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white max-w-lg mx-auto">
       <div className="sticky top-0 bg-[#0a0a0a] z-10 border-b border-white/10 px-5 py-3 flex items-center justify-between">
@@ -434,11 +530,31 @@ export default function NutricionPage() {
       <div className="p-5">
         <h2 className="text-xl font-bold mb-4">Registro <span className="text-[#F5C518]">Nutricional</span></h2>
 
+        {/* NAVEGACIÓN DE FECHA */}
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <button
+            onClick={irDiaAnterior}
+            aria-label="Día anterior"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-[#1a1a1a] border border-white/10 text-gray-300 hover:text-[#F5C518] hover:border-[#F5C518]/40 transition-colors">
+            ◄
+          </button>
+          <span className="text-sm font-semibold text-center px-1">
+            {esHoy ? `Hoy · ${formatFechaLarga(fechaSeleccionada)}` : formatFechaLarga(fechaSeleccionada)}
+          </span>
+          <button
+            onClick={irDiaSiguiente}
+            disabled={esHoy}
+            aria-label="Día siguiente"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-[#1a1a1a] border border-white/10 text-gray-300 hover:text-[#F5C518] hover:border-[#F5C518]/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-300 disabled:hover:border-white/10">
+            ►
+          </button>
+        </div>
+
         {/* RESUMEN DEL DÍA */}
         <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 mb-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Calorías hoy</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{esHoy ? 'Calorías hoy' : 'Calorías'}</div>
               <div className="text-3xl font-black">{totalCals} <span className="text-sm text-gray-500 font-normal">/ {OBJETIVO.cals}</span></div>
             </div>
             <div className="text-right">
@@ -501,6 +617,7 @@ export default function NutricionPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-sm font-bold text-[#F5C518]">{item.calorias} kcal</div>
+                          <button onClick={() => abrirEdicion(item)} className="text-gray-600 hover:text-[#F5C518] text-sm leading-none">✎</button>
                           <button onClick={() => eliminarRegistro(item.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none">×</button>
                         </div>
                       </div>
@@ -658,6 +775,12 @@ export default function NutricionPage() {
                     className="w-full border border-dashed border-white/20 rounded-xl py-4 text-sm text-gray-300 hover:border-[#F5C518]/50 hover:text-[#F5C518] transition-colors font-medium">
                     📷 Escanear código de barras
                   </button>
+                )}
+
+                {codigoDetectado && (
+                  <div className="mb-2 px-3 py-2 bg-[#22C55E]/10 border border-[#22C55E]/30 rounded-xl text-xs text-[#22C55E]">
+                    ✓ Código detectado: {codigoDetectado}
+                  </div>
                 )}
 
                 {buscandoOff && (
@@ -820,6 +943,71 @@ export default function NutricionPage() {
               disabled={!seleccionado || guardando}
               className="w-full bg-[#F5C518] text-black font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0bb00] transition-colors">
               {guardando ? 'Guardando...' : 'Añadir alimento'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDICIÓN */}
+      {editando && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg p-5 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold">Editar alimento</h3>
+              <button onClick={cerrarEdicion} className="text-gray-500 hover:text-white text-xl">×</button>
+            </div>
+
+            <div className="mb-3">
+              <label className="text-[11px] text-gray-500 block mb-1">Nombre</label>
+              <input
+                type="text"
+                value={editNombre}
+                onChange={e => setEditNombre(e.target.value)}
+                className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#F5C518]/50"
+                autoFocus
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="text-[11px] text-gray-500 block mb-1">Cantidad (g)</label>
+              <input
+                type="number"
+                value={editGramos}
+                onChange={e => setEditGramos(e.target.value)}
+                className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#F5C518]/50"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {([
+                { lbl: 'Kcal', val: editCalorias, set: setEditCalorias },
+                { lbl: 'Prot', val: editProteina, set: setEditProteina },
+                { lbl: 'Carb', val: editCarbos,   set: setEditCarbos },
+                { lbl: 'Gras', val: editGrasas,   set: setEditGrasas },
+              ]).map(({ lbl, val, set }) => (
+                <div key={lbl}>
+                  <label className="text-[9px] text-gray-500 block mb-1">{lbl}</label>
+                  <input
+                    type="number"
+                    value={val}
+                    onChange={e => set(e.target.value)}
+                    className="w-full bg-[#111] border border-white/10 rounded-lg px-1.5 py-1.5 text-xs text-white text-center outline-none focus:border-[#F5C518]/50"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {errorEdicion && (
+              <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
+                {errorEdicion}
+              </div>
+            )}
+
+            <button
+              onClick={guardarEdicion}
+              disabled={guardandoEdicion}
+              className="w-full bg-[#F5C518] text-black font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0bb00] transition-colors">
+              {guardandoEdicion ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         </div>
