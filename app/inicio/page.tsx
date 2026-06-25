@@ -31,6 +31,13 @@ type Perfil = {
   proteina_objetivo: number | null
   carbos_objetivo: number | null
   grasas_objetivo: number | null
+  nivel_actividad: string | null
+}
+
+function calcularMetaAgua(pesoKg: number | null, nivelActividad: string | null): number {
+  const base = Math.round((pesoKg ?? 70) * 35)
+  const extra = nivelActividad === 'alto' ? 750 : nivelActividad === 'moderado' ? 500 : 0
+  return Math.round((base + extra) / 250) * 250
 }
 
 type Consumo = { calorias: number; proteina: number; carbos: number; grasas: number }
@@ -53,6 +60,12 @@ export default function InicioPage() {
   const [perfil, setPerfil]   = useState<Perfil | null>(null)
   const [consumo, setConsumo] = useState<Consumo>({ calorias: 0, proteina: 0, carbos: 0, grasas: 0 })
   const [listo, setListo]     = useState(false)
+  const [mlBebidos, setMlBebidos]         = useState(0)
+  const [guardandoAgua, setGuardandoAgua] = useState(false)
+  const [userId, setUserId]               = useState<string>('')
+  const [mlManual, setMlManual]           = useState('')
+  const [permisoNotif, setPermisoNotif]   = useState<NotificationPermission>('default')
+  const [recordatoriosOn, setRecordatoriosOn] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -61,10 +74,10 @@ export default function InicioPage() {
 
       const hoy = new Date().toISOString().split('T')[0]
 
-      const [{ data: perfilData }, { data: comidas }] = await Promise.all([
+      const [{ data: perfilData }, { data: comidas }, { data: aguaHoy }] = await Promise.all([
         supabase
           .from('perfiles')
-          .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo')
+          .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo, nivel_actividad')
           .eq('id', user.id)
           .maybeSingle(),
         supabase
@@ -72,7 +85,15 @@ export default function InicioPage() {
           .select('calorias, proteina, carbos, grasas')
           .eq('user_id', user.id)
           .eq('fecha', hoy),
+        supabase
+          .from('registro_agua')
+          .select('ml')
+          .eq('user_id', user.id)
+          .eq('fecha', hoy)
+          .maybeSingle(),
       ])
+      setUserId(user.id)
+      if (aguaHoy) setMlBebidos(aguaHoy.ml ?? 0)
 
       if (!perfilData || perfilData.edad === null || perfilData.peso_kg === null || perfilData.altura_cm === null) {
         router.replace('/onboarding')
@@ -91,9 +112,37 @@ export default function InicioPage() {
       }
 
       setListo(true)
+
+      // Cargar preferencia de recordatorios guardada
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setPermisoNotif(Notification.permission)
+        const guardado = localStorage.getItem('fitpro_recordatorios') === 'true'
+        setRecordatoriosOn(guardado && Notification.permission === 'granted')
+      }
     }
     init()
   }, [router])
+
+  // Programar recordatorios en el SW al activarlos o al cargar la app con ellos activos
+  useEffect(() => {
+    if (!listo || !recordatoriosOn || !perfil || !('serviceWorker' in navigator)) return
+    const meta = calcularMetaAgua(perfil.peso_kg, perfil.nivel_actividad)
+    navigator.serviceWorker.ready.then(reg => {
+      reg.active?.postMessage({ type: 'SCHEDULE_WATER', mlBebidos, metaMl: meta })
+    })
+  // Solo re-ejecutar cuando se activan/desactivan, no en cada cambio de ml
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listo, recordatoriosOn])
+
+  // Avisar al SW cada vez que cambia el agua bebida (para que sepa si ya se alcanzó la meta)
+  useEffect(() => {
+    if (!recordatoriosOn || !perfil || !('serviceWorker' in navigator)) return
+    const meta = calcularMetaAgua(perfil.peso_kg, perfil.nivel_actividad)
+    navigator.serviceWorker.ready.then(reg => {
+      reg.active?.postMessage({ type: 'UPDATE_AGUA', mlBebidos, metaMl: meta })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mlBebidos])
 
   if (!listo) {
     return (
@@ -114,6 +163,48 @@ export default function InicioPage() {
 
   const calRestantes = metaCal - Math.round(consumo.calorias)
   const calExcedido = consumo.calorias > metaCal
+
+  const metaAgua = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
+  const pctAgua  = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
+
+  const ajustarAgua = async (delta: number) => {
+    const nuevo = Math.max(0, mlBebidos + delta)
+    setMlBebidos(nuevo)
+    setGuardandoAgua(true)
+    const hoy = new Date().toISOString().split('T')[0]
+    await supabase.from('registro_agua').upsert(
+      { user_id: userId, fecha: hoy, ml: nuevo },
+      { onConflict: 'user_id,fecha' }
+    )
+    setGuardandoAgua(false)
+  }
+
+  const activarRecordatorios = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    const permiso = await Notification.requestPermission()
+    setPermisoNotif(permiso)
+    if (permiso !== 'granted') return
+    localStorage.setItem('fitpro_recordatorios', 'true')
+    setRecordatoriosOn(true)
+    // El useEffect [listo, recordatoriosOn] se dispara y programa los timers en el SW
+  }
+
+  const desactivarRecordatorios = () => {
+    localStorage.setItem('fitpro_recordatorios', 'false')
+    setRecordatoriosOn(false)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active?.postMessage({ type: 'CANCEL_WATER' })
+      })
+    }
+  }
+
+  const aplicarManual = (signo: 1 | -1) => {
+    const val = parseInt(mlManual, 10)
+    if (!Number.isFinite(val) || val <= 0) return
+    setMlManual('')
+    ajustarAgua(signo * val)
+  }
 
   const macros = [
     { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-blue-500',   text: 'text-blue-400'   },
@@ -209,6 +300,136 @@ export default function InicioPage() {
               )
             })}
           </div>
+        </div>
+
+        {/* AGUA */}
+        <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-5 mb-4 overflow-hidden">
+
+          {/* Glow decorativo */}
+          <div className="absolute -top-10 -right-10 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Header */}
+          <div className="flex items-start justify-between mb-5 relative">
+            <p className="text-xs font-semibold text-sky-400/60 uppercase tracking-widest pt-0.5">Hidratación</p>
+            <div className="text-right">
+              <p className="text-sm font-bold text-white/70">
+                {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
+              </p>
+              <p className="text-[10px] text-gray-600 uppercase tracking-wide">meta diaria</p>
+            </div>
+          </div>
+
+          {/* Número protagonista */}
+          <div className="flex items-baseline gap-2.5 mb-0.5 relative">
+            <span className={`text-6xl font-black tracking-tight transition-colors duration-500 ${
+              pctAgua >= 100 ? 'text-emerald-400' : 'text-sky-400'
+            }`}>
+              {mlBebidos >= 1000 ? (mlBebidos / 1000).toFixed(1) : mlBebidos}
+            </span>
+            <span className="text-2xl font-semibold text-gray-500">
+              {mlBebidos >= 1000 ? 'L' : 'ml'}
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 mb-5">
+            de {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
+            {' · '}{Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'}
+          </p>
+
+          {/* Barra de progreso gruesa con gradiente */}
+          <div className="mb-1.5">
+            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${Math.min(pctAgua, 100)}%`,
+                  background: pctAgua >= 100
+                    ? 'linear-gradient(90deg, #10b981, #34d399)'
+                    : 'linear-gradient(90deg, #0369a1, #38bdf8)',
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-[11px] text-gray-600">{mlBebidos} ml registrados</span>
+              <span className={`text-[11px] font-semibold ${pctAgua >= 100 ? 'text-emerald-400' : 'text-sky-400'}`}>
+                {Math.min(Math.round(pctAgua), 100)}%
+              </span>
+            </div>
+          </div>
+
+          {/* Mensajes de hito */}
+          {pctAgua >= 100 ? (
+            <div className="mt-4 mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-center">
+              <p className="text-sm font-bold text-emerald-400">🎉 ¡Felicitaciones! Cumpliste tu meta de agua hoy 💧🙌</p>
+              <p className="text-xs text-gray-500 mt-0.5">Excelente hidratación. Los recordatorios se pausan por hoy.</p>
+            </div>
+          ) : pctAgua >= 75 ? (
+            <p className="mt-3 mb-4 text-xs font-medium text-sky-300/80 text-center">
+              🔥 ¡Casi llegas! Solo te faltan {metaAgua - mlBebidos} ml más.
+            </p>
+          ) : pctAgua >= 50 ? (
+            <p className="mt-3 mb-4 text-xs font-medium text-sky-400/60 text-center">
+              💪 ¡Vas a la mitad! Mantén el ritmo.
+            </p>
+          ) : (
+            <div className="mt-3 mb-4" />
+          )}
+
+          {/* Entrada manual */}
+          <div className="flex gap-2.5">
+            <div className="relative flex-1">
+              <input
+                type="number"
+                min="1"
+                placeholder="¿Cuánto tomaste?"
+                value={mlManual}
+                onChange={e => setMlManual(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && aplicarManual(1)}
+                className="w-full bg-black/40 border border-white/8 rounded-2xl pl-4 pr-10 py-3 text-sm font-medium text-white placeholder-gray-700 outline-none focus:border-sky-500/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-600 pointer-events-none select-none">ml</span>
+            </div>
+            <button
+              onClick={() => aplicarManual(1)}
+              disabled={guardandoAgua || !mlManual}
+              className="bg-sky-500 hover:bg-sky-400 disabled:bg-sky-500/30 text-white font-bold rounded-2xl px-5 py-3 text-sm active:scale-95 transition-all whitespace-nowrap">
+              💧 Sumar
+            </button>
+          </div>
+
+          {/* Restar: solo visible cuando hay texto en el input */}
+          {mlManual && mlBebidos > 0 && (
+            <button
+              onClick={() => aplicarManual(-1)}
+              disabled={guardandoAgua}
+              className="mt-2 w-full text-xs text-gray-600 hover:text-red-400 transition-colors py-1">
+              − Corregir (quitar {mlManual} ml del total)
+            </button>
+          )}
+
+          {/* Toggle de recordatorios */}
+          {typeof window !== 'undefined' && 'Notification' in window && (
+            <div className="border-t border-white/5 mt-4 pt-3.5">
+              {permisoNotif === 'denied' ? (
+                <p className="text-xs text-gray-600 text-center">
+                  🔕 Notificaciones bloqueadas en el navegador.
+                </p>
+              ) : recordatoriosOn ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-sky-400/50">🔔 Recordatorios activos · 6 avisos al día</span>
+                  <button onClick={desactivarRecordatorios} className="text-xs text-gray-600 hover:text-red-400 transition-colors">
+                    Desactivar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={activarRecordatorios}
+                  className="w-full border border-sky-500/20 rounded-xl py-2.5 text-xs font-medium text-sky-400/60 hover:text-sky-400 hover:border-sky-500/40 transition-all">
+                  🔔 Activar recordatorios de agua
+                </button>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* ACCESO RÁPIDO */}
