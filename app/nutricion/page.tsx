@@ -611,6 +611,20 @@ export default function NutricionPage() {
           </div>
         </div>
 
+        {/* DIETA PERSONALIZADA — acceso rápido */}
+        <a
+          href="/dieta"
+          className="flex items-center justify-between bg-gradient-to-r from-[#1c1a00] to-[#111] border border-[#F5C518]/25 rounded-2xl px-4 py-3.5 mb-4 hover:border-[#F5C518]/50 transition-colors group">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🥗</span>
+            <div>
+              <div className="text-sm font-bold text-white">¿Quieres una dieta recomendada?</div>
+              <div className="text-[11px] text-gray-500 mt-0.5">Ver plan con porciones calculadas para ti</div>
+            </div>
+          </div>
+          <span className="text-[#F5C518] text-lg group-hover:translate-x-0.5 transition-transform">›</span>
+        </a>
+
         {/* COMIDAS */}
         {TIPOS.map(({ key, label, icono, hora }) => {
           const items = registrosPorTipo(key)
