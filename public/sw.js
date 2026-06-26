@@ -1,7 +1,7 @@
 const CACHE = 'fitpro-js-v2'
 
 // Archivos del shell que se cachean al instalar
-const SHELL = ['/', '/inicio', '/rutinas', '/nutricion', '/progreso']
+const SHELL = ['/', '/inicio', '/rutinas', '/progreso']
 
 self.addEventListener('install', e => {
   e.waitUntil(

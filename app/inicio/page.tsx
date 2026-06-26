@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const supabase = createClient()
 
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
 const OBJETIVO_LABEL: Record<string, string> = {
-  // Objetivo simplificado actual
-  bajar:    'Bajar de peso',
-  mantener: 'Mantenerme',
-  subir:    'Subir de peso',
-  // Compatibilidad con perfiles creados antes de simplificar el onboarding
+  bajar:            'Bajar de peso',
+  mantener:         'Mantenerme',
+  subir:            'Subir de peso',
   deficit_leve:     'Bajar de peso',
   deficit_moderado: 'Bajar de peso',
   deficit_agresivo: 'Bajar de peso',
@@ -20,30 +20,98 @@ const OBJETIVO_LABEL: Record<string, string> = {
   superavit:        'Subir de peso',
 }
 
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
 type Perfil = {
-  nombre_completo: string | null
-  edad: number | null
-  peso_kg: number | null
-  altura_cm: number | null
-  tdee: number | null
+  nombre_completo:   string | null
+  edad:              number | null
+  peso_kg:           number | null
+  altura_cm:         number | null
+  tdee:              number | null
   calorias_objetivo: number | null
-  objetivo: string | null
+  objetivo:          string | null
   proteina_objetivo: number | null
-  carbos_objetivo: number | null
-  grasas_objetivo: number | null
-  nivel_actividad: string | null
+  carbos_objetivo:   number | null
+  grasas_objetivo:   number | null
+  nivel_actividad:   string | null
 }
 
+type RegistroItem = {
+  id:                string
+  nombre_comida:     string
+  cantidad_gramos:   number
+  unidades:          number | null
+  gramos_por_unidad: number | null
+  calorias:          number
+  proteina:          number
+  carbos:            number
+  grasas:            number
+}
+
+type AlimentoBusqueda = {
+  id:            string
+  nombre:        string
+  calorias_100g: number
+  proteina_100g: number
+  carbos_100g:   number
+  grasas_100g:   number
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function calcularMetaAgua(pesoKg: number | null, nivelActividad: string | null): number {
-  const base = Math.round((pesoKg ?? 70) * 35)
+  const base  = Math.round((pesoKg ?? 70) * 35)
   const extra = nivelActividad === 'alto' ? 750 : nivelActividad === 'moderado' ? 500 : 0
   return Math.round((base + extra) / 250) * 250
 }
 
-type Consumo = { calorias: number; proteina: number; carbos: number; grasas: number }
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function sumarDias(fechaStr: string, dias: number): string {
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const f = new Date(y, m - 1, d)
+  f.setDate(f.getDate() + dias)
+  return toLocalDateStr(f)
+}
+
+function labelFecha(fechaStr: string): string {
+  const hoy  = toLocalDateStr(new Date())
+  const ayer = sumarDias(hoy, -1)
+  if (fechaStr === hoy)  return 'Hoy'
+  if (fechaStr === ayer) return 'Ayer'
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const f = new Date(y, m - 1, d)
+  return `${d} ${MESES_CORTOS[f.getMonth()]} ${y}`
+}
+
+function gramosPorUnidad(nombre: string): number {
+  const n = nombre.toLowerCase()
+  if (n.includes('huevo'))                                          return 50
+  if (n.includes('limon') || n.includes('limón'))                  return 30
+  if (n.includes('banana') || n.includes('platano') || n.includes('plátano')) return 120
+  if (n.includes('manzana'))                                        return 150
+  if (n.includes('naranja'))                                        return 180
+  if (n.includes('galleta') || n.includes('oreo'))                 return 11
+  if (n.includes('pan') && !n.includes('empanada'))                return 30
+  return 100
+}
+
+function formatCantidad(item: RegistroItem): string {
+  if (item.unidades && item.gramos_por_unidad) {
+    const porciones = item.unidades === 1 ? '1 porción' : `${item.unidades} porciones`
+    return `${porciones} (${item.cantidad_gramos}g)`
+  }
+  return `${item.cantidad_gramos}g`
+}
+
+// ─── Componentes auxiliares ───────────────────────────────────────────────────
 
 function Barra({ consumido, meta, color }: { consumido: number; meta: number; color: string }) {
-  const pct = meta > 0 ? Math.min((consumido / meta) * 100, 100) : 0
+  const pct     = meta > 0 ? Math.min((consumido / meta) * 100, 100) : 0
   const excedido = consumido > meta
   return (
     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -55,36 +123,66 @@ function Barra({ consumido, meta, color }: { consumido: number; meta: number; co
   )
 }
 
+// ─── Componente principal ─────────────────────────────────────────────────────
+
 export default function InicioPage() {
   const router = useRouter()
-  const [perfil, setPerfil]   = useState<Perfil | null>(null)
-  const [consumo, setConsumo] = useState<Consumo>({ calorias: 0, proteina: 0, carbos: 0, grasas: 0 })
-  const [listo, setListo]     = useState(false)
-  const [mlBebidos, setMlBebidos]         = useState(0)
-  const [guardandoAgua, setGuardandoAgua] = useState(false)
-  const [userId, setUserId]               = useState<string>('')
-  const [mlManual, setMlManual]           = useState('')
-  const [permisoNotif, setPermisoNotif]   = useState<NotificationPermission>('default')
+
+  // ── Perfil / auth ─────────────────────────────────────────────────────────
+  const [perfil,  setPerfil]  = useState<Perfil | null>(null)
+  const [listo,   setListo]   = useState(false)
+  const [userId,  setUserId]  = useState<string>('')
+
+  // ── Fecha seleccionada ────────────────────────────────────────────────────
+  const hoyStr = useMemo(() => toLocalDateStr(new Date()), [])
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyStr)
+  const esHoy = fechaSeleccionada === hoyStr
+
+  // ── Registros del día (array completo → macros se derivan de aquí) ────────
+  const [registros,         setRegistros]         = useState<RegistroItem[]>([])
+  const [cargandoRegistros, setCargandoRegistros] = useState(false)
+
+  const consumo = useMemo(() => ({
+    calorias: registros.reduce((s, r) => s + r.calorias, 0),
+    proteina: registros.reduce((s, r) => s + r.proteina, 0),
+    carbos:   registros.reduce((s, r) => s + r.carbos,   0),
+    grasas:   registros.reduce((s, r) => s + r.grasas,   0),
+  }), [registros])
+
+  // ── Agua ──────────────────────────────────────────────────────────────────
+  const [mlBebidos,       setMlBebidos]       = useState(0)
+  const [guardandoAgua,   setGuardandoAgua]   = useState(false)
+  const [mlManual,        setMlManual]        = useState('')
+  const [permisoNotif,    setPermisoNotif]    = useState<NotificationPermission>('default')
   const [recordatoriosOn, setRecordatoriosOn] = useState(false)
 
+  // ── Formulario de agregar alimento ────────────────────────────────────────
+  const [formAbierto,    setFormAbierto]    = useState(false)
+  const [busquedaAlim,   setBusquedaAlim]   = useState('')
+  const [resultadosAlim, setResultadosAlim] = useState<AlimentoBusqueda[]>([])
+  const [buscandoAlim,   setBuscandoAlim]   = useState(false)
+  const [alimentoSel,    setAlimentoSel]    = useState<AlimentoBusqueda | null>(null)
+  const [gramosInput,    setGramosInput]    = useState('100')
+  const [modoRegistro,   setModoRegistro]   = useState<'gramos' | 'unidades'>('gramos')
+  const [unidadesInput,  setUnidadesInput]  = useState('1')
+  const [pesoPorcion,    setPesoPorcion]    = useState('100')
+  const [guardandoAlim,  setGuardandoAlim]  = useState(false)
+  const busquedaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Carga inicial: perfil + agua ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
+      setUserId(user.id)
 
-      const hoy = new Date().toISOString().split('T')[0]
-
-      const [{ data: perfilData }, { data: comidas }, { data: aguaHoy }] = await Promise.all([
+      const hoy = toLocalDateStr(new Date())
+      const [{ data: perfilData }, { data: aguaHoy }] = await Promise.all([
         supabase
           .from('perfiles')
           .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo, nivel_actividad')
           .eq('id', user.id)
           .maybeSingle(),
-        supabase
-          .from('registro_comidas')
-          .select('calorias, proteina, carbos, grasas')
-          .eq('user_id', user.id)
-          .eq('fecha', hoy),
         supabase
           .from('registro_agua')
           .select('ml')
@@ -92,7 +190,7 @@ export default function InicioPage() {
           .eq('fecha', hoy)
           .maybeSingle(),
       ])
-      setUserId(user.id)
+
       if (aguaHoy) setMlBebidos(aguaHoy.ml ?? 0)
 
       if (!perfilData || perfilData.edad === null || perfilData.peso_kg === null || perfilData.altura_cm === null) {
@@ -101,19 +199,8 @@ export default function InicioPage() {
       }
 
       setPerfil(perfilData)
-
-      if (comidas && comidas.length > 0) {
-        setConsumo({
-          calorias: comidas.reduce((s, r) => s + (r.calorias ?? 0), 0),
-          proteina: comidas.reduce((s, r) => s + (r.proteina ?? 0), 0),
-          carbos:   comidas.reduce((s, r) => s + (r.carbos   ?? 0), 0),
-          grasas:   comidas.reduce((s, r) => s + (r.grasas   ?? 0), 0),
-        })
-      }
-
       setListo(true)
 
-      // Cargar preferencia de recordatorios guardada
       if (typeof window !== 'undefined' && 'Notification' in window) {
         setPermisoNotif(Notification.permission)
         const guardado = localStorage.getItem('fitpro_recordatorios') === 'true'
@@ -123,18 +210,32 @@ export default function InicioPage() {
     init()
   }, [router])
 
-  // Programar recordatorios en el SW al activarlos o al cargar la app con ellos activos
+  // ── Carga de registros del día ─────────────────────────────────────────────
+  const cargarRegistros = useCallback(async () => {
+    if (!userId) return
+    setCargandoRegistros(true)
+    const { data } = await supabase
+      .from('registro_comidas')
+      .select('id, nombre_comida, cantidad_gramos, unidades, gramos_por_unidad, calorias, proteina, carbos, grasas')
+      .eq('user_id', userId)
+      .eq('fecha', fechaSeleccionada)
+      .order('created_at', { ascending: true })
+    setRegistros(data ?? [])
+    setCargandoRegistros(false)
+  }, [userId, fechaSeleccionada])
+
+  useEffect(() => { cargarRegistros() }, [cargarRegistros])
+
+  // ── Service worker: recordatorios de agua ─────────────────────────────────
   useEffect(() => {
     if (!listo || !recordatoriosOn || !perfil || !('serviceWorker' in navigator)) return
     const meta = calcularMetaAgua(perfil.peso_kg, perfil.nivel_actividad)
     navigator.serviceWorker.ready.then(reg => {
       reg.active?.postMessage({ type: 'SCHEDULE_WATER', mlBebidos, metaMl: meta })
     })
-  // Solo re-ejecutar cuando se activan/desactivan, no en cada cambio de ml
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listo, recordatoriosOn])
 
-  // Avisar al SW cada vez que cambia el agua bebida (para que sepa si ya se alcanzó la meta)
   useEffect(() => {
     if (!recordatoriosOn || !perfil || !('serviceWorker' in navigator)) return
     const meta = calcularMetaAgua(perfil.peso_kg, perfil.nivel_actividad)
@@ -144,38 +245,102 @@ export default function InicioPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mlBebidos])
 
-  if (!listo) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#F5C518] border-t-transparent animate-spin" />
-      </div>
-    )
+  // ── Búsqueda de alimentos (debounced 300 ms) ──────────────────────────────
+  useEffect(() => {
+    if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current)
+    if (!formAbierto || alimentoSel || busquedaAlim.trim().length < 2) {
+      setResultadosAlim([])
+      setBuscandoAlim(false)
+      return
+    }
+    setBuscandoAlim(true)
+    busquedaTimerRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('alimentos')
+        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g')
+        .ilike('nombre', `%${busquedaAlim.trim()}%`)
+        .limit(10)
+      setResultadosAlim(data ?? [])
+      setBuscandoAlim(false)
+    }, 300)
+    return () => { if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current) }
+  }, [busquedaAlim, formAbierto, alimentoSel])
+
+  // ── Navegación de fecha ───────────────────────────────────────────────────
+  const irDiaAnterior  = () => setFechaSeleccionada(f => sumarDias(f, -1))
+  const irDiaSiguiente = () => setFechaSeleccionada(f => {
+    const sig = sumarDias(f, 1)
+    return sig > hoyStr ? f : sig
+  })
+
+  // ── Agregar alimento al día ───────────────────────────────────────────────
+  const agregarAlimento = async () => {
+    if (!alimentoSel || !userId) return
+    const g = modoRegistro === 'gramos'
+      ? Math.max(parseInt(gramosInput) || 1, 1)
+      : Math.max(Math.round((parseFloat(unidadesInput) || 1) * (parseFloat(pesoPorcion) || 1)), 1)
+    const unids    = modoRegistro === 'unidades' ? (parseFloat(unidadesInput) || null) : null
+    const gramsPU  = modoRegistro === 'unidades' ? (parseFloat(pesoPorcion)   || null) : null
+    setGuardandoAlim(true)
+    const { error: errComida } = await supabase.from('registro_comidas').insert({
+      user_id:           userId,
+      alimento_id:       alimentoSel.id,
+      nombre_comida:     alimentoSel.nombre,
+      tipo_comida:       'merienda',
+      cantidad_gramos:   g,
+      unidades:          unids,
+      gramos_por_unidad: gramsPU,
+      calorias:          Math.round(alimentoSel.calorias_100g * g / 100),
+      proteina:          Math.round(alimentoSel.proteina_100g * g / 100),
+      carbos:            Math.round(alimentoSel.carbos_100g   * g / 100),
+      grasas:            Math.round(alimentoSel.grasas_100g   * g / 100),
+      fecha:             fechaSeleccionada,
+    })
+    setGuardandoAlim(false)
+    if (errComida) { console.error('[FitPro] Error guardando comida:', errComida); return }
+    setAlimentoSel(null)
+    setBusquedaAlim('')
+    setGramosInput('100')
+    setModoRegistro('gramos')
+    setUnidadesInput('1')
+    setPesoPorcion('100')
+    cargarRegistros()
   }
 
-  const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? ''
-  const tdee     = perfil?.tdee?.toLocaleString() ?? '—'
-  const kcal     = perfil?.calorias_objetivo?.toLocaleString() ?? '—'
-  const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? 'Personalizado') : '—'
-  const metaCal  = perfil?.calorias_objetivo  ?? 0
-  const metaPro  = perfil?.proteina_objetivo  ?? 0
-  const metaCarb = perfil?.carbos_objetivo    ?? 0
-  const metaGra  = perfil?.grasas_objetivo    ?? 0
+  // ── Eliminar alimento (optimistic) ────────────────────────────────────────
+  const eliminarAlimento = async (id: string) => {
+    setRegistros(prev => prev.filter(r => r.id !== id))
+    await supabase.from('registro_comidas').delete().eq('id', id)
+  }
 
-  const calRestantes = metaCal - Math.round(consumo.calorias)
-  const calExcedido = consumo.calorias > metaCal
+  const cerrarFormulario = () => {
+    setFormAbierto(false)
+    setAlimentoSel(null)
+    setBusquedaAlim('')
+    setResultadosAlim([])
+    setGramosInput('100')
+    setModoRegistro('gramos')
+    setUnidadesInput('1')
+    setPesoPorcion('100')
+  }
 
-  const metaAgua = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
-  const pctAgua  = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
+  const seleccionarAlimento = (a: AlimentoBusqueda) => {
+    setAlimentoSel(a)
+    setPesoPorcion(String(gramosPorUnidad(a.nombre)))
+    setResultadosAlim([])
+  }
 
+  // ── Agua ──────────────────────────────────────────────────────────────────
   const ajustarAgua = async (delta: number) => {
     const nuevo = Math.max(0, mlBebidos + delta)
     setMlBebidos(nuevo)
     setGuardandoAgua(true)
-    const hoy = new Date().toISOString().split('T')[0]
-    await supabase.from('registro_agua').upsert(
+    const hoy = toLocalDateStr(new Date())
+    const { error: errAgua } = await supabase.from('registro_agua').upsert(
       { user_id: userId, fecha: hoy, ml: nuevo },
       { onConflict: 'user_id,fecha' }
     )
+    if (errAgua) console.error('[FitPro] Error guardando agua:', errAgua)
     setGuardandoAgua(false)
   }
 
@@ -186,7 +351,6 @@ export default function InicioPage() {
     if (permiso !== 'granted') return
     localStorage.setItem('fitpro_recordatorios', 'true')
     setRecordatoriosOn(true)
-    // El useEffect [listo, recordatoriosOn] se dispara y programa los timers en el SW
   }
 
   const desactivarRecordatorios = () => {
@@ -206,11 +370,47 @@ export default function InicioPage() {
     ajustarAgua(signo * val)
   }
 
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (!listo) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#F5C518] border-t-transparent animate-spin" />
+      </div>
+    )
+  }
+
+  // ── Valores de presentación ───────────────────────────────────────────────
+  const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? ''
+  const tdee     = perfil?.tdee?.toLocaleString() ?? '—'
+  const kcal     = perfil?.calorias_objetivo?.toLocaleString() ?? '—'
+  const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? 'Personalizado') : '—'
+  const metaCal  = perfil?.calorias_objetivo  ?? 0
+  const metaPro  = perfil?.proteina_objetivo  ?? 0
+  const metaCarb = perfil?.carbos_objetivo    ?? 0
+  const metaGra  = perfil?.grasas_objetivo    ?? 0
+
+  const calRestantes = metaCal - Math.round(consumo.calorias)
+  const calExcedido  = consumo.calorias > metaCal
+
+  const metaAgua = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
+  const pctAgua  = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
+
   const macros = [
     { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-blue-500',   text: 'text-blue-400'   },
     { lbl: 'Carbohidratos', con: Math.round(consumo.carbos),   meta: metaCarb, color: 'bg-[#F5C518]',  text: 'text-[#F5C518]'  },
     { lbl: 'Grasas',        con: Math.round(consumo.grasas),   meta: metaGra,  color: 'bg-orange-500', text: 'text-orange-400' },
   ]
+
+  // Preview en tiempo real: usa gramos o unidades×peso según el modo
+  const totalGramosPreview = modoRegistro === 'gramos'
+    ? Math.max(parseInt(gramosInput) || 1, 1)
+    : Math.max(Math.round((parseFloat(unidadesInput) || 1) * (parseFloat(pesoPorcion) || 1)), 1)
+  const preview = alimentoSel ? {
+    calorias: Math.round(alimentoSel.calorias_100g * totalGramosPreview / 100),
+    proteina: Math.round(alimentoSel.proteina_100g * totalGramosPreview / 100),
+    carbos:   Math.round(alimentoSel.carbos_100g   * totalGramosPreview / 100),
+    grasas:   Math.round(alimentoSel.grasas_100g   * totalGramosPreview / 100),
+  } : null
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -230,7 +430,6 @@ export default function InicioPage() {
         <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1c1a00] border border-[#F5C518]/20 rounded-2xl p-5 mb-4">
           <h2 className="text-2xl font-bold mb-1">¡Hola, {nombre}! 💪</h2>
           <p className="text-gray-500 text-sm mb-4">Tu plataforma de fitness inteligente está lista</p>
-          {/* Calorías meta */}
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-black/30 rounded-xl p-3 text-center">
               <div className="text-base font-bold text-white">{tdee}</div>
@@ -241,7 +440,6 @@ export default function InicioPage() {
               <div className="text-[10px] text-[#F5C518]/60 mt-1">{objLabel}</div>
             </div>
           </div>
-          {/* Macros meta */}
           <div className="grid grid-cols-3 gap-3">
             {[
               { val: metaPro,  lbl: 'Proteína',      color: 'text-blue-400'   },
@@ -256,20 +454,36 @@ export default function InicioPage() {
           </div>
         </div>
 
-        {/* HOY */}
-        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 mb-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Hoy</p>
+        {/* CALORÍAS, MACROS Y REGISTRO DEL DÍA */}
+        <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1c1800] border border-[#F5C518]/12 rounded-2xl p-4 mb-4">
 
-          {/* Calorías del día */}
-          <div className="mb-5">
+          {/* ── Navegador de fecha ── */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={irDiaAnterior}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors">
+              ◄
+            </button>
+            <span className="text-sm font-semibold text-gray-300 tracking-wide">
+              {labelFecha(fechaSeleccionada)}
+            </span>
+            <button
+              onClick={irDiaSiguiente}
+              disabled={esHoy}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 disabled:opacity-25 disabled:cursor-not-allowed text-xs transition-colors">
+              ►
+            </button>
+          </div>
+
+          {/* ── Calorías ── */}
+          <div className="mb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Te quedan hoy</p>
-            <div className="flex items-baseline gap-1.5 mb-3">
-              <span className={`text-5xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#F5C518]'}`}>
+            <div className="flex items-baseline gap-1.5 mb-2">
+              <span className={`text-3xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#F5C518]'}`}>
                 {calRestantes.toLocaleString()}
               </span>
-              <span className="text-lg font-semibold text-gray-400">kcal</span>
+              <span className="text-sm font-semibold text-gray-400">kcal</span>
             </div>
-
             <div className="flex items-end justify-between mb-1">
               <span className="text-xs text-gray-500">
                 {Math.round(consumo.calorias).toLocaleString()} / {metaCal.toLocaleString()} kcal
@@ -278,11 +492,11 @@ export default function InicioPage() {
             <Barra consumido={consumo.calorias} meta={metaCal} color="bg-[#F5C518]" />
           </div>
 
-          {/* Macros del día */}
-          <div className="flex flex-col gap-3">
+          {/* ── Macros ── */}
+          <div className="flex flex-col gap-2 mb-4">
             {macros.map(({ lbl, con, meta, color, text }) => {
               const excedido = con > meta
-              const quedan = Math.max(meta - con, 0)
+              const quedan   = Math.max(meta - con, 0)
               return (
                 <div key={lbl}>
                   <div className="flex items-center justify-between mb-1">
@@ -300,16 +514,238 @@ export default function InicioPage() {
               )
             })}
           </div>
+
+          {/* ── Lista de alimentos del día ── */}
+          {cargandoRegistros && (
+            <div className="flex justify-center py-3">
+              <div className="w-4 h-4 rounded-full border border-white/20 border-t-white/60 animate-spin" />
+            </div>
+          )}
+
+          {!cargandoRegistros && registros.length > 0 && (
+            <div className="border-t border-[#F5C518]/8 pt-3 mb-3">
+              <p className="text-[10px] text-[#F5C518]/40 uppercase tracking-widest mb-2">
+                Alimentos · {registros.length} {registros.length === 1 ? 'item' : 'items'}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {registros.map(r => (
+                  <div key={r.id} className="flex items-center gap-2 px-3 py-2.5 bg-white/4 rounded-xl border border-white/5">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white truncate">{r.nombre_comida}</div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-[10px] text-gray-600">{formatCantidad(r)}</span>
+                        <span className="text-[10px] font-bold text-[#F5C518]/90">{r.calorias} kcal</span>
+                        <span className="text-[10px] text-blue-400/70">P{r.proteina}</span>
+                        <span className="text-[10px] text-[#F5C518]/50">C{r.carbos}</span>
+                        <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => eliminarAlimento(r.id)}
+                      className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-600 hover:text-red-400 text-xs transition-colors">
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!cargandoRegistros && registros.length === 0 && !formAbierto && (
+            <p className="text-xs text-gray-700 text-center py-1 mb-2">
+              Sin alimentos registrados {esHoy ? 'hoy' : 'ese día'}.
+            </p>
+          )}
+
+          {/* ── Formulario de búsqueda / agregar alimento ── */}
+          {formAbierto ? (
+            <div className="border-t border-[#F5C518]/10 pt-3">
+
+              {/* Título del formulario */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🍽️</span>
+                <h3 className="text-sm font-bold text-white flex-1">¿Qué comiste?</h3>
+                <button
+                  onClick={cerrarFormulario}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white text-xs transition-colors">
+                  ✕
+                </button>
+              </div>
+
+              {/* Estado A: buscando alimento */}
+              {!alimentoSel ? (
+                <>
+                  <div className="mb-2">
+                    <input
+                      type="text"
+                      placeholder="Buscar alimento…"
+                      value={busquedaAlim}
+                      onChange={e => setBusquedaAlim(e.target.value)}
+                      autoFocus
+                      className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/40 focus:bg-black/60 transition-all"
+                    />
+                  </div>
+
+                  {buscandoAlim && (
+                    <p className="text-xs text-gray-600 text-center py-2">Buscando…</p>
+                  )}
+
+                  {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
+                    <p className="text-xs text-gray-600 text-center py-2">
+                      Sin resultados para &ldquo;{busquedaAlim}&rdquo;
+                    </p>
+                  )}
+
+                  {resultadosAlim.length > 0 && (
+                    <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
+                      {resultadosAlim.map(a => (
+                        <button
+                          key={a.id}
+                          onClick={() => seleccionarAlimento(a)}
+                          className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#F5C518]/8 border border-transparent hover:border-[#F5C518]/15 transition-all">
+                          <div className="text-xs font-semibold text-white">{a.nombre}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            <span className="text-[#F5C518]/70">{a.calorias_100g} kcal</span>
+                            {' · '}
+                            <span className="text-blue-400/60">P{a.proteina_100g}</span>
+                            {' · '}
+                            <span className="text-[#F5C518]/40">C{a.carbos_100g}</span>
+                            {' · '}
+                            <span className="text-orange-400/40">G{a.grasas_100g}</span>
+                            {' /100g'}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Estado B: alimento seleccionado → elegir cantidad */
+                <>
+                  {/* Chip del alimento elegido */}
+                  <div className="bg-gradient-to-r from-[#1c1800] to-[#1a1a00] border border-[#F5C518]/30 rounded-2xl px-4 py-3 mb-3">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm shrink-0">✅</span>
+                        <span className="text-sm font-bold text-white truncate">{alimentoSel.nombre}</span>
+                      </div>
+                      <button
+                        onClick={() => { setAlimentoSel(null); setBusquedaAlim('') }}
+                        className="shrink-0 text-[10px] text-gray-500 hover:text-[#F5C518] border border-white/10 hover:border-[#F5C518]/30 rounded-lg px-2 py-0.5 transition-all">
+                        cambiar
+                      </button>
+                    </div>
+                    {preview && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-[#F5C518]">{preview.calorias} kcal</span>
+                        <span className="text-gray-700 text-xs">·</span>
+                        <span className="text-xs font-semibold text-blue-400">P {preview.proteina}g</span>
+                        <span className="text-xs font-semibold text-[#F5C518]/70">C {preview.carbos}g</span>
+                        <span className="text-xs font-semibold text-orange-400">G {preview.grasas}g</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggle gramos / porción-unidad */}
+                  <div className="flex gap-2 mb-3">
+                    {(['gramos', 'unidades'] as const).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setModoRegistro(m)
+                          if (m === 'unidades' && alimentoSel) {
+                            setPesoPorcion(String(gramosPorUnidad(alimentoSel.nombre)))
+                          }
+                        }}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                          modoRegistro === m
+                            ? 'bg-[#F5C518] text-black shadow-[0_0_12px_rgba(245,197,24,0.25)]'
+                            : 'bg-black/40 text-gray-500 border border-white/10 hover:border-white/20 hover:text-gray-300'
+                        }`}>
+                        {m === 'gramos' ? '⚖️ Gramos' : '🔢 Porción / Unidad'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {modoRegistro === 'gramos' ? (
+                    /* Modo gramos */
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          min="1"
+                          value={gramosInput}
+                          onChange={e => setGramosInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && agregarAlimento()}
+                          className="w-full bg-black/50 border border-white/15 rounded-xl pl-4 pr-9 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 pointer-events-none">g</span>
+                      </div>
+                      <button
+                        onClick={agregarAlimento}
+                        disabled={guardandoAlim}
+                        className="bg-[#F5C518] hover:bg-[#f0bc00] disabled:opacity-40 text-black font-black rounded-xl px-5 py-2.5 text-sm active:scale-95 transition-all whitespace-nowrap shadow-[0_0_16px_rgba(245,197,24,0.3)]">
+                        {guardandoAlim ? '…' : '＋ Agregar'}
+                      </button>
+                    </div>
+                  ) : (
+                    /* Modo porción / unidad */
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Porciones</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={unidadesInput}
+                            onChange={e => setUnidadesInput(e.target.value)}
+                            className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Peso c/u (g)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={pesoPorcion}
+                            onChange={e => setPesoPorcion(e.target.value)}
+                            className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[#F5C518]/50 pl-1">
+                        Total: {unidadesInput || 0} × {pesoPorcion || 0}g = {Math.round((parseFloat(unidadesInput) || 0) * (parseFloat(pesoPorcion) || 0))}g
+                      </p>
+                      <button
+                        onClick={agregarAlimento}
+                        disabled={guardandoAlim}
+                        className="w-full bg-[#F5C518] hover:bg-[#f0bc00] disabled:opacity-40 text-black font-black rounded-xl py-2.5 text-sm active:scale-95 transition-all shadow-[0_0_16px_rgba(245,197,24,0.3)]">
+                        {guardandoAlim ? '…' : '＋ Agregar'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            /* Botón para abrir el formulario */
+            <button
+              onClick={() => setFormAbierto(true)}
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-[#F5C518]/25 rounded-xl py-3 text-sm font-semibold text-[#F5C518]/50 hover:text-[#F5C518]/80 hover:border-[#F5C518]/40 hover:bg-[#F5C518]/4 transition-all">
+              <span className="text-base">🍽️</span>
+              Agregar alimento
+            </button>
+          )}
         </div>
 
-        {/* AGUA */}
-        <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-5 mb-4 overflow-hidden">
+        {/* HIDRATACIÓN */}
+        <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-4 mb-4 overflow-hidden">
 
           {/* Glow decorativo */}
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Header */}
-          <div className="flex items-start justify-between mb-5 relative">
+          <div className="flex items-start justify-between mb-3 relative">
             <p className="text-xs font-semibold text-sky-400/60 uppercase tracking-widest pt-0.5">Hidratación</p>
             <div className="text-right">
               <p className="text-sm font-bold text-white/70">
@@ -320,24 +756,24 @@ export default function InicioPage() {
           </div>
 
           {/* Número protagonista */}
-          <div className="flex items-baseline gap-2.5 mb-0.5 relative">
-            <span className={`text-6xl font-black tracking-tight transition-colors duration-500 ${
+          <div className="flex items-baseline gap-2 mb-0.5 relative">
+            <span className={`text-4xl font-black tracking-tight transition-colors duration-500 ${
               pctAgua >= 100 ? 'text-emerald-400' : 'text-sky-400'
             }`}>
               {mlBebidos >= 1000 ? (mlBebidos / 1000).toFixed(1) : mlBebidos}
             </span>
-            <span className="text-2xl font-semibold text-gray-500">
+            <span className="text-lg font-semibold text-gray-500">
               {mlBebidos >= 1000 ? 'L' : 'ml'}
             </span>
           </div>
-          <p className="text-xs text-gray-600 mb-5">
+          <p className="text-xs text-gray-600 mb-3">
             de {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
             {' · '}{Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'}
           </p>
 
-          {/* Barra de progreso gruesa con gradiente */}
-          <div className="mb-1.5">
-            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+          {/* Barra de progreso con gradiente */}
+          <div className="mb-1">
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{
@@ -358,24 +794,24 @@ export default function InicioPage() {
 
           {/* Mensajes de hito */}
           {pctAgua >= 100 ? (
-            <div className="mt-4 mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-center">
+            <div className="mt-2 mb-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 text-center">
               <p className="text-sm font-bold text-emerald-400">🎉 ¡Felicitaciones! Cumpliste tu meta de agua hoy 💧🙌</p>
               <p className="text-xs text-gray-500 mt-0.5">Excelente hidratación. Los recordatorios se pausan por hoy.</p>
             </div>
           ) : pctAgua >= 75 ? (
-            <p className="mt-3 mb-4 text-xs font-medium text-sky-300/80 text-center">
+            <p className="mt-2 mb-2 text-xs font-medium text-sky-300/80 text-center">
               🔥 ¡Casi llegas! Solo te faltan {metaAgua - mlBebidos} ml más.
             </p>
           ) : pctAgua >= 50 ? (
-            <p className="mt-3 mb-4 text-xs font-medium text-sky-400/60 text-center">
+            <p className="mt-2 mb-2 text-xs font-medium text-sky-400/60 text-center">
               💪 ¡Vas a la mitad! Mantén el ritmo.
             </p>
           ) : (
-            <div className="mt-3 mb-4" />
+            <div className="mt-2 mb-2" />
           )}
 
           {/* Entrada manual */}
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <div className="relative flex-1">
               <input
                 type="number"
@@ -384,14 +820,14 @@ export default function InicioPage() {
                 value={mlManual}
                 onChange={e => setMlManual(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && aplicarManual(1)}
-                className="w-full bg-black/40 border border-white/8 rounded-2xl pl-4 pr-10 py-3 text-sm font-medium text-white placeholder-gray-700 outline-none focus:border-sky-500/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-black/40 border border-white/8 rounded-2xl pl-4 pr-10 py-2 text-sm font-medium text-white placeholder-gray-700 outline-none focus:border-sky-500/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-600 pointer-events-none select-none">ml</span>
             </div>
             <button
               onClick={() => aplicarManual(1)}
               disabled={guardandoAgua || !mlManual}
-              className="bg-sky-500 hover:bg-sky-400 disabled:bg-sky-500/30 text-white font-bold rounded-2xl px-5 py-3 text-sm active:scale-95 transition-all whitespace-nowrap">
+              className="bg-sky-500 hover:bg-sky-400 disabled:bg-sky-500/30 text-white font-bold rounded-2xl px-4 py-2 text-sm active:scale-95 transition-all whitespace-nowrap">
               💧 Sumar
             </button>
           </div>
@@ -408,7 +844,7 @@ export default function InicioPage() {
 
           {/* Toggle de recordatorios */}
           {typeof window !== 'undefined' && 'Notification' in window && (
-            <div className="border-t border-white/5 mt-4 pt-3.5">
+            <div className="border-t border-white/5 mt-3 pt-3">
               {permisoNotif === 'denied' ? (
                 <p className="text-xs text-gray-600 text-center">
                   🔕 Notificaciones bloqueadas en el navegador.
@@ -423,22 +859,20 @@ export default function InicioPage() {
               ) : (
                 <button
                   onClick={activarRecordatorios}
-                  className="w-full border border-sky-500/20 rounded-xl py-2.5 text-xs font-medium text-sky-400/60 hover:text-sky-400 hover:border-sky-500/40 transition-all">
+                  className="w-full border border-sky-500/20 rounded-xl py-2 text-xs font-medium text-sky-400/60 hover:text-sky-400 hover:border-sky-500/40 transition-all">
                   🔔 Activar recordatorios de agua
                 </button>
               )}
             </div>
           )}
-
         </div>
 
-        {/* ACCESO RÁPIDO */}
+        {/* MÓDULOS */}
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { emoji: '🥗', title: 'Nutrición',  sub: 'Registro de comidas',  href: '/nutricion'  },
-            { emoji: '📋', title: 'Rutinas',    sub: 'Mis entrenamientos',   href: '/rutinas'    },
-            { emoji: '📈', title: 'Progreso',   sub: 'Seguimiento corporal', href: '/progreso'   },
+            { emoji: '📋', title: 'Rutinas',  sub: 'Mis entrenamientos',   href: '/rutinas'  },
+            { emoji: '📈', title: 'Progreso', sub: 'Seguimiento corporal', href: '/progreso' },
           ].map(({ emoji, title, sub, href }) => (
             <a key={href} href={href}
               className="bg-[#1a1a1a] border border-white/8 rounded-xl p-4 hover:border-white/20 transition-colors">

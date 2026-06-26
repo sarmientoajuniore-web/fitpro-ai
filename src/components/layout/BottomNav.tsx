@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Dumbbell,
-  Salad,
   ListChecks,
   TrendingUp,
   Brain
@@ -14,7 +13,6 @@ import {
 const links = [
   { href: '/inicio',     label: 'Inicio',     icon: LayoutDashboard },
   { href: '/ejercicios', label: 'Ejercicios', icon: Dumbbell },
-  { href: '/nutricion',  label: 'Nutrición',  icon: Salad },
   { href: '/rutinas',    label: 'Rutinas',    icon: ListChecks },
   { href: '/progreso',   label: 'Progreso',   icon: TrendingUp },
   { href: '/ia',         label: 'IA',         icon: Brain },
