@@ -432,6 +432,9 @@ export default function InicioPage() {
   const imagenComida = perfil?.sexo === 'mujer'
     ? '/caricaturas/mujer-comida.png'
     : '/caricaturas/hombre-comida.png'
+  const imagenAgua = perfil?.sexo === 'mujer'
+    ? '/caricaturas/mujer-agua.png'
+    : '/caricaturas/hombre-agua.png'
   const imagenEntrena = perfil?.sexo === 'mujer'
     ? '/caricaturas/mujer-entrena.png'
     : '/caricaturas/hombre-entrena.png'
@@ -891,7 +894,7 @@ export default function InicioPage() {
             {/* Columna derecha: personaje */}
             <div className="w-20 flex-shrink-0 flex items-end justify-center">
               <img
-                src="/caricaturas/hombre-agua.png"
+                src={imagenAgua}
                 alt=""
                 className="agua-caricatura pointer-events-none select-none"
                 style={{
