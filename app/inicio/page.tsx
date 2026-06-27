@@ -407,6 +407,14 @@ export default function InicioPage() {
 
   const calRestantes = metaCal - Math.round(consumo.calorias)
   const calExcedido  = consumo.calorias > metaCal
+  const pctCal         = metaCal > 0 ? Math.min((consumo.calorias / metaCal) * 100, 100) : 0
+  const tdeeNum        = perfil?.tdee ?? 0
+  const estadoLabel    = metaCal < tdeeNum - 50 ? 'DÉFICIT' : metaCal > tdeeNum + 50 ? 'SUPERÁVIT' : 'MANTENIM.'
+  const estadoBadgeClass = metaCal < tdeeNum - 50
+    ? 'bg-red-500/20 text-red-400'
+    : metaCal > tdeeNum + 50
+    ? 'bg-emerald-500/20 text-emerald-400'
+    : 'bg-blue-500/20 text-blue-300'
 
   const metaAgua    = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
   const pctAgua     = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
@@ -454,327 +462,333 @@ export default function InicioPage() {
           </button>
         </div>
 
-        {/* BIENVENIDA */}
-        <div
-          className="rounded-2xl p-5 mb-4 border border-[#FFE08A]/50"
-          style={{ background: 'linear-gradient(135deg, #1a1200 0%, #100c00 100%)', boxShadow: '0 0 28px rgba(255,193,60,0.13)' }}>
-          <h2 className="text-2xl font-bold mb-3 text-[#FFC93C]">¡Hola, {nombre}! 💪</h2>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="bg-black/30 rounded-xl p-3 text-center">
-              <div className="text-base font-bold text-white">{tdee}</div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">Mantenimiento</div>
-            </div>
-            <div className="bg-black/30 rounded-xl p-3 text-center">
-              <div className="text-base font-bold text-[#FFC93C]">{kcal}</div>
-              <div className="text-[10px] text-[#FFC93C]/60 mt-1">{objLabel}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { val: metaPro,  lbl: 'Proteína',      color: 'text-[#38B6FF]' },
-              { val: metaCarb, lbl: 'Carbohidratos', color: 'text-[#FF9D42]' },
-              { val: metaGra,  lbl: 'Grasas',        color: 'text-[#FF5C5C]' },
-            ].map(({ val, lbl, color }) => (
-              <div key={lbl} className="bg-black/30 rounded-xl p-3 text-center">
-                <div className={`text-base font-bold ${color}`}>{val > 0 ? `${val}g` : '—'}</div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">{lbl}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CALORÍAS, MACROS Y REGISTRO DEL DÍA */}
-        <div className="relative mb-4">
-          <img
-            src={imagenComida}
-            alt=""
-            className="comida-caricatura absolute right-4 z-10 pointer-events-none select-none"
-            style={{ top: '-16px', animation: 'aguaFloat 3s ease-in-out infinite' }}
-          />
+        {/* MÓDULO UNIFICADO: SALUDO + NUTRICIÓN */}
+        <div className="mb-4">
           <div
-            className="rounded-2xl p-4 border border-[#9CF5C2]/40"
-            style={{ background: 'linear-gradient(135deg, #051a0b 0%, #081510 100%)', boxShadow: '0 0 28px rgba(46,229,125,0.10)' }}>
-          <p className="text-xs font-semibold text-[#2EE57D]/70 uppercase tracking-widest mb-3">Nutrición</p>
+            className="rounded-2xl border border-[#B57BFF]/40"
+            style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)', boxShadow: '0 0 28px rgba(181,123,255,0.13)' }}>
 
-          {/* ── Navegador de fecha ── */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={irDiaAnterior}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors">
-              ◄
-            </button>
-            <span className="text-sm font-semibold text-gray-300 tracking-wide">
-              {labelFecha(fechaSeleccionada)}
-            </span>
-            <button
-              onClick={irDiaSiguiente}
-              disabled={esHoy}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 disabled:opacity-25 disabled:cursor-not-allowed text-xs transition-colors">
-              ►
-            </button>
-          </div>
-
-          {/* ── Calorías ── */}
-          <div className="mb-3">
-            <p className="text-xs font-semibold text-[#2EE57D]/60 uppercase tracking-wide mb-1">Te quedan hoy</p>
-            <div className="flex items-baseline gap-1.5 mb-2">
-              <span className={`text-3xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#2EE57D]'}`}>
-                {calRestantes.toLocaleString()}
-              </span>
-              <span className="text-sm font-semibold text-gray-400">kcal</span>
-            </div>
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-xs text-gray-500">
-                {Math.round(consumo.calorias).toLocaleString()} / {metaCal.toLocaleString()} kcal
-              </span>
-            </div>
-            <Barra consumido={consumo.calorias} meta={metaCal} color="bg-[#2EE57D]" />
-          </div>
-
-          {/* ── Macros ── */}
-          <div className="flex flex-col gap-2 mb-4">
-            {macros.map(({ lbl, con, meta, color, text }) => {
-              const excedido = con > meta
-              const quedan   = Math.max(meta - con, 0)
-              return (
-                <div key={lbl}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-400">{lbl}</span>
-                    <span className={`text-xs font-medium ${excedido ? 'text-red-400' : 'text-gray-500'}`}>
-                      <span className={text}>{con}g</span>
-                      {' / '}{meta}g
-                      {excedido
-                        ? <span className="text-red-400"> · +{con - meta}g</span>
-                        : <span className="text-gray-600"> · quedan {quedan}g</span>}
-                    </span>
-                  </div>
-                  <Barra consumido={con} meta={meta} color={color} />
-                </div>
-              )
-            })}
-          </div>
-
-          {/* ── Lista de alimentos del día ── */}
-          {cargandoRegistros && (
-            <div className="flex justify-center py-3">
-              <div className="w-4 h-4 rounded-full border border-white/20 border-t-white/60 animate-spin" />
-            </div>
-          )}
-
-          {!cargandoRegistros && registros.length > 0 && (
-            <div className="border-t border-[#F5C518]/8 pt-3 mb-3">
-              <p className="text-[10px] text-[#F5C518]/40 uppercase tracking-widest mb-2">
-                Alimentos · {registros.length} {registros.length === 1 ? 'item' : 'items'}
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {registros.map(r => (
-                  <div key={r.id} className="flex items-center gap-2 px-3 py-2.5 bg-white/4 rounded-xl border border-white/5">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-white truncate">{r.nombre_comida}</div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-[10px] text-gray-600">{formatCantidad(r)}</span>
-                        <span className="text-[10px] font-bold text-[#F5C518]/90">{r.calorias} kcal</span>
-                        <span className="text-[10px] text-blue-400/70">P{r.proteina}</span>
-                        <span className="text-[10px] text-[#F5C518]/50">C{r.carbos}</span>
-                        <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => eliminarAlimento(r.id)}
-                      className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-600 hover:text-red-400 text-xs transition-colors">
-                      ✕
-                    </button>
-                  </div>
-                ))}
+            {/* ── Saludo + muñequito ── */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              <div>
+                <h2 className="text-2xl font-bold text-[#B57BFF]">¡Hola, {nombre}! 💪</h2>
+                <p className="text-[11px] text-[#B57BFF]/45 mt-0.5 uppercase tracking-widest">Nutrición</p>
               </div>
+              <img
+                src={imagenComida}
+                alt=""
+                className="comida-caricatura pointer-events-none select-none"
+                style={{ animation: 'aguaFloat 3s ease-in-out infinite' }}
+              />
             </div>
-          )}
 
-          {!cargandoRegistros && registros.length === 0 && !formAbierto && (
-            <p className="text-xs text-gray-700 text-center py-1 mb-2">
-              Sin alimentos registrados {esHoy ? 'hoy' : 'ese día'}.
-            </p>
-          )}
+            <div className="px-5 pb-5">
 
-          {/* ── Formulario de búsqueda / agregar alimento ── */}
-          {formAbierto ? (
-            <div className="border-t border-[#F5C518]/10 pt-3">
-
-              {/* Título del formulario */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">🍽️</span>
-                <h3 className="text-sm font-bold text-white flex-1">¿Qué comiste?</h3>
+              {/* ── Navegador de fecha ── */}
+              <div className="flex items-center justify-between mb-4">
                 <button
-                  onClick={cerrarFormulario}
-                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white text-xs transition-colors">
-                  ✕
+                  onClick={irDiaAnterior}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 text-xs transition-colors">
+                  ◄
+                </button>
+                <span className="text-sm font-semibold text-gray-300 tracking-wide">
+                  {labelFecha(fechaSeleccionada)}
+                </span>
+                <button
+                  onClick={irDiaSiguiente}
+                  disabled={esHoy}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 disabled:opacity-25 disabled:cursor-not-allowed text-xs transition-colors">
+                  ►
                 </button>
               </div>
 
-              {/* Estado A: buscando alimento */}
-              {!alimentoSel ? (
-                <>
-                  <div className="mb-2">
-                    <input
-                      type="text"
-                      placeholder="Buscar alimento…"
-                      value={busquedaAlim}
-                      onChange={e => setBusquedaAlim(e.target.value)}
-                      autoFocus
-                      className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#F5C518]/40 focus:bg-black/60 transition-all"
-                    />
+              {/* ── Anillo + cajitas ── */}
+              <div className="flex items-center gap-4 mb-4">
+
+                {/* Anillo circular de progreso */}
+                <div className="relative shrink-0" style={{ width: 108, height: 108 }}>
+                  <div
+                    className="w-full h-full rounded-full"
+                    style={{
+                      background: `conic-gradient(${calExcedido ? '#FF5C5C' : '#B57BFF'} ${pctCal}%, rgba(255,255,255,0.06) 0%)`,
+                    }}>
+                    <div
+                      className="absolute inset-[11px] rounded-full flex flex-col items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)' }}>
+                      <span className={`text-xl font-black leading-none tabular-nums ${calExcedido ? 'text-red-400' : 'text-[#B57BFF]'}`}>
+                        {Math.abs(calRestantes).toLocaleString()}
+                      </span>
+                      <span className="text-[9px] text-gray-500 uppercase tracking-wide mt-0.5">
+                        {calExcedido ? 'excedido' : 'restantes'}
+                      </span>
+                    </div>
                   </div>
+                </div>
 
-                  {buscandoAlim && (
-                    <p className="text-xs text-gray-600 text-center py-2">Buscando…</p>
-                  )}
+                {/* Cajitas mantenimiento + meta */}
+                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                  <div className="bg-black/30 rounded-xl px-3 py-2.5">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Mantenimiento</div>
+                    <div className="text-base font-bold text-white">{tdee} <span className="text-xs font-normal text-gray-500">kcal</span></div>
+                  </div>
+                  <div className="bg-black/30 rounded-xl px-3 py-2.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wide">Meta</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${estadoBadgeClass}`}>{estadoLabel}</span>
+                    </div>
+                    <div className="text-base font-bold text-[#B57BFF]">{kcal} <span className="text-xs font-normal text-gray-500">kcal</span></div>
+                    <div className="text-[10px] text-gray-600">{Math.round(consumo.calorias).toLocaleString()} consumidas</div>
+                  </div>
+                </div>
 
-                  {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
-                    <p className="text-xs text-gray-600 text-center py-2">
-                      Sin resultados para &ldquo;{busquedaAlim}&rdquo;
-                    </p>
-                  )}
+              </div>
 
-                  {resultadosAlim.length > 0 && (
-                    <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
-                      {resultadosAlim.map(a => (
-                        <button
-                          key={a.id}
-                          onClick={() => seleccionarAlimento(a)}
-                          className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#F5C518]/8 border border-transparent hover:border-[#F5C518]/15 transition-all">
-                          <div className="text-xs font-semibold text-white">{a.nombre}</div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">
-                            <span className="text-[#F5C518]/70">{a.calorias_100g} kcal</span>
-                            {' · '}
-                            <span className="text-blue-400/60">P{a.proteina_100g}</span>
-                            {' · '}
-                            <span className="text-[#F5C518]/40">C{a.carbos_100g}</span>
-                            {' · '}
-                            <span className="text-orange-400/40">G{a.grasas_100g}</span>
-                            {' /100g'}
+              {/* ── Macros ── */}
+              <div className="flex flex-col gap-2 mb-4">
+                {macros.map(({ lbl, con, meta, color, text }) => {
+                  const excedido = con > meta
+                  const quedan   = Math.max(meta - con, 0)
+                  return (
+                    <div key={lbl}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-400">{lbl}</span>
+                        <span className={`text-xs font-medium ${excedido ? 'text-red-400' : 'text-gray-500'}`}>
+                          <span className={text}>{con}g</span>
+                          {' / '}{meta}g
+                          {excedido
+                            ? <span className="text-red-400"> · +{con - meta}g</span>
+                            : <span className="text-gray-600"> · quedan {quedan}g</span>}
+                        </span>
+                      </div>
+                      <Barra consumido={con} meta={meta} color={color} />
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* ── Lista de alimentos del día ── */}
+              {cargandoRegistros && (
+                <div className="flex justify-center py-3">
+                  <div className="w-4 h-4 rounded-full border border-white/20 border-t-white/60 animate-spin" />
+                </div>
+              )}
+
+              {!cargandoRegistros && registros.length > 0 && (
+                <div className="border-t border-[#B57BFF]/10 pt-3 mb-3">
+                  <p className="text-[10px] text-[#B57BFF]/40 uppercase tracking-widest mb-2">
+                    Alimentos · {registros.length} {registros.length === 1 ? 'item' : 'items'}
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {registros.map(r => (
+                      <div key={r.id} className="flex items-center gap-2 px-3 py-2.5 bg-white/4 rounded-xl border border-white/5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-white truncate">{r.nombre_comida}</div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[10px] text-gray-600">{formatCantidad(r)}</span>
+                            <span className="text-[10px] font-bold text-[#B57BFF]/90">{r.calorias} kcal</span>
+                            <span className="text-[10px] text-blue-400/70">P{r.proteina}</span>
+                            <span className="text-[10px] text-[#FF9D42]/50">C{r.carbos}</span>
+                            <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
                           </div>
+                        </div>
+                        <button
+                          onClick={() => eliminarAlimento(r.id)}
+                          className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-600 hover:text-red-400 text-xs transition-colors">
+                          ✕
                         </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Estado B: alimento seleccionado → elegir cantidad */
-                <>
-                  {/* Chip del alimento elegido */}
-                  <div className="bg-gradient-to-r from-[#1c1800] to-[#1a1a00] border border-[#F5C518]/30 rounded-2xl px-4 py-3 mb-3">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm shrink-0">✅</span>
-                        <span className="text-sm font-bold text-white truncate">{alimentoSel.nombre}</span>
                       </div>
-                      <button
-                        onClick={() => { setAlimentoSel(null); setBusquedaAlim('') }}
-                        className="shrink-0 text-[10px] text-gray-500 hover:text-[#F5C518] border border-white/10 hover:border-[#F5C518]/30 rounded-lg px-2 py-0.5 transition-all">
-                        cambiar
-                      </button>
-                    </div>
-                    {preview && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-black text-[#F5C518]">{preview.calorias} kcal</span>
-                        <span className="text-gray-700 text-xs">·</span>
-                        <span className="text-xs font-semibold text-blue-400">P {preview.proteina}g</span>
-                        <span className="text-xs font-semibold text-[#F5C518]/70">C {preview.carbos}g</span>
-                        <span className="text-xs font-semibold text-orange-400">G {preview.grasas}g</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Toggle gramos / porción-unidad */}
-                  <div className="flex gap-2 mb-3">
-                    {(['gramos', 'unidades'] as const).map(m => (
-                      <button
-                        key={m}
-                        onClick={() => {
-                          setModoRegistro(m)
-                          if (m === 'unidades' && alimentoSel) {
-                            setPesoPorcion(String(gramosPorUnidad(alimentoSel.nombre)))
-                          }
-                        }}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                          modoRegistro === m
-                            ? 'bg-[#F5C518] text-black shadow-[0_0_12px_rgba(245,197,24,0.25)]'
-                            : 'bg-black/40 text-gray-500 border border-white/10 hover:border-white/20 hover:text-gray-300'
-                        }`}>
-                        {m === 'gramos' ? '⚖️ Gramos' : '🔢 Porción / Unidad'}
-                      </button>
                     ))}
                   </div>
-
-                  {modoRegistro === 'gramos' ? (
-                    /* Modo gramos */
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          min="1"
-                          value={gramosInput}
-                          onChange={e => setGramosInput(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && agregarAlimento()}
-                          className="w-full bg-black/50 border border-white/15 rounded-xl pl-4 pr-9 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 pointer-events-none">g</span>
-                      </div>
-                      <button
-                        onClick={agregarAlimento}
-                        disabled={guardandoAlim}
-                        className="bg-[#F5C518] hover:bg-[#f0bc00] disabled:opacity-40 text-black font-black rounded-xl px-5 py-2.5 text-sm active:scale-95 transition-all whitespace-nowrap shadow-[0_0_16px_rgba(245,197,24,0.3)]">
-                        {guardandoAlim ? '…' : '＋ Agregar'}
-                      </button>
-                    </div>
-                  ) : (
-                    /* Modo porción / unidad */
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Porciones</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={unidadesInput}
-                            onChange={e => setUnidadesInput(e.target.value)}
-                            className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Peso c/u (g)</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={pesoPorcion}
-                            onChange={e => setPesoPorcion(e.target.value)}
-                            className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#F5C518]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#F5C518]/50 pl-1">
-                        Total: {unidadesInput || 0} × {pesoPorcion || 0}g = {Math.round((parseFloat(unidadesInput) || 0) * (parseFloat(pesoPorcion) || 0))}g
-                      </p>
-                      <button
-                        onClick={agregarAlimento}
-                        disabled={guardandoAlim}
-                        className="w-full bg-[#F5C518] hover:bg-[#f0bc00] disabled:opacity-40 text-black font-black rounded-xl py-2.5 text-sm active:scale-95 transition-all shadow-[0_0_16px_rgba(245,197,24,0.3)]">
-                        {guardandoAlim ? '…' : '＋ Agregar'}
-                      </button>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
+
+              {!cargandoRegistros && registros.length === 0 && !formAbierto && (
+                <p className="text-xs text-gray-700 text-center py-1 mb-2">
+                  Sin alimentos registrados {esHoy ? 'hoy' : 'ese día'}.
+                </p>
+              )}
+
+              {/* ── Formulario de búsqueda / agregar alimento ── */}
+              {formAbierto ? (
+                <div className="border-t border-[#B57BFF]/10 pt-3">
+
+                  {/* Título del formulario */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">🍽️</span>
+                    <h3 className="text-sm font-bold text-white flex-1">¿Qué comiste?</h3>
+                    <button
+                      onClick={cerrarFormulario}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white text-xs transition-colors">
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Estado A: buscando alimento */}
+                  {!alimentoSel ? (
+                    <>
+                      <div className="mb-2">
+                        <input
+                          type="text"
+                          placeholder="Buscar alimento…"
+                          value={busquedaAlim}
+                          onChange={e => setBusquedaAlim(e.target.value)}
+                          autoFocus
+                          className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#B57BFF]/40 focus:bg-black/60 transition-all"
+                        />
+                      </div>
+
+                      {buscandoAlim && (
+                        <p className="text-xs text-gray-600 text-center py-2">Buscando…</p>
+                      )}
+
+                      {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
+                        <p className="text-xs text-gray-600 text-center py-2">
+                          Sin resultados para &ldquo;{busquedaAlim}&rdquo;
+                        </p>
+                      )}
+
+                      {resultadosAlim.length > 0 && (
+                        <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
+                          {resultadosAlim.map(a => (
+                            <button
+                              key={a.id}
+                              onClick={() => seleccionarAlimento(a)}
+                              className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#B57BFF]/8 border border-transparent hover:border-[#B57BFF]/15 transition-all">
+                              <div className="text-xs font-semibold text-white">{a.nombre}</div>
+                              <div className="text-[10px] text-gray-500 mt-0.5">
+                                <span className="text-[#B57BFF]/70">{a.calorias_100g} kcal</span>
+                                {' · '}
+                                <span className="text-blue-400/60">P{a.proteina_100g}</span>
+                                {' · '}
+                                <span className="text-[#B57BFF]/40">C{a.carbos_100g}</span>
+                                {' · '}
+                                <span className="text-orange-400/40">G{a.grasas_100g}</span>
+                                {' /100g'}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Estado B: alimento seleccionado → elegir cantidad */
+                    <>
+                      {/* Chip del alimento elegido */}
+                      <div className="bg-gradient-to-r from-[#1a0d35] to-[#150a2a] border border-[#B57BFF]/30 rounded-2xl px-4 py-3 mb-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm shrink-0">✅</span>
+                            <span className="text-sm font-bold text-white truncate">{alimentoSel.nombre}</span>
+                          </div>
+                          <button
+                            onClick={() => { setAlimentoSel(null); setBusquedaAlim('') }}
+                            className="shrink-0 text-[10px] text-gray-500 hover:text-[#B57BFF] border border-white/10 hover:border-[#B57BFF]/30 rounded-lg px-2 py-0.5 transition-all">
+                            cambiar
+                          </button>
+                        </div>
+                        {preview && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-[#B57BFF]">{preview.calorias} kcal</span>
+                            <span className="text-gray-700 text-xs">·</span>
+                            <span className="text-xs font-semibold text-blue-400">P {preview.proteina}g</span>
+                            <span className="text-xs font-semibold text-[#B57BFF]/70">C {preview.carbos}g</span>
+                            <span className="text-xs font-semibold text-orange-400">G {preview.grasas}g</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Toggle gramos / porción-unidad */}
+                      <div className="flex gap-2 mb-3">
+                        {(['gramos', 'unidades'] as const).map(m => (
+                          <button
+                            key={m}
+                            onClick={() => {
+                              setModoRegistro(m)
+                              if (m === 'unidades' && alimentoSel) {
+                                setPesoPorcion(String(gramosPorUnidad(alimentoSel.nombre)))
+                              }
+                            }}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                              modoRegistro === m
+                                ? 'bg-[#B57BFF] text-black shadow-[0_0_12px_rgba(181,123,255,0.25)]'
+                                : 'bg-black/40 text-gray-500 border border-white/10 hover:border-white/20 hover:text-gray-300'
+                            }`}>
+                            {m === 'gramos' ? '⚖️ Gramos' : '🔢 Porción / Unidad'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {modoRegistro === 'gramos' ? (
+                        /* Modo gramos */
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="number"
+                              min="1"
+                              value={gramosInput}
+                              onChange={e => setGramosInput(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && agregarAlimento()}
+                              className="w-full bg-black/50 border border-white/15 rounded-xl pl-4 pr-9 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#B57BFF]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 pointer-events-none">g</span>
+                          </div>
+                          <button
+                            onClick={agregarAlimento}
+                            disabled={guardandoAlim}
+                            className="bg-[#B57BFF] hover:bg-[#c490ff] disabled:opacity-40 text-black font-black rounded-xl px-5 py-2.5 text-sm active:scale-95 transition-all whitespace-nowrap shadow-[0_0_16px_rgba(181,123,255,0.3)]">
+                            {guardandoAlim ? '…' : '＋ Agregar'}
+                          </button>
+                        </div>
+                      ) : (
+                        /* Modo porción / unidad */
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Porciones</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={unidadesInput}
+                                onChange={e => setUnidadesInput(e.target.value)}
+                                className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#B57BFF]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Peso c/u (g)</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={pesoPorcion}
+                                onChange={e => setPesoPorcion(e.target.value)}
+                                className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#B57BFF]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[#B57BFF]/50 pl-1">
+                            Total: {unidadesInput || 0} × {pesoPorcion || 0}g = {Math.round((parseFloat(unidadesInput) || 0) * (parseFloat(pesoPorcion) || 0))}g
+                          </p>
+                          <button
+                            onClick={agregarAlimento}
+                            disabled={guardandoAlim}
+                            className="w-full bg-[#B57BFF] hover:bg-[#c490ff] disabled:opacity-40 text-black font-black rounded-xl py-2.5 text-sm active:scale-95 transition-all shadow-[0_0_16px_rgba(181,123,255,0.3)]">
+                            {guardandoAlim ? '…' : '＋ Agregar'}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                /* Botón para abrir el formulario */
+                <button
+                  onClick={() => setFormAbierto(true)}
+                  className="w-full flex items-center justify-center gap-2 border border-dashed border-[#B57BFF]/25 rounded-xl py-3 text-sm font-semibold text-[#B57BFF]/50 hover:text-[#B57BFF]/80 hover:border-[#B57BFF]/40 hover:bg-[#B57BFF]/4 transition-all">
+                  <span className="text-base">🍽️</span>
+                  Agregar alimento
+                </button>
+              )}
+
             </div>
-          ) : (
-            /* Botón para abrir el formulario */
-            <button
-              onClick={() => setFormAbierto(true)}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-[#F5C518]/25 rounded-xl py-3 text-sm font-semibold text-[#F5C518]/50 hover:text-[#F5C518]/80 hover:border-[#F5C518]/40 hover:bg-[#F5C518]/4 transition-all">
-              <span className="text-base">🍽️</span>
-              Agregar alimento
-            </button>
-          )}
           </div>
         </div>
 
