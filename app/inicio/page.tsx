@@ -36,6 +36,7 @@ type Perfil = {
   carbos_objetivo:   number | null
   grasas_objetivo:   number | null
   nivel_actividad:   string | null
+  sexo:              string | null
 }
 
 type RegistroItem = {
@@ -181,7 +182,7 @@ export default function InicioPage() {
       const [{ data: perfilData }, { data: aguaHoy }] = await Promise.all([
         supabase
           .from('perfiles')
-          .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo, nivel_actividad')
+          .select('nombre_completo, edad, peso_kg, altura_cm, tdee, calorias_objetivo, objetivo, proteina_objetivo, carbos_objetivo, grasas_objetivo, nivel_actividad, sexo')
           .eq('id', user.id)
           .maybeSingle(),
         supabase
@@ -393,8 +394,11 @@ export default function InicioPage() {
   const calRestantes = metaCal - Math.round(consumo.calorias)
   const calExcedido  = consumo.calorias > metaCal
 
-  const metaAgua = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
-  const pctAgua  = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
+  const metaAgua    = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
+  const pctAgua     = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
+  const imagenComida = perfil?.sexo === 'mujer'
+    ? '/caricaturas/mujer-comida.png'
+    : '/caricaturas/hombre-comida.png'
 
   const macros = [
     { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-[#38B6FF]',  text: 'text-[#38B6FF]'  },
@@ -457,9 +461,16 @@ export default function InicioPage() {
         </div>
 
         {/* CALORÍAS, MACROS Y REGISTRO DEL DÍA */}
-        <div
-          className="rounded-2xl p-4 mb-4 border border-[#9CF5C2]/40"
-          style={{ background: 'linear-gradient(135deg, #051a0b 0%, #081510 100%)', boxShadow: '0 0 28px rgba(46,229,125,0.10)' }}>
+        <div className="relative mb-4">
+          <img
+            src={imagenComida}
+            alt=""
+            className="comida-caricatura absolute right-4 z-10 pointer-events-none select-none"
+            style={{ top: '-16px', animation: 'aguaFloat 3s ease-in-out infinite' }}
+          />
+          <div
+            className="rounded-2xl p-4 border border-[#9CF5C2]/40"
+            style={{ background: 'linear-gradient(135deg, #051a0b 0%, #081510 100%)', boxShadow: '0 0 28px rgba(46,229,125,0.10)' }}>
           <p className="text-xs font-semibold text-[#2EE57D]/70 uppercase tracking-widest mb-3">Nutrición</p>
 
           {/* ── Navegador de fecha ── */}
@@ -741,6 +752,7 @@ export default function InicioPage() {
               Agregar alimento
             </button>
           )}
+          </div>
         </div>
 
         {/* HIDRATACIÓN */}
@@ -757,6 +769,8 @@ export default function InicioPage() {
           }
           .agua-caricatura { height: 130px; width: auto; }
           @media (max-width: 640px) { .agua-caricatura { height: 95px; } }
+          .comida-caricatura { height: 100px; width: auto; }
+          @media (max-width: 640px) { .comida-caricatura { height: 72px; } }
         `}</style>
         <div
           className="relative rounded-2xl p-4 mb-4 overflow-hidden border border-[#9DD9FF]/40"
