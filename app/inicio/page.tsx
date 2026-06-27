@@ -543,27 +543,19 @@ export default function InicioPage() {
 
               </div>
 
-              {/* ── Macros ── */}
-              <div className="flex flex-col gap-2 mb-4">
-                {macros.map(({ lbl, con, meta, color, text }) => {
-                  const excedido = con > meta
-                  const quedan   = Math.max(meta - con, 0)
-                  return (
-                    <div key={lbl}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-400">{lbl}</span>
-                        <span className={`text-xs font-medium ${excedido ? 'text-red-400' : 'text-gray-500'}`}>
-                          <span className={text}>{con}g</span>
-                          {' / '}{meta}g
-                          {excedido
-                            ? <span className="text-red-400"> · +{con - meta}g</span>
-                            : <span className="text-gray-600"> · quedan {quedan}g</span>}
-                        </span>
-                      </div>
+              {/* ── Macros en cajitas ── */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {macros.map(({ lbl, con, meta, color, text }) => (
+                  <div key={lbl} className="bg-black/30 rounded-xl px-2.5 py-2.5">
+                    <div className="text-[10px] text-gray-500 mb-1 truncate">{lbl}</div>
+                    <div className={`text-xs font-bold ${con > meta ? 'text-red-400' : text}`}>
+                      {con} / {meta}g
+                    </div>
+                    <div className="mt-1.5">
                       <Barra consumido={con} meta={meta} color={color} />
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
 
               {/* ── Lista de alimentos del día ── */}
@@ -788,11 +780,110 @@ export default function InicioPage() {
                 </button>
               )}
 
+              {/* ── Hidratación ── */}
+              <div className="border-t border-white/8 mt-2 pt-4">
+                <div className="flex items-start gap-4">
+
+                  {/* Gota de agua con relleno */}
+                  <div className="shrink-0" style={{ width: 80, height: 110, position: 'relative' }}>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        position: 'relative',
+                        clipPath: 'path("M 40,5 C 65,15 80,45 80,70 A 40,40,0,1,1,0,70 C 0,45 15,15 40,5 Z")',
+                        background: 'rgba(56,182,255,0.08)',
+                      }}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: `${Math.min(pctAgua, 100)}%`,
+                          background: pctAgua >= 100
+                            ? 'linear-gradient(180deg,#34d399 0%,#10b981 100%)'
+                            : 'linear-gradient(180deg,#38B6FF 0%,#0A6FD4 100%)',
+                          transition: 'height 0.7s ease-out',
+                        }}
+                      />
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 900, color: 'white', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
+                          {(mlBebidos / 1000).toFixed(1)}
+                        </span>
+                        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.85)', lineHeight: 1.3, textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
+                          / {(metaAgua / 1000).toFixed(1)} L
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info + entrada */}
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-xs font-semibold ${pctAgua >= 100 ? 'text-emerald-400' : 'text-[#38B6FF]'}`}>
+                      Hidratación · {Math.min(Math.round(pctAgua), 100)}%
+                    </span>
+                    <p className="text-[11px] text-gray-600 mb-3 mt-0.5">
+                      {Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'} · meta {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="¿Cuánto tomaste?"
+                          value={mlManual}
+                          onChange={e => setMlManual(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && aplicarManual(1)}
+                          className="w-full bg-black/40 border border-white/8 rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white placeholder-gray-700 outline-none focus:border-sky-500/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none select-none">ml</span>
+                      </div>
+                      <button
+                        onClick={() => { reproducirSonido('gota'); aplicarManual(1) }}
+                        disabled={guardandoAgua || !mlManual}
+                        className="bg-[#38B6FF] hover:bg-[#5ec6ff] disabled:bg-[#38B6FF]/30 text-black font-bold rounded-xl px-3 py-2 text-xs active:scale-95 transition-all whitespace-nowrap">
+                        💧 Sumar
+                      </button>
+                    </div>
+                    {mlManual && mlBebidos > 0 && (
+                      <button
+                        onClick={() => aplicarManual(-1)}
+                        disabled={guardandoAgua}
+                        className="mt-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors py-1">
+                        − Corregir (quitar {mlManual} ml)
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+
+                {pctAgua >= 100 && (
+                  <p className="mt-3 text-xs font-semibold text-emerald-400 text-center">🎉 ¡Meta de agua cumplida hoy! 💧</p>
+                )}
+
+                {typeof window !== 'undefined' && 'Notification' in window && (
+                  <div className="mt-3">
+                    {recordatoriosOn ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-[#38B6FF]/40">🔔 Recordatorios · 6 avisos/día</span>
+                        <button onClick={desactivarRecordatorios} className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">Desactivar</button>
+                      </div>
+                    ) : permisoNotif !== 'denied' ? (
+                      <button
+                        onClick={activarRecordatorios}
+                        className="w-full border border-[#38B6FF]/15 rounded-xl py-1.5 text-[10px] font-medium text-[#38B6FF]/50 hover:text-[#38B6FF] hover:border-[#38B6FF]/30 transition-all">
+                        🔔 Activar recordatorios de agua
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </div>
 
-        {/* HIDRATACIÓN */}
         <style>{`
           @keyframes aguaFloat {
             0%, 100% { transform: translateY(0px); }
@@ -833,154 +924,6 @@ export default function InicioPage() {
           .modulo-caricatura { height: 72px; width: auto; }
           @media (max-width: 640px) { .modulo-caricatura { height: 52px; } }
         `}</style>
-        <div
-          className="relative rounded-2xl p-4 mb-4 overflow-hidden border border-[#9DD9FF]/40"
-          style={{ background: 'linear-gradient(135deg, #051220 0%, #081828 100%)', boxShadow: '0 0 28px rgba(56,182,255,0.12)' }}>
-
-          {/* Glow decorativo */}
-          <div className="absolute -top-10 -right-10 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Header: título + meta diaria */}
-          <div className="flex items-center justify-between mb-3 relative">
-            <p className="text-xs font-semibold text-[#38B6FF]/70 uppercase tracking-widest">Hidratación</p>
-            <p className="text-xs font-bold text-[#9DD9FF]/60">
-              Meta: {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
-            </p>
-          </div>
-
-          {/* Fila: datos (izq) + personaje (der) */}
-          <div className="flex gap-3 items-end mb-1 relative">
-
-            {/* Columna izquierda: números + barra */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2 mb-0.5">
-                <span className={`text-4xl font-black tracking-tight transition-colors duration-500 ${
-                  pctAgua >= 100 ? 'text-emerald-400' : 'text-[#38B6FF]'
-                }`}>
-                  {mlBebidos >= 1000 ? (mlBebidos / 1000).toFixed(1) : mlBebidos}
-                </span>
-                <span className="text-lg font-semibold text-gray-500">
-                  {mlBebidos >= 1000 ? 'L' : 'ml'}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mb-3">
-                {Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'}
-                {' · de '}{metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
-              </p>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
-                <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{
-                    width: `${Math.min(pctAgua, 100)}%`,
-                    background: pctAgua >= 100
-                      ? 'linear-gradient(90deg, #10b981, #34d399)'
-                      : 'linear-gradient(90deg, #0369a1, #38bdf8)',
-                  }}
-                />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[11px] text-gray-600">{mlBebidos} ml registrados</span>
-                <span className={`text-[11px] font-semibold ${pctAgua >= 100 ? 'text-emerald-400' : 'text-[#38B6FF]'}`}>
-                  {Math.min(Math.round(pctAgua), 100)}%
-                </span>
-              </div>
-            </div>
-
-            {/* Columna derecha: personaje */}
-            <div className="w-20 flex-shrink-0 flex items-end justify-center">
-              <img
-                src={imagenAgua}
-                alt=""
-                className="agua-caricatura pointer-events-none select-none"
-                style={{
-                  animation: aguaSaltando
-                    ? 'aguaSalto 0.5s ease-out forwards'
-                    : 'aguaFloat 3s ease-in-out infinite',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Mensajes de hito */}
-          {pctAgua >= 100 ? (
-            <div className="mt-2 mb-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 text-center">
-              <p className="text-sm font-bold text-emerald-400">🎉 ¡Felicitaciones! Cumpliste tu meta de agua hoy 💧🙌</p>
-              <p className="text-xs text-gray-500 mt-0.5">Excelente hidratación. Los recordatorios se pausan por hoy.</p>
-            </div>
-          ) : pctAgua >= 75 ? (
-            <p className="mt-2 mb-2 text-xs font-medium text-sky-300/80 text-center">
-              🔥 ¡Casi llegas! Solo te faltan {metaAgua - mlBebidos} ml más.
-            </p>
-          ) : pctAgua >= 50 ? (
-            <p className="mt-2 mb-2 text-xs font-medium text-sky-400/60 text-center">
-              💪 ¡Vas a la mitad! Mantén el ritmo.
-            </p>
-          ) : (
-            <div className="mt-2 mb-2" />
-          )}
-
-          {/* Entrada manual */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type="number"
-                min="1"
-                placeholder="¿Cuánto tomaste?"
-                value={mlManual}
-                onChange={e => setMlManual(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && aplicarManual(1)}
-                className="w-full bg-black/40 border border-white/8 rounded-2xl pl-4 pr-10 py-2 text-sm font-medium text-white placeholder-gray-700 outline-none focus:border-sky-500/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-600 pointer-events-none select-none">ml</span>
-            </div>
-            <button
-              onClick={() => {
-                reproducirSonido('gota')
-                aplicarManual(1)
-                setAguaSaltando(true)
-                setTimeout(() => setAguaSaltando(false), 500)
-              }}
-              disabled={guardandoAgua || !mlManual}
-              className="bg-[#38B6FF] hover:bg-[#5ec6ff] disabled:bg-[#38B6FF]/30 text-black font-bold rounded-2xl px-4 py-2 text-sm active:scale-95 transition-all whitespace-nowrap">
-              💧 Sumar
-            </button>
-          </div>
-
-          {/* Restar: solo visible cuando hay texto en el input */}
-          {mlManual && mlBebidos > 0 && (
-            <button
-              onClick={() => aplicarManual(-1)}
-              disabled={guardandoAgua}
-              className="mt-2 w-full text-xs text-gray-600 hover:text-red-400 transition-colors py-1">
-              − Corregir (quitar {mlManual} ml del total)
-            </button>
-          )}
-
-          {/* Toggle de recordatorios */}
-          {typeof window !== 'undefined' && 'Notification' in window && (
-            <div className="border-t border-white/5 mt-3 pt-3">
-              {permisoNotif === 'denied' ? (
-                <p className="text-xs text-gray-600 text-center">
-                  🔕 Notificaciones bloqueadas en el navegador.
-                </p>
-              ) : recordatoriosOn ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#38B6FF]/50">🔔 Recordatorios activos · 6 avisos al día</span>
-                  <button onClick={desactivarRecordatorios} className="text-xs text-gray-600 hover:text-red-400 transition-colors">
-                    Desactivar
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={activarRecordatorios}
-                  className="w-full border border-[#38B6FF]/20 rounded-xl py-2 text-xs font-medium text-[#38B6FF]/60 hover:text-[#38B6FF] hover:border-[#38B6FF]/40 transition-all">
-                  🔔 Activar recordatorios de agua
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* MÓDULOS */}
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
         <div className="grid grid-cols-2 gap-3">
