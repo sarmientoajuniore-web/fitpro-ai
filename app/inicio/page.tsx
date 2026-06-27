@@ -109,6 +109,38 @@ function formatCantidad(item: RegistroItem): string {
   return `${item.cantidad_gramos}g`
 }
 
+// ─── Audio ────────────────────────────────────────────────────────────────────
+
+function reproducirSonido(tipo: 'pop' | 'gota') {
+  if (typeof window === 'undefined') return
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    const ctx: AudioContext = new AudioCtx()
+    const now = ctx.currentTime
+
+    const tono = (freq: number, t: number, dur: number, vol: number) => {
+      const osc = ctx.createOscillator()
+      const g   = ctx.createGain()
+      osc.connect(g)
+      g.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, now + t)
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.6, now + t + dur)
+      g.gain.setValueAtTime(vol, now + t)
+      g.gain.exponentialRampToValueAtTime(0.001, now + t + dur)
+      osc.start(now + t)
+      osc.stop(now + t + dur)
+    }
+
+    if (tipo === 'pop') {
+      tono(800, 0, 0.15, 0.28)
+    } else {
+      tono(620, 0,    0.15, 0.22)
+      tono(390, 0.13, 0.18, 0.22)
+    }
+  } catch { /* sin soporte de audio */ }
+}
+
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
 
 function Barra({ consumido, meta, color }: { consumido: number; meta: number; color: string }) {
@@ -300,6 +332,7 @@ export default function InicioPage() {
     })
     setGuardandoAlim(false)
     if (errComida) { console.error('[FitPro] Error guardando comida:', errComida); return }
+    reproducirSonido('pop')
     setAlimentoSel(null)
     setBusquedaAlim('')
     setGramosInput('100')
@@ -399,6 +432,12 @@ export default function InicioPage() {
   const imagenComida = perfil?.sexo === 'mujer'
     ? '/caricaturas/mujer-comida.png'
     : '/caricaturas/hombre-comida.png'
+  const imagenEntrena = perfil?.sexo === 'mujer'
+    ? '/caricaturas/mujer-entrena.png'
+    : '/caricaturas/hombre-entrena.png'
+  const imagenProteina = perfil?.sexo === 'mujer'
+    ? '/caricaturas/mujer-proteina.png'
+    : '/caricaturas/hombre-proteina.png'
 
   const macros = [
     { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-[#38B6FF]',  text: 'text-[#38B6FF]'  },
@@ -771,6 +810,30 @@ export default function InicioPage() {
           @media (max-width: 640px) { .agua-caricatura { height: 95px; } }
           .comida-caricatura { height: 100px; width: auto; }
           @media (max-width: 640px) { .comida-caricatura { height: 72px; } }
+          @keyframes rutinaFloatSalto {
+            0%   { transform: translateY(0px); }
+            16%  { transform: translateY(-5px); }
+            33%  { transform: translateY(0px); }
+            50%  { transform: translateY(-5px); }
+            57%  { transform: translateY(0px); }
+            67%  { transform: translateY(-16px) rotate(-5deg); }
+            77%  { transform: translateY(-3px) rotate(3deg); }
+            83%  { transform: translateY(-7px); }
+            90%  { transform: translateY(0px); }
+            100% { transform: translateY(0px); }
+          }
+          @keyframes progresoBalanceo {
+            0%   { transform: translateY(0px) rotate(0deg); }
+            15%  { transform: translateY(-5px) rotate(3deg); }
+            30%  { transform: translateY(0px) rotate(-3deg); }
+            45%  { transform: translateY(-5px) rotate(3deg); }
+            60%  { transform: translateY(0px) rotate(-3deg); }
+            75%  { transform: translateY(-4px) rotate(2deg); }
+            90%  { transform: translateY(0px) rotate(-1deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+          }
+          .modulo-caricatura { height: 72px; width: auto; }
+          @media (max-width: 640px) { .modulo-caricatura { height: 52px; } }
         `}</style>
         <div
           className="relative rounded-2xl p-4 mb-4 overflow-hidden border border-[#9DD9FF]/40"
@@ -874,6 +937,7 @@ export default function InicioPage() {
             </div>
             <button
               onClick={() => {
+                reproducirSonido('gota')
                 aplicarManual(1)
                 setAguaSaltando(true)
                 setTimeout(() => setAguaSaltando(false), 500)
@@ -922,20 +986,36 @@ export default function InicioPage() {
         {/* MÓDULOS */}
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
         <div className="grid grid-cols-2 gap-3">
-          <a href="/rutinas"
-            className="rounded-xl p-4 transition-all border border-[#FFD0A3]/50 hover:border-[#FFD0A3]/80"
-            style={{ background: 'linear-gradient(135deg, #1a0c00 0%, #110800 100%)', boxShadow: '0 0 18px rgba(255,157,66,0.10)' }}>
-            <div className="text-2xl mb-2">📋</div>
-            <div className="text-sm font-semibold mb-1 text-[#FF9D42]">Rutinas</div>
-            <div className="text-xs text-gray-500">Mis entrenamientos</div>
-          </a>
-          <a href="/progreso"
-            className="rounded-xl p-4 transition-all border border-[#DCC4FF]/50 hover:border-[#DCC4FF]/80"
-            style={{ background: 'linear-gradient(135deg, #0e0820 0%, #090618 100%)', boxShadow: '0 0 18px rgba(181,123,255,0.10)' }}>
-            <div className="text-2xl mb-2">📈</div>
-            <div className="text-sm font-semibold mb-1 text-[#B57BFF]">Progreso</div>
-            <div className="text-xs text-gray-500">Seguimiento corporal</div>
-          </a>
+          <div className="relative">
+            <img
+              src={imagenEntrena}
+              alt=""
+              className="modulo-caricatura absolute z-10 pointer-events-none select-none"
+              style={{ right: '-14px', bottom: '8px', animation: 'rutinaFloatSalto 3s ease-in-out infinite' }}
+            />
+            <a href="/rutinas"
+              className="block rounded-xl p-4 transition-all border border-[#FFD0A3]/50 hover:border-[#FFD0A3]/80"
+              style={{ background: 'linear-gradient(135deg, #1a0c00 0%, #110800 100%)', boxShadow: '0 0 18px rgba(255,157,66,0.10)' }}>
+              <div className="text-2xl mb-2">📋</div>
+              <div className="text-sm font-semibold mb-1 text-[#FF9D42]">Rutinas</div>
+              <div className="text-xs text-gray-500">Mis entrenamientos</div>
+            </a>
+          </div>
+          <div className="relative">
+            <img
+              src={imagenProteina}
+              alt=""
+              className="modulo-caricatura absolute z-10 pointer-events-none select-none"
+              style={{ right: '-14px', bottom: '8px', animation: 'progresoBalanceo 3s ease-in-out infinite' }}
+            />
+            <a href="/progreso"
+              className="block rounded-xl p-4 transition-all border border-[#DCC4FF]/50 hover:border-[#DCC4FF]/80"
+              style={{ background: 'linear-gradient(135deg, #0e0820 0%, #090618 100%)', boxShadow: '0 0 18px rgba(181,123,255,0.10)' }}>
+              <div className="text-2xl mb-2">📈</div>
+              <div className="text-sm font-semibold mb-1 text-[#B57BFF]">Progreso</div>
+              <div className="text-xs text-gray-500">Seguimiento corporal</div>
+            </a>
+          </div>
         </div>
 
       </div>
