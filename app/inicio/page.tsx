@@ -155,6 +155,7 @@ export default function InicioPage() {
   const [mlManual,        setMlManual]        = useState('')
   const [permisoNotif,    setPermisoNotif]    = useState<NotificationPermission>('default')
   const [recordatoriosOn, setRecordatoriosOn] = useState(false)
+  const [aguaSaltando,    setAguaSaltando]    = useState(false)
 
   // ── Formulario de agregar alimento ────────────────────────────────────────
   const [formAbierto,    setFormAbierto]    = useState(false)
@@ -739,7 +740,35 @@ export default function InicioPage() {
         </div>
 
         {/* HIDRATACIÓN */}
-        <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-4 mb-4 overflow-hidden">
+        <style>{`
+          @keyframes aguaFloat {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-6px); }
+          }
+          @keyframes aguaSalto {
+            0%   { transform: translateY(0px)   rotate(0deg);  }
+            30%  { transform: translateY(-14px) rotate(-8deg); }
+            65%  { transform: translateY(-4px)  rotate(4deg);  }
+            100% { transform: translateY(0px)   rotate(0deg);  }
+          }
+          .agua-caricatura { height: 120px; width: auto; }
+          @media (max-width: 640px) {
+            .agua-caricatura { height: 88px; top: -14px !important; }
+          }
+        `}</style>
+        <div className="relative mb-4">
+          <img
+            src="/caricaturas/hombre-agua.png"
+            alt=""
+            className="agua-caricatura absolute right-3 z-10 pointer-events-none select-none"
+            style={{
+              top: '-20px',
+              animation: aguaSaltando
+                ? 'aguaSalto 0.5s ease-out forwards'
+                : 'aguaFloat 3s ease-in-out infinite',
+            }}
+          />
+          <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-4 overflow-hidden">
 
           {/* Glow decorativo */}
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -825,7 +854,11 @@ export default function InicioPage() {
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-600 pointer-events-none select-none">ml</span>
             </div>
             <button
-              onClick={() => aplicarManual(1)}
+              onClick={() => {
+                aplicarManual(1)
+                setAguaSaltando(true)
+                setTimeout(() => setAguaSaltando(false), 500)
+              }}
               disabled={guardandoAgua || !mlManual}
               className="bg-sky-500 hover:bg-sky-400 disabled:bg-sky-500/30 text-white font-bold rounded-2xl px-4 py-2 text-sm active:scale-95 transition-all whitespace-nowrap">
               💧 Sumar
@@ -865,6 +898,7 @@ export default function InicioPage() {
               )}
             </div>
           )}
+          </div>
         </div>
 
         {/* MÓDULOS */}
