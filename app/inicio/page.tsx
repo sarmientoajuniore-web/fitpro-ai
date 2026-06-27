@@ -397,9 +397,9 @@ export default function InicioPage() {
   const pctAgua  = metaAgua > 0 ? (mlBebidos / metaAgua) * 100 : 0
 
   const macros = [
-    { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-blue-500',   text: 'text-blue-400'   },
-    { lbl: 'Carbohidratos', con: Math.round(consumo.carbos),   meta: metaCarb, color: 'bg-[#F5C518]',  text: 'text-[#F5C518]'  },
-    { lbl: 'Grasas',        con: Math.round(consumo.grasas),   meta: metaGra,  color: 'bg-orange-500', text: 'text-orange-400' },
+    { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-[#38B6FF]',  text: 'text-[#38B6FF]'  },
+    { lbl: 'Carbohidratos', con: Math.round(consumo.carbos),   meta: metaCarb, color: 'bg-[#FF9D42]',  text: 'text-[#FF9D42]'  },
+    { lbl: 'Grasas',        con: Math.round(consumo.grasas),   meta: metaGra,  color: 'bg-[#FF5C5C]',  text: 'text-[#FF5C5C]'  },
   ]
 
   // Preview en tiempo real: usa gramos o unidades×peso según el modo
@@ -428,24 +428,25 @@ export default function InicioPage() {
         </div>
 
         {/* BIENVENIDA */}
-        <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1c1a00] border border-[#F5C518]/20 rounded-2xl p-5 mb-4">
-          <h2 className="text-2xl font-bold mb-1">¡Hola, {nombre}! 💪</h2>
-          <p className="text-gray-500 text-sm mb-4">Tu plataforma de fitness inteligente está lista</p>
+        <div
+          className="rounded-2xl p-5 mb-4 border border-[#FFE08A]/50"
+          style={{ background: 'linear-gradient(135deg, #1a1200 0%, #100c00 100%)', boxShadow: '0 0 28px rgba(255,193,60,0.13)' }}>
+          <h2 className="text-2xl font-bold mb-3 text-[#FFC93C]">¡Hola, {nombre}! 💪</h2>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-black/30 rounded-xl p-3 text-center">
               <div className="text-base font-bold text-white">{tdee}</div>
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">Mantenimiento</div>
             </div>
             <div className="bg-black/30 rounded-xl p-3 text-center">
-              <div className="text-base font-bold text-[#F5C518]">{kcal}</div>
-              <div className="text-[10px] text-[#F5C518]/60 mt-1">{objLabel}</div>
+              <div className="text-base font-bold text-[#FFC93C]">{kcal}</div>
+              <div className="text-[10px] text-[#FFC93C]/60 mt-1">{objLabel}</div>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { val: metaPro,  lbl: 'Proteína',      color: 'text-blue-400'   },
-              { val: metaCarb, lbl: 'Carbohidratos', color: 'text-[#F5C518]'  },
-              { val: metaGra,  lbl: 'Grasas',        color: 'text-orange-400' },
+              { val: metaPro,  lbl: 'Proteína',      color: 'text-[#38B6FF]' },
+              { val: metaCarb, lbl: 'Carbohidratos', color: 'text-[#FF9D42]' },
+              { val: metaGra,  lbl: 'Grasas',        color: 'text-[#FF5C5C]' },
             ].map(({ val, lbl, color }) => (
               <div key={lbl} className="bg-black/30 rounded-xl p-3 text-center">
                 <div className={`text-base font-bold ${color}`}>{val > 0 ? `${val}g` : '—'}</div>
@@ -456,7 +457,10 @@ export default function InicioPage() {
         </div>
 
         {/* CALORÍAS, MACROS Y REGISTRO DEL DÍA */}
-        <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1c1800] border border-[#F5C518]/12 rounded-2xl p-4 mb-4">
+        <div
+          className="rounded-2xl p-4 mb-4 border border-[#9CF5C2]/40"
+          style={{ background: 'linear-gradient(135deg, #051a0b 0%, #081510 100%)', boxShadow: '0 0 28px rgba(46,229,125,0.10)' }}>
+          <p className="text-xs font-semibold text-[#2EE57D]/70 uppercase tracking-widest mb-3">Nutrición</p>
 
           {/* ── Navegador de fecha ── */}
           <div className="flex items-center justify-between mb-3">
@@ -478,9 +482,9 @@ export default function InicioPage() {
 
           {/* ── Calorías ── */}
           <div className="mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Te quedan hoy</p>
+            <p className="text-xs font-semibold text-[#2EE57D]/60 uppercase tracking-wide mb-1">Te quedan hoy</p>
             <div className="flex items-baseline gap-1.5 mb-2">
-              <span className={`text-3xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#F5C518]'}`}>
+              <span className={`text-3xl font-black tracking-tight ${calExcedido ? 'text-red-400' : 'text-[#2EE57D]'}`}>
                 {calRestantes.toLocaleString()}
               </span>
               <span className="text-sm font-semibold text-gray-400">kcal</span>
@@ -490,7 +494,7 @@ export default function InicioPage() {
                 {Math.round(consumo.calorias).toLocaleString()} / {metaCal.toLocaleString()} kcal
               </span>
             </div>
-            <Barra consumido={consumo.calorias} meta={metaCal} color="bg-[#F5C518]" />
+            <Barra consumido={consumo.calorias} meta={metaCal} color="bg-[#2EE57D]" />
           </div>
 
           {/* ── Macros ── */}
@@ -751,73 +755,74 @@ export default function InicioPage() {
             65%  { transform: translateY(-4px)  rotate(4deg);  }
             100% { transform: translateY(0px)   rotate(0deg);  }
           }
-          .agua-caricatura { height: 120px; width: auto; }
-          @media (max-width: 640px) {
-            .agua-caricatura { height: 88px; top: -14px !important; }
-          }
+          .agua-caricatura { height: 130px; width: auto; }
+          @media (max-width: 640px) { .agua-caricatura { height: 95px; } }
         `}</style>
-        <div className="relative mb-4">
-          <img
-            src="/caricaturas/hombre-agua.png"
-            alt=""
-            className="agua-caricatura absolute right-3 z-10 pointer-events-none select-none"
-            style={{
-              top: '-20px',
-              animation: aguaSaltando
-                ? 'aguaSalto 0.5s ease-out forwards'
-                : 'aguaFloat 3s ease-in-out infinite',
-            }}
-          />
-          <div className="relative bg-gradient-to-br from-[#0c1628] to-[#151515] border border-sky-500/20 rounded-2xl p-4 overflow-hidden">
+        <div
+          className="relative rounded-2xl p-4 mb-4 overflow-hidden border border-[#9DD9FF]/40"
+          style={{ background: 'linear-gradient(135deg, #051220 0%, #081828 100%)', boxShadow: '0 0 28px rgba(56,182,255,0.12)' }}>
 
           {/* Glow decorativo */}
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Header */}
-          <div className="flex items-start justify-between mb-3 relative">
-            <p className="text-xs font-semibold text-sky-400/60 uppercase tracking-widest pt-0.5">Hidratación</p>
-            <div className="text-right">
-              <p className="text-sm font-bold text-white/70">
-                {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
+          {/* Header: título + meta diaria */}
+          <div className="flex items-center justify-between mb-3 relative">
+            <p className="text-xs font-semibold text-[#38B6FF]/70 uppercase tracking-widest">Hidratación</p>
+            <p className="text-xs font-bold text-[#9DD9FF]/60">
+              Meta: {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
+            </p>
+          </div>
+
+          {/* Fila: datos (izq) + personaje (der) */}
+          <div className="flex gap-3 items-end mb-1 relative">
+
+            {/* Columna izquierda: números + barra */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-0.5">
+                <span className={`text-4xl font-black tracking-tight transition-colors duration-500 ${
+                  pctAgua >= 100 ? 'text-emerald-400' : 'text-[#38B6FF]'
+                }`}>
+                  {mlBebidos >= 1000 ? (mlBebidos / 1000).toFixed(1) : mlBebidos}
+                </span>
+                <span className="text-lg font-semibold text-gray-500">
+                  {mlBebidos >= 1000 ? 'L' : 'ml'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                {Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'}
+                {' · de '}{metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
               </p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-wide">meta diaria</p>
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${Math.min(pctAgua, 100)}%`,
+                    background: pctAgua >= 100
+                      ? 'linear-gradient(90deg, #10b981, #34d399)'
+                      : 'linear-gradient(90deg, #0369a1, #38bdf8)',
+                  }}
+                />
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[11px] text-gray-600">{mlBebidos} ml registrados</span>
+                <span className={`text-[11px] font-semibold ${pctAgua >= 100 ? 'text-emerald-400' : 'text-[#38B6FF]'}`}>
+                  {Math.min(Math.round(pctAgua), 100)}%
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Número protagonista */}
-          <div className="flex items-baseline gap-2 mb-0.5 relative">
-            <span className={`text-4xl font-black tracking-tight transition-colors duration-500 ${
-              pctAgua >= 100 ? 'text-emerald-400' : 'text-sky-400'
-            }`}>
-              {mlBebidos >= 1000 ? (mlBebidos / 1000).toFixed(1) : mlBebidos}
-            </span>
-            <span className="text-lg font-semibold text-gray-500">
-              {mlBebidos >= 1000 ? 'L' : 'ml'}
-            </span>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">
-            de {metaAgua >= 1000 ? `${(metaAgua / 1000).toFixed(1)} L` : `${metaAgua} ml`}
-            {' · '}{Math.floor(mlBebidos / 250)} {Math.floor(mlBebidos / 250) === 1 ? 'vaso' : 'vasos'}
-          </p>
-
-          {/* Barra de progreso con gradiente */}
-          <div className="mb-1">
-            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700 ease-out"
+            {/* Columna derecha: personaje */}
+            <div className="w-20 flex-shrink-0 flex items-end justify-center">
+              <img
+                src="/caricaturas/hombre-agua.png"
+                alt=""
+                className="agua-caricatura pointer-events-none select-none"
                 style={{
-                  width: `${Math.min(pctAgua, 100)}%`,
-                  background: pctAgua >= 100
-                    ? 'linear-gradient(90deg, #10b981, #34d399)'
-                    : 'linear-gradient(90deg, #0369a1, #38bdf8)',
+                  animation: aguaSaltando
+                    ? 'aguaSalto 0.5s ease-out forwards'
+                    : 'aguaFloat 3s ease-in-out infinite',
                 }}
               />
-            </div>
-            <div className="flex justify-between mt-1.5">
-              <span className="text-[11px] text-gray-600">{mlBebidos} ml registrados</span>
-              <span className={`text-[11px] font-semibold ${pctAgua >= 100 ? 'text-emerald-400' : 'text-sky-400'}`}>
-                {Math.min(Math.round(pctAgua), 100)}%
-              </span>
             </div>
           </div>
 
@@ -860,7 +865,7 @@ export default function InicioPage() {
                 setTimeout(() => setAguaSaltando(false), 500)
               }}
               disabled={guardandoAgua || !mlManual}
-              className="bg-sky-500 hover:bg-sky-400 disabled:bg-sky-500/30 text-white font-bold rounded-2xl px-4 py-2 text-sm active:scale-95 transition-all whitespace-nowrap">
+              className="bg-[#38B6FF] hover:bg-[#5ec6ff] disabled:bg-[#38B6FF]/30 text-black font-bold rounded-2xl px-4 py-2 text-sm active:scale-95 transition-all whitespace-nowrap">
               💧 Sumar
             </button>
           </div>
@@ -884,7 +889,7 @@ export default function InicioPage() {
                 </p>
               ) : recordatoriosOn ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-sky-400/50">🔔 Recordatorios activos · 6 avisos al día</span>
+                  <span className="text-xs text-[#38B6FF]/50">🔔 Recordatorios activos · 6 avisos al día</span>
                   <button onClick={desactivarRecordatorios} className="text-xs text-gray-600 hover:text-red-400 transition-colors">
                     Desactivar
                   </button>
@@ -892,29 +897,31 @@ export default function InicioPage() {
               ) : (
                 <button
                   onClick={activarRecordatorios}
-                  className="w-full border border-sky-500/20 rounded-xl py-2 text-xs font-medium text-sky-400/60 hover:text-sky-400 hover:border-sky-500/40 transition-all">
+                  className="w-full border border-[#38B6FF]/20 rounded-xl py-2 text-xs font-medium text-[#38B6FF]/60 hover:text-[#38B6FF] hover:border-[#38B6FF]/40 transition-all">
                   🔔 Activar recordatorios de agua
                 </button>
               )}
             </div>
           )}
-          </div>
         </div>
 
         {/* MÓDULOS */}
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { emoji: '📋', title: 'Rutinas',  sub: 'Mis entrenamientos',   href: '/rutinas'  },
-            { emoji: '📈', title: 'Progreso', sub: 'Seguimiento corporal', href: '/progreso' },
-          ].map(({ emoji, title, sub, href }) => (
-            <a key={href} href={href}
-              className="bg-[#1a1a1a] border border-white/8 rounded-xl p-4 hover:border-white/20 transition-colors">
-              <div className="text-2xl mb-2">{emoji}</div>
-              <div className="text-sm font-semibold text-white mb-1">{title}</div>
-              <div className="text-xs text-gray-500">{sub}</div>
-            </a>
-          ))}
+          <a href="/rutinas"
+            className="rounded-xl p-4 transition-all border border-[#FFD0A3]/50 hover:border-[#FFD0A3]/80"
+            style={{ background: 'linear-gradient(135deg, #1a0c00 0%, #110800 100%)', boxShadow: '0 0 18px rgba(255,157,66,0.10)' }}>
+            <div className="text-2xl mb-2">📋</div>
+            <div className="text-sm font-semibold mb-1 text-[#FF9D42]">Rutinas</div>
+            <div className="text-xs text-gray-500">Mis entrenamientos</div>
+          </a>
+          <a href="/progreso"
+            className="rounded-xl p-4 transition-all border border-[#DCC4FF]/50 hover:border-[#DCC4FF]/80"
+            style={{ background: 'linear-gradient(135deg, #0e0820 0%, #090618 100%)', boxShadow: '0 0 18px rgba(181,123,255,0.10)' }}>
+            <div className="text-2xl mb-2">📈</div>
+            <div className="text-sm font-semibold mb-1 text-[#B57BFF]">Progreso</div>
+            <div className="text-xs text-gray-500">Seguimiento corporal</div>
+          </a>
         </div>
 
       </div>
