@@ -114,30 +114,11 @@ function formatCantidad(item: RegistroItem): string {
 function reproducirSonido(tipo: 'pop' | 'gota') {
   if (typeof window === 'undefined') return
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
-    const ctx: AudioContext = new AudioCtx()
-    const now = ctx.currentTime
-
-    const tono = (freq: number, t: number, dur: number, vol: number) => {
-      const osc = ctx.createOscillator()
-      const g   = ctx.createGain()
-      osc.connect(g)
-      g.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(freq, now + t)
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.6, now + t + dur)
-      g.gain.setValueAtTime(vol, now + t)
-      g.gain.exponentialRampToValueAtTime(0.001, now + t + dur)
-      osc.start(now + t)
-      osc.stop(now + t + dur)
-    }
-
-    if (tipo === 'pop') {
-      tono(800, 0, 0.15, 0.28)
-    } else {
-      tono(620, 0,    0.15, 0.22)
-      tono(390, 0.13, 0.18, 0.22)
-    }
+    const src = tipo === 'pop' ? '/sonidos/sonido-comida.mp3' : '/sonidos/sonido-agua.mp3'
+    const audio = new Audio(src)
+    audio.volume = 0.6
+    audio.currentTime = 0
+    audio.play()
   } catch { /* sin soporte de audio */ }
 }
 
