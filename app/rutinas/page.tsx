@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar } from 'lucide-react'
+import ReportButton from '@/components/ui/ReportButton'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -393,6 +394,8 @@ export default function RutinasPage() {
   const [codigoCompartir, setCodigoCompartir] = useState<string | null>(null)
   const [generandoCodigo, setGenerandoCodigo] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [compartiendoDirecto, setCompartiendoDirecto] = useState(false)
+  const [compartidoAviso, setCompartidoAviso] = useState(false)
 
   // Importar rutina por código
   const [inputImportar, setInputImportar] = useState('')
@@ -846,6 +849,36 @@ export default function RutinasPage() {
     setTimeout(() => setCopiado(false), 2500)
   }
 
+  // Compartir directo: genera el código si hace falta, luego usa Web Share API
+  // (o copia al portapapeles como respaldo en escritorio)
+  const compartirDirecto = async (rutinaId: string) => {
+    setCompartiendoDirecto(true)
+    const rutina = rutinas.find(r => r.id === rutinaId)
+    let codigo = rutina?.codigo_compartir?.startsWith('FIT-') ? rutina.codigo_compartir : null
+    if (!codigo) {
+      const res = await fetch('/api/rutinas/compartir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rutina_id: rutinaId }),
+      })
+      const json = await res.json()
+      if (json.codigo) {
+        codigo = json.codigo
+        setRutinas(prev => prev.map(r => r.id === rutinaId ? { ...r, codigo_compartir: json.codigo } : r))
+      }
+    }
+    setCompartiendoDirecto(false)
+    if (!codigo) return
+    const texto = `¡Entrena conmigo en FitPro! Usa mi código de rutina: ${codigo}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ text: texto }) } catch { /* usuario canceló */ }
+    } else {
+      await navigator.clipboard.writeText(texto).catch(() => {})
+      setCompartidoAviso(true)
+      setTimeout(() => setCompartidoAviso(false), 2500)
+    }
+  }
+
   // ── Importar rutina ──
   const buscarPorCodigo = async () => {
     const codigo = inputImportar.trim().toUpperCase()
@@ -1160,24 +1193,32 @@ export default function RutinasPage() {
             {/* Texto y botones */}
             <div className="flex-1 min-w-0 py-4 pr-4 pl-2">
               <div className="text-white font-black text-[15px] leading-tight">¡Reta a un amigo!</div>
-              <div className="text-white/80 text-xs mt-0.5 leading-relaxed">Comparte tu rutina o pega un código</div>
-              <div className="flex gap-2 mt-3">
+              <div className="text-white/80 text-xs mt-0.5 leading-relaxed">Comparte tu rutina o agrega una</div>
+              <div className="flex flex-wrap gap-2 mt-3">
                 <button
-                  onClick={() => rutinas.length > 0 && generarCodigoCompartir(rutinas[0].id)}
-                  disabled={rutinas.length === 0}
-                  className="px-4 py-1.5 bg-white font-bold rounded-lg text-xs disabled:opacity-40 transition-opacity"
+                  onClick={() => rutinas.length > 0 && compartirDirecto(rutinas[0].id)}
+                  disabled={rutinas.length === 0 || compartiendoDirecto}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg text-xs disabled:opacity-40 transition-opacity"
                   style={{ color: '#7B2FF7' }}
                 >
-                  Compartir
+                  <Share2 className="w-3 h-3" />
+                  {compartiendoDirecto ? '...' : 'Compartir'}
                 </button>
                 <button
                   onClick={() => { setMostrarPegar(p => !p); setErrorImportar(null); setPreviewImport(null); setImportOk(false) }}
-                  className="px-4 py-1.5 font-bold rounded-lg text-xs text-white transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-1.5 font-bold rounded-lg text-xs text-white transition-colors"
                   style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.65)' }}
                 >
-                  Pegar
+                  <span className="text-base leading-none">+</span>
+                  Agregar rutina
                 </button>
               </div>
+              {compartidoAviso && (
+                <div className="mt-2 text-[11px] text-white/90 flex items-center gap-1.5">
+                  <Check className="w-3 h-3 shrink-0" />
+                  ¡Texto copiado al portapapeles!
+                </div>
+              )}
             </div>
           </div>
 
@@ -1946,6 +1987,8 @@ export default function RutinasPage() {
           </div>
         </div>
       )}
+
+      <ReportButton />
     </div>
   )
 }

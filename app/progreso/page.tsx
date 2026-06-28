@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import ReportButton from '@/components/ui/ReportButton'
 import {
   LineChart, Line, BarChart, Bar, ReferenceLine,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -789,6 +790,8 @@ export default function ProgresoPage() {
           </>
         )}
       </div>
+
+      <ReportButton />
     </div>
   )
 }
