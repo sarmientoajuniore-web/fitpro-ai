@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Share2, Users, Search, Download, Copy, Check, Dumbbell } from 'lucide-react'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2 } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -257,7 +257,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
           <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
           <circle
             cx="36" cy="36" r={r} fill="none"
-            stroke={restante === 0 || enAviso ? '#EF4444' : '#B57BFF'}
+            stroke={restante === 0 || enAviso ? '#EF4444' : '#22D3EE'}
             strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={circunferencia}
@@ -265,7 +265,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
             style={{ transition: 'stroke-dashoffset 1s linear' }}
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-xl font-black text-white">
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-black" style={{ color: restante === 0 || enAviso ? '#EF4444' : '#22D3EE' }}>
           {restante}
         </div>
       </div>
@@ -274,7 +274,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
         {!corriendo ? (
           <button
             onClick={iniciar}
-            className="w-11 h-11 rounded-full bg-[#B57BFF] text-white flex items-center justify-center text-sm">
+            className="w-11 h-11 rounded-full text-white flex items-center justify-center text-sm" style={{ background: '#22D3EE' }}>
             ▶
           </button>
         ) : (
@@ -378,6 +378,10 @@ export default function RutinasPage() {
   const [sesionOk, setSesionOk]           = useState(false)
   const [detalleSesionEj, setDetalleSesionEj] = useState<EjBasico | null>(null)
 
+  // Sesión: navegación uno a uno
+  const [ejActivo, setEjActivo] = useState(0)
+  const [fotoAbierta, setFotoAbierta] = useState(false)
+
   // Compartir rutina por código
   const [modalCompartir, setModalCompartir] = useState<string | null>(null)
   const [codigoCompartir, setCodigoCompartir] = useState<string | null>(null)
@@ -450,6 +454,11 @@ export default function RutinasPage() {
   }, [userId, hoyStr])
 
   useEffect(() => { cargarRutinas() }, [cargarRutinas])
+
+  useEffect(() => {
+    setEjActivo(0)
+    setFotoAbierta(false)
+  }, [sesion])
 
   // Búsqueda combinada: grupo muscular seleccionado + texto (por nombre o músculo principal).
   // Solo se muestran ejercicios con imagen: el catálogo original en español aún no tiene
@@ -739,6 +748,16 @@ export default function RutinasPage() {
       if (series.length <= 1) return prev
       return { ...prev, [ejId]: series.filter((_, i) => i !== idx) }
     })
+
+  const quitarEjercicio = (idx: number) => {
+    if (!sesion) return
+    const nombre = sesion.ejercicios[idx].ejercicios?.nombre ?? 'este ejercicio'
+    if (!window.confirm(`¿Quitar "${nombre}" de esta sesión?`)) return
+    const nuevosEj = sesion.ejercicios.filter((_, i) => i !== idx)
+    if (nuevosEj.length === 0) { setSesion(null); return }
+    setSesion({ ...sesion, ejercicios: nuevosEj })
+    if (idx >= nuevosEj.length) setEjActivo(nuevosEj.length - 1)
+  }
 
   const guardarSesion = async () => {
     if (!sesion || !userId) return
@@ -1493,223 +1512,222 @@ export default function RutinasPage() {
 
           {!sesionOk ? (
             <>
-              <div className="px-5 py-4 border-b border-white/10 shrink-0 bg-[#111]">
-                <div className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2.5">
-                  ⏱ Cronómetro de descanso
+              {/* Barra de progreso */}
+              <div className="px-5 pt-3 pb-2 shrink-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold text-gray-400">
+                    Ejercicio {ejActivo + 1} de {sesion.ejercicios.length}
+                  </span>
+                  <span className="text-[11px] text-gray-600">
+                    {Math.round(((ejActivo + 1) / sesion.ejercicios.length) * 100)}%
+                  </span>
                 </div>
-                <CronometroDescanso segundosIniciales={sesion.ejercicios[0]?.descanso_segundos ?? 90} />
+                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${((ejActivo + 1) / sesion.ejercicios.length) * 100}%`, background: 'linear-gradient(90deg, #B57BFF, #7B2FF7)' }}
+                  />
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-5">
-                {sesion.ejercicios.map((ej, idx) => {
-                  const cardio = esCardio(ej)
-                  return (
-                  <div key={ej.id} className="mb-7">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <button
-                          onClick={() => ej.ejercicios && setDetalleSesionEj(ej.ejercicios)}
-                          className="shrink-0 mt-0.5">
-                          {ej.ejercicios?.imagenes && ej.ejercicios.imagenes[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={ej.ejercicios.imagenes[0]}
-                              alt={ej.ejercicios?.nombre}
-                              loading="lazy"
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              className="w-10 h-10 rounded-lg border border-white/10 bg-black/30 object-contain"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg border border-white/10 bg-black/30 flex items-center justify-center text-gray-600 text-sm">
-                              🏋️
-                            </div>
-                          )}
-                        </button>
-                        <div className="min-w-0">
-                        <div className="text-base font-black">{ej.ejercicios?.nombre}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{cardio ? 'Cardio' : ej.ejercicios?.musculo_principal}</div>
+              {/* Ejercicio activo */}
+              {(() => {
+                const ej = sesion.ejercicios[ejActivo]
+                if (!ej) return null
+                const cardio = esCardio(ej)
+                return (
+                  <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col">
+                    <div
+                      className="rounded-2xl border border-[#B57BFF]/40 p-4"
+                      style={{ background: 'rgba(181,123,255,0.06)', boxShadow: '0 0 24px rgba(181,123,255,0.08)' }}
+                    >
+                      {/* Nombre + meta */}
+                      <div className="mb-3">
+                        <div
+                          style={{
+                            fontFamily: "'Oswald', sans-serif",
+                            fontWeight: 700,
+                            fontSize: 'clamp(13px, 4.5vw, 24px)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            color: '#22D3EE',
+                            lineHeight: 1.15,
+                          }}
+                        >{ej.ejercicios?.nombre}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {cardio ? 'Cardio' : ej.ejercicios?.musculo_principal}
+                          {!cardio && ` · plan ${ej.series}×${ej.repeticiones}`}
+                          {ej.descanso_segundos > 0 && ` · ${ej.descanso_segundos}s descanso`}
+                        </div>
                         {historial[ej.ejercicio_id] && (
-                          <div className="text-[10px] text-[#B57BFF]/60 mt-1 flex items-center gap-2 flex-wrap">
+                          <div className="text-[10px] text-[#B57BFF]/60 mt-1.5 flex items-center gap-2 flex-wrap">
                             <span>{historial[ej.ejercicio_id]}</span>
                             {!cardio && ultimoPesos[ej.ejercicio_id] > 0 && (() => {
-                               const pesosValidos = (registros[ej.id] || [])
-                                 .map(s => parseFloat(s.peso))
-                                 .filter(p => !isNaN(p) && p > 0)
-                               if (pesosValidos.length === 0) return null
-                               const maxPeso = Math.max(...pesosValidos)
-                               const anterior = ultimoPesos[ej.ejercicio_id]
-                               const diff = (maxPeso - anterior).toFixed(1).replace(/\.0$/, '')
-                               if (maxPeso > anterior) {
-                                 return (
-                                   <span className="bg-green-500/20 text-green-400 border border-green-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
-                                     ↑ Subiste +{diff}kg
-                                   </span>
-                                 )
-                               }
-                               if (maxPeso < anterior) {
-                                 return (
-                                   <span className="bg-red-500/20 text-red-400 border border-red-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
-                                     ↓ Bajaste {diff}kg
-                                   </span>
-                                 )
-                               }
-                               return (
-                                 <span className="bg-white/10 text-gray-400 border border-white/15 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">
-                                   = Igual
-                                 </span>
-                               )
-                             })()}
+                              const pesosValidos = (registros[ej.id] || [])
+                                .map(s => parseFloat(s.peso))
+                                .filter(p => !isNaN(p) && p > 0)
+                              if (pesosValidos.length === 0) return null
+                              const maxPeso = Math.max(...pesosValidos)
+                              const anterior = ultimoPesos[ej.ejercicio_id]
+                              const diff = (maxPeso - anterior).toFixed(1).replace(/\.0$/, '')
+                              if (maxPeso > anterior) return <span key="up" className="bg-green-500/20 text-green-400 border border-green-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">↑ Subiste +{diff}kg</span>
+                              if (maxPeso < anterior) return <span key="dn" className="bg-red-500/20 text-red-400 border border-red-500/30 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">↓ Bajaste {diff}kg</span>
+                              return <span key="eq" className="bg-white/10 text-gray-400 border border-white/15 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap">= Igual</span>
+                            })()}
                           </div>
                         )}
-                        </div>
                       </div>
-                      <div className="text-right shrink-0 ml-3">
-                        <div className="text-[10px] text-gray-600 uppercase">Plan</div>
-                        {cardio ? (
-                          <div className="text-sm font-bold text-[#B57BFF]">🏃 Cardio</div>
-                        ) : (
-                          <>
-                            <div className="text-sm font-bold text-[#B57BFF]">{ej.series}×{ej.repeticiones}</div>
-                            {ej.descanso_segundos > 0 && (
-                              <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s desc.</div>
-                            )}
-                          </>
-                        )}
+
+                      {/* Foto plegable */}
+                      {ej.ejercicios?.imagenes && ej.ejercicios.imagenes.length > 0 && (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => setFotoAbierta(v => !v)}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#B57BFF] hover:text-[#9B5BF7] transition-colors mb-2">
+                            <span className="text-xs">{fotoAbierta ? '▲' : '▼'}</span>
+                            Ver ejercicio
+                          </button>
+                          {fotoAbierta && (
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                              {ej.ejercicios.imagenes.slice(0, 3).map((url, i) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  key={i}
+                                  src={url}
+                                  alt={`${ej.ejercicios?.nombre} ${i + 1}`}
+                                  loading="lazy"
+                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                  className="h-36 w-auto rounded-xl border border-white/10 bg-black/30 object-contain shrink-0"
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Series cardio */}
+                      {cardio ? (
+                        <>
+                          {(registros[ej.id] || []).map((serie, i) => (
+                            <div key={i} className={`rounded-xl p-3 mb-2 border transition-colors
+                              ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10 bg-black/30'}`}>
+                              <div className="grid grid-cols-3 gap-2 mb-2.5">
+                                <div>
+                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Min</label>
+                                  <input type="number" min="0" inputMode="numeric" value={serie.duracionMin}
+                                    onChange={e => updateSerie(ej.id, i, 'duracionMin', e.target.value)} placeholder="—"
+                                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Kcal</label>
+                                  <input type="number" min="0" inputMode="numeric" value={serie.calorias}
+                                    onChange={e => updateSerie(ej.id, i, 'calorias', e.target.value)} placeholder="—"
+                                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Intensidad</label>
+                                  <input type="text" value={serie.intensidad}
+                                    onChange={e => updateSerie(ej.id, i, 'intensidad', e.target.value)} placeholder="ej. nivel 6"
+                                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className={`text-xs font-bold ${serie.ok ? 'text-[#B57BFF]' : 'text-gray-600'}`}>Bloque {i + 1}</span>
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                      ${serie.ok ? 'bg-[#B57BFF] text-white scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>✓</button>
+                                  {(registros[ej.id] || []).length > 1 && (
+                                    <button
+                                      onClick={() => eliminarSerie(ej.id, i)}
+                                      className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FF5C5C]/10 text-[#FF5C5C] active:bg-[#FF5C5C]/20 transition-colors">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_2.25rem] gap-2 mb-1.5 px-0.5">
+                            {['#', 'Reps', 'kg', '✓', ''].map(h => (
+                              <div key={h} className="text-[9px] text-gray-700 uppercase text-center">{h}</div>
+                            ))}
+                          </div>
+                          {(registros[ej.id] || []).map((serie, i) => (
+                            <div key={i} className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_2.25rem] gap-2 mb-2 items-center">
+                              <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#B57BFF]' : 'text-gray-600'}`}>{i + 1}</div>
+                              <input type="text" value={serie.reps} onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
+                                className={`bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold focus:outline-none transition-colors
+                                  ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`} />
+                              <input type="number" min="0" step="0.5" value={serie.peso} onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)} placeholder="—"
+                                className={`bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
+                                  ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`} />
+                              <button onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
+                                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                  ${serie.ok ? 'bg-[#B57BFF] text-white scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>✓</button>
+                              {(registros[ej.id] || []).length > 1 ? (
+                                <button
+                                  onClick={() => eliminarSerie(ej.id, i)}
+                                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FF5C5C]/10 text-[#FF5C5C] active:bg-[#FF5C5C]/20 transition-colors">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <div className="w-9 h-9" />
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => agregarSerie(ej.id)}
+                        className="mt-1 mb-4 flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#B57BFF] transition-colors">
+                        <span className="text-sm leading-none font-bold">+</span> Agregar serie
+                      </button>
+
+                      {/* Cronómetro de descanso integrado */}
+                      <div className="border-t border-white/10 pt-4">
+                        <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-2.5">⏱ Descanso</div>
+                        <CronometroDescanso
+                          key={`${ejActivo}-${sesion.rutina.id}-${sesion.fecha}`}
+                          segundosIniciales={ej.descanso_segundos ?? 90}
+                        />
                       </div>
                     </div>
 
-                    {cardio ? (
-                      <>
-                        {(registros[ej.id] || []).map((serie, i) => (
-                          <div key={i} className={`rounded-xl p-3 mb-2 border transition-colors
-                            ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10 bg-black/30'}`}>
-                            <div className="grid grid-cols-3 gap-2 mb-2.5">
-                              <div>
-                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Min</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  inputMode="numeric"
-                                  value={serie.duracionMin}
-                                  onChange={e => updateSerie(ej.id, i, 'duracionMin', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Kcal</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  inputMode="numeric"
-                                  value={serie.calorias}
-                                  onChange={e => updateSerie(ej.id, i, 'calorias', e.target.value)}
-                                  placeholder="—"
-                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Intensidad</label>
-                                <input
-                                  type="text"
-                                  value={serie.intensidad}
-                                  onChange={e => updateSerie(ej.id, i, 'intensidad', e.target.value)}
-                                  placeholder="ej. nivel 6"
-                                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${serie.ok ? 'text-[#B57BFF]' : 'text-gray-600'}`}>
-                                Bloque {i + 1}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
-                                  className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                    ${serie.ok ? 'bg-[#B57BFF] text-white scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>
-                                  ✓
-                                </button>
-                                <button
-                                  onClick={() => eliminarSerie(ej.id, i)}
-                                  disabled={(registros[ej.id] || []).length <= 1}
-                                  className="w-7 h-7 flex items-center justify-center text-sm text-gray-700 hover:text-red-400 transition-colors disabled:opacity-0">
-                                  ×
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-1.5 px-0.5">
-                          {['#', 'Reps', 'kg', '✓', ''].map(h => (
-                            <div key={h} className="text-[9px] text-gray-700 uppercase text-center">{h}</div>
-                          ))}
-                        </div>
-
-                        {(registros[ej.id] || []).map((serie, i) => (
-                          <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2.5rem_1.25rem] gap-2 mb-2 items-center">
-                            <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#B57BFF]' : 'text-gray-600'}`}>
-                              {i + 1}
-                            </div>
-                            <input
-                              type="text"
-                              value={serie.reps}
-                              onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
-                              className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold focus:outline-none transition-colors
-                                ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`}
-                            />
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={serie.peso}
-                              onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)}
-                              placeholder="—"
-                              className={`bg-[#1a1a1a] border rounded-xl py-2.5 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
-                                ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`}
-                            />
-                            <button
-                              onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
-                              className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                ${serie.ok ? 'bg-[#B57BFF] text-white scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => eliminarSerie(ej.id, i)}
-                              disabled={(registros[ej.id] || []).length <= 1}
-                              className="w-5 h-5 flex items-center justify-center text-xs text-gray-700 hover:text-red-400 transition-colors disabled:opacity-0">
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    <button
-                      onClick={() => agregarSerie(ej.id)}
-                      className="mt-1 mb-1 flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#B57BFF] transition-colors">
-                      <span className="text-sm leading-none font-bold">+</span> Agregar serie
-                    </button>
-
-                    {idx < sesion.ejercicios.length - 1 && (
-                      <div className="border-b border-white/5 mt-5" />
-                    )}
+                    {/* Navegación — pegada a la tarjeta */}
+                    <div className="pt-3 pb-6">
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => { setEjActivo(v => Math.max(0, v - 1)); setFotoAbierta(false) }}
+                          disabled={ejActivo === 0}
+                          className="flex-1 border border-white/10 text-gray-400 font-semibold py-3.5 rounded-xl text-sm disabled:opacity-25 hover:border-white/20 transition-all">
+                          ‹ Anterior
+                        </button>
+                        {ejActivo < sesion.ejercicios.length - 1 ? (
+                          <button
+                            onClick={() => { setEjActivo(v => v + 1); setFotoAbierta(false) }}
+                            className="flex-1 text-white font-bold py-3.5 rounded-xl text-sm"
+                            style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 16px rgba(181,123,255,0.35)' }}>
+                            Siguiente ›
+                          </button>
+                        ) : (
+                          <button
+                            onClick={guardarSesion}
+                            disabled={guardandoSesion}
+                            className="flex-1 text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-40"
+                            style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 16px rgba(181,123,255,0.35)' }}>
+                            {guardandoSesion ? 'Guardando...' : '✓ Guardar sesión'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  )
-                })}
-              </div>
-
-              <div className="px-5 pb-8 pt-3 shrink-0">
-                <button
-                  onClick={guardarSesion}
-                  disabled={guardandoSesion}
-                  className="w-full bg-[#B57BFF] text-white font-bold py-4 rounded-2xl text-base disabled:opacity-40">
-                  {guardandoSesion ? 'Guardando...' : '✓ Guardar sesión'}
-                </button>
-              </div>
+                )
+              })()}
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
@@ -1729,6 +1747,7 @@ export default function RutinasPage() {
           )}
         </div>
       )}
+
 
       {/* ══════════════════════════════════
           MODAL COMPARTIR RUTINA
