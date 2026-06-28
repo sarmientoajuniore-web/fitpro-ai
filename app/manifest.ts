@@ -2,14 +2,14 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'FitPro JS',
-    short_name: 'FitPro JS',
+    name: 'FitPro',
+    short_name: 'FitPro',
     description: 'Tu plataforma de fitness y entrenamiento',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0a0a0a',
-    theme_color: '#F5C518',
+    theme_color: '#B57BFF',
     icons: [
       {
         src: '/icons/icon-192',

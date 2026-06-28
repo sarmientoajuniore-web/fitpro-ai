@@ -17,11 +17,8 @@ export default function AppleIcon() {
           background: '#111111',
         }}
       >
-        <div style={{ display: 'flex', fontSize: 82, fontWeight: 900, lineHeight: 1, color: '#F5C518' }}>
+        <div style={{ display: 'flex', fontSize: 82, fontWeight: 900, lineHeight: 1, color: '#B57BFF' }}>
           FP
-        </div>
-        <div style={{ display: 'flex', fontSize: 28, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: 7, marginTop: 6 }}>
-          JS
         </div>
       </div>
     ),

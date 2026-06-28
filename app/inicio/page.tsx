@@ -391,7 +391,7 @@ export default function InicioPage() {
   if (!listo) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#F5C518] border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#B57BFF] border-t-transparent animate-spin" />
       </div>
     )
   }
@@ -458,7 +458,7 @@ export default function InicioPage() {
 
         {/* HEADER */}
         <div className="flex items-center justify-between py-4 mb-4 border-b border-white/10">
-          <h1 className="text-xl font-bold">Fit<span className="text-[#F5C518]">Pro</span> JS</h1>
+          <h1 className="text-xl font-bold">Fit<span className="text-[#B57BFF]">Pro</span></h1>
           <button
             onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
             className="text-xs text-gray-400 hover:text-white transition-colors">

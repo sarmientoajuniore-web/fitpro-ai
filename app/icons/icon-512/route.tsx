@@ -16,11 +16,8 @@ export function GET() {
           background: '#111111',
         }}
       >
-        <div style={{ display: 'flex', fontSize: 230, fontWeight: 900, lineHeight: 1, color: '#F5C518' }}>
+        <div style={{ display: 'flex', fontSize: 230, fontWeight: 900, lineHeight: 1, color: '#B57BFF' }}>
           FP
-        </div>
-        <div style={{ display: 'flex', fontSize: 78, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: 20, marginTop: 12 }}>
-          JS
         </div>
       </div>
     ),

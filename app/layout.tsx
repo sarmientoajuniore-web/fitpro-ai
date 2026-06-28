@@ -3,19 +3,19 @@ import './globals.css'
 import { PwaRegister } from './pwa-register'
 
 export const metadata: Metadata = {
-  title: 'FitPro JS',
+  title: 'FitPro',
   description: 'Tu plataforma de fitness y entrenamiento',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'FitPro JS',
+    title: 'FitPro',
   },
   formatDetection: { telephone: false },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F5C518',
+  themeColor: '#B57BFF',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

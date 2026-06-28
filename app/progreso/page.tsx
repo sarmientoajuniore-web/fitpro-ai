@@ -393,12 +393,12 @@ export default function ProgresoPage() {
 
       {/* HEADER */}
       <div className="sticky top-0 bg-[#0a0a0a] z-10 border-b border-white/10 px-5 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold">Fit<span className="text-[#F5C518]">Pro</span> JS</h1>
+        <h1 className="text-lg font-bold">Fit<span className="text-[#B57BFF]">Pro</span></h1>
         <a href="/inicio" className="text-xs text-gray-400">← Inicio</a>
       </div>
 
       <div className="p-5">
-        <h2 className="text-xl font-bold mb-4">Progreso <span className="text-[#F5C518]">Corporal</span></h2>
+        <h2 className="text-xl font-bold mb-4">Progreso <span className="text-[#B57BFF]">Corporal</span></h2>
 
         {/* TABS */}
         <div className="flex gap-2 mb-5">
@@ -406,7 +406,7 @@ export default function ProgresoPage() {
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors
                 ${tab === key
-                  ? 'bg-[#F5C518] text-black'
+                  ? 'bg-[#B57BFF] text-white'
                   : 'bg-[#1a1a1a] text-gray-400 border border-white/10'}`}>
               {label}
             </button>
@@ -440,13 +440,13 @@ export default function ProgresoPage() {
                       onKeyDown={e => e.key === 'Enter' && guardarPeso()}
                       placeholder="Ej: 75.5"
                       step="0.1" min="20" max="500"
-                      className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#F5C518]/60 placeholder-gray-600"
+                      className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60 placeholder-gray-600"
                     />
                     <span className="text-gray-500 text-sm shrink-0">kg</span>
                     <button
                       onClick={guardarPeso}
                       disabled={guardando || !pesoInput}
-                      className="bg-[#F5C518] text-black font-bold px-5 py-3 rounded-xl text-sm disabled:opacity-40 shrink-0">
+                      className="bg-[#B57BFF] text-white font-bold px-5 py-3 rounded-xl text-sm disabled:opacity-40 shrink-0">
                       {guardando ? '...' : 'Guardar'}
                     </button>
                   </div>
@@ -491,9 +491,9 @@ export default function ProgresoPage() {
                         <XAxis dataKey="fecha" {...AXIS} interval="preserveStartEnd" />
                         <YAxis domain={[yMinPeso, yMaxPeso]} {...AXIS} width={42} tickFormatter={v => `${v}kg`} />
                         <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso']} />
-                        <Line type="monotone" dataKey="peso" stroke="#F5C518" strokeWidth={2}
-                          dot={{ fill: '#F5C518', r: 3, strokeWidth: 0 }}
-                          activeDot={{ r: 5, fill: '#F5C518', strokeWidth: 0 }} />
+                        <Line type="monotone" dataKey="peso" stroke="#B57BFF" strokeWidth={2}
+                          dot={{ fill: '#B57BFF', r: 3, strokeWidth: 0 }}
+                          activeDot={{ r: 5, fill: '#B57BFF', strokeWidth: 0 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -528,7 +528,7 @@ export default function ProgresoPage() {
                       <select
                         value={ejercicioSel}
                         onChange={e => setEjercicioSel(e.target.value)}
-                        className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#F5C518]/60">
+                        className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60">
                         {ejerciciosList.map(e => (
                           <option key={e.id} value={e.id}>{e.nombre}</option>
                         ))}
@@ -541,7 +541,7 @@ export default function ProgresoPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xs text-gray-500 mb-1">Récord personal</p>
-                            <p className="text-3xl font-black text-[#F5C518]">
+                            <p className="text-3xl font-black text-[#B57BFF]">
                               {recordEjercicio}
                               <span className="text-sm text-gray-500 font-normal"> kg</span>
                             </p>
@@ -574,9 +574,9 @@ export default function ProgresoPage() {
                             <XAxis dataKey="fecha" {...AXIS} interval="preserveStartEnd" />
                             <YAxis domain={[yMinEj, yMaxEj]} {...AXIS} width={42} tickFormatter={v => `${v}kg`} />
                             <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso máx.']} />
-                            <Line type="monotone" dataKey="peso" stroke="#F5C518" strokeWidth={2}
-                              dot={{ fill: '#F5C518', r: 3, strokeWidth: 0 }}
-                              activeDot={{ r: 5, fill: '#F5C518', strokeWidth: 0 }} />
+                            <Line type="monotone" dataKey="peso" stroke="#B57BFF" strokeWidth={2}
+                              dot={{ fill: '#B57BFF', r: 3, strokeWidth: 0 }}
+                              activeDot={{ r: 5, fill: '#B57BFF', strokeWidth: 0 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -611,7 +611,7 @@ export default function ProgresoPage() {
                           onClick={() => setPeriodoNutri(p.key)}
                           className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
                             periodoNutri === p.key
-                              ? 'bg-[#F5C518] text-black'
+                              ? 'bg-[#B57BFF] text-white'
                               : 'bg-[#1a1a1a] text-gray-400 border border-white/10'
                           }`}>
                           {p.label}
@@ -625,7 +625,7 @@ export default function ProgresoPage() {
                         value={fechaDiaNutri}
                         max={hoyStr}
                         onChange={e => setFechaDiaNutri(e.target.value)}
-                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#F5C518]/60"
+                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60"
                       />
                     )}
 
@@ -655,7 +655,7 @@ export default function ProgresoPage() {
                               <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
                                 {m.lbl} · objetivo {periodoNutri === 'dia' ? 'del día' : periodoNutri === 'semana' ? 'de la semana' : 'del mes'}
                               </p>
-                              <p className="text-2xl font-black text-[#F5C518] mb-2">
+                              <p className="text-2xl font-black text-[#B57BFF] mb-2">
                                 {Math.round(m.objPeriodo).toLocaleString()}
                                 <span className="text-sm text-gray-500 font-normal"> {m.unidad}</span>
                               </p>
@@ -696,7 +696,7 @@ export default function ProgresoPage() {
                         </div>
                         <div className="bg-black/30 rounded-xl p-3">
                           <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{objetivoPeriodoLabel}</p>
-                          <p className="text-lg font-bold text-[#F5C518]">{Math.round(objCaloriasPeriodo).toLocaleString()} kcal</p>
+                          <p className="text-lg font-bold text-[#B57BFF]">{Math.round(objCaloriasPeriodo).toLocaleString()} kcal</p>
                         </div>
                       </div>
 
@@ -748,7 +748,7 @@ export default function ProgresoPage() {
                             formatter={(v) => [typeof v === 'number' ? v.toLocaleString() : v, 'Consumido']}
                           />
                           <ReferenceLine y={metaDiaria} stroke="rgba(255,255,255,0.3)" strokeDasharray="5 4" />
-                          <Bar dataKey="consumido" fill="#F5C518" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          <Bar dataKey="consumido" fill="#B57BFF" radius={[4, 4, 0, 0]} maxBarSize={36} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -773,7 +773,7 @@ export default function ProgresoPage() {
                             </div>
                             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full ${excedido ? 'bg-red-500' : 'bg-[#F5C518]'}`}
+                                className={`h-full rounded-full ${excedido ? 'bg-red-500' : 'bg-[#B57BFF]'}`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>

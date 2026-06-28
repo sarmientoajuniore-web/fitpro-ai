@@ -16,9 +16,9 @@ const ACTIVIDADES: { val: Actividad; label: string; sub: string }[] = [
 ]
 
 const OBJETIVOS: { val: Objetivo; label: string; sub: string }[] = [
-  { val: 'bajar',    label: 'Bajar de peso', sub: 'Perder grasa de forma saludable' },
-  { val: 'mantener', label: 'Mantenerme',    sub: 'Conservar mi peso actual' },
-  { val: 'subir',    label: 'Subir de peso', sub: 'Ganar peso / músculo' },
+  { val: 'bajar',    label: 'Bajar de peso',    sub: 'Perder grasa de forma saludable' },
+  { val: 'mantener', label: 'Mantener tu peso', sub: 'Conservar mi peso actual' },
+  { val: 'subir',    label: 'Subir de peso',    sub: 'Ganar peso / músculo' },
 ]
 
 const FACTOR_ACT: Record<Actividad, number> = { sedentario: 1.2, moderada: 1.55, alta: 1.725 }
@@ -50,11 +50,12 @@ type Resultado = ReturnType<typeof calcular>
 export default function OnboardingPage() {
   const router = useRouter()
 
-  const [nombre,   setNombre]   = useState('')
-  const [edad,     setEdad]     = useState('')
-  const [sexo,     setSexo]     = useState<'hombre' | 'mujer' | ''>('')
-  const [altura,   setAltura]   = useState('')
-  const [peso,     setPeso]     = useState('')
+  const [nombre,    setNombre]    = useState('')
+  const [telefono,  setTelefono]  = useState('')
+  const [edad,      setEdad]      = useState('')
+  const [sexo,      setSexo]      = useState<'hombre' | 'mujer' | ''>('')
+  const [altura,    setAltura]    = useState('')
+  const [peso,      setPeso]      = useState('')
   const [actividad, setActividad] = useState<Actividad | ''>('')
   const [objetivo,  setObjetivo]  = useState<Objetivo | ''>('')
   const [guardando, setGuardando] = useState(false)
@@ -83,6 +84,7 @@ export default function OnboardingPage() {
       sexo,
       altura_cm:          h,
       peso_kg:            p,
+      telefono:           telefono.trim() || null,
       nivel_actividad:    actividad,
       objetivo,
       bmr:                calc.bmr,
@@ -100,7 +102,10 @@ export default function OnboardingPage() {
 
   if (resultado) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-5">
+      <div
+        className="min-h-screen text-white flex flex-col items-center justify-center p-5"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(123, 47, 247, 0.18) 0%, transparent 65%), #0a0a0a' }}
+      >
         <div className="w-full max-w-sm">
           <div className="text-center mb-7">
             <div className="text-6xl mb-4">🎯</div>
@@ -108,8 +113,7 @@ export default function OnboardingPage() {
             <p className="text-xs text-gray-500 mt-1">Calculado con Mifflin-St Jeor</p>
           </div>
 
-          {/* Metabolismo */}
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 mb-3">
+          <div className="bg-[#110d1a] border border-[#B57BFF]/20 rounded-2xl p-4 mb-3">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Metabolismo</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-black/30 rounded-xl p-3 text-center">
@@ -123,8 +127,10 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Objetivo */}
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1c1a00] border border-[#F5C518]/30 rounded-2xl p-4 mb-3">
+          <div
+            className="rounded-2xl p-4 mb-3 border border-[#B57BFF]/30"
+            style={{ background: 'linear-gradient(135deg, #110d1a, #1a0d2e)' }}
+          >
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Calorías</p>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs text-gray-500 shrink-0">Mantenimiento</span>
@@ -132,18 +138,17 @@ export default function OnboardingPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-xs text-gray-500 shrink-0">Tu meta</span>
-              <span className="text-3xl font-black text-[#F5C518]">{resultado.calorias.toLocaleString()}</span>
+              <span className="text-3xl font-black text-[#B57BFF]">{resultado.calorias.toLocaleString()}</span>
               <span className="text-sm text-gray-400">kcal</span>
             </div>
           </div>
 
-          {/* Macros */}
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 mb-6">
+          <div className="bg-[#110d1a] border border-[#B57BFF]/20 rounded-2xl p-4 mb-6">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Macros diarios</p>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { val: resultado.proteina, lbl: 'Proteína', color: 'text-blue-400' },
-                { val: resultado.carbos,   lbl: 'Carbos',   color: 'text-[#F5C518]' },
+                { val: resultado.carbos,   lbl: 'Carbos',   color: 'text-[#B57BFF]' },
                 { val: resultado.grasas,   lbl: 'Grasas',   color: 'text-orange-400' },
               ].map(({ val, lbl, color }) => (
                 <div key={lbl} className="bg-black/30 rounded-xl p-3 text-center">
@@ -156,7 +161,12 @@ export default function OnboardingPage() {
 
           <button
             onClick={() => router.push('/inicio')}
-            className="w-full bg-[#F5C518] text-black font-bold py-4 rounded-2xl text-base">
+            className="w-full text-white font-bold py-4 rounded-2xl text-base"
+            style={{
+              background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)',
+              boxShadow: '0 0 24px rgba(181, 123, 255, 0.4)',
+            }}
+          >
             Empezar →
           </button>
         </div>
@@ -164,36 +174,36 @@ export default function OnboardingPage() {
     )
   }
 
-  const inputCls = "w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#F5C518]/60 transition-colors placeholder-gray-600"
-  const chipBase = "flex-1 py-3 rounded-xl text-sm font-semibold border transition-colors text-center cursor-pointer"
-  const chipOn  = "bg-[#F5C518] text-black border-[#F5C518]"
-  const chipOff = "bg-[#1a1a1a] text-gray-400 border-white/10 hover:border-white/25"
+  const inputCls = "w-full bg-[#15101f] border border-[#B57BFF]/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF] transition-colors placeholder-gray-600"
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div
+      className="min-h-screen text-white"
+      style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(123, 47, 247, 0.18) 0%, transparent 65%), #0a0a0a' }}
+    >
       <div className="max-w-lg mx-auto p-5 pb-12">
 
-        {/* Header */}
         <div className="text-center py-8">
-          <h1 className="text-2xl font-black">Fit<span className="text-[#F5C518]">Pro</span> JS</h1>
+          <h1 className="text-2xl font-black">Fit<span className="text-[#B57BFF]">Pro</span> JS</h1>
           <p className="text-gray-500 text-sm mt-1">Completa tu perfil para calcular tus macros</p>
         </div>
 
         <div className="flex flex-col gap-5">
 
-          {/* Nombre */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Nombre completo</label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={e => setNombre(e.target.value)}
-              placeholder="Tu nombre"
-              className={inputCls}
-            />
+            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)}
+              placeholder="Tu nombre" className={inputCls} />
           </div>
 
-          {/* Edad + Altura + Peso en fila */}
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">
+              Teléfono <span className="text-gray-600 normal-case">(opcional)</span>
+            </label>
+            <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)}
+              placeholder="+56 9 1234 5678" className={inputCls} />
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Edad</label>
@@ -212,27 +222,38 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Sexo */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Sexo biológico</label>
             <div className="flex gap-3">
               {(['hombre', 'mujer'] as const).map(s => (
-                <button key={s} onClick={() => setSexo(s)}
-                  className={`${chipBase} ${sexo === s ? chipOn : chipOff}`}>
+                <button
+                  key={s}
+                  onClick={() => setSexo(s)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold border transition-all text-center cursor-pointer"
+                  style={sexo === s
+                    ? { background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', borderColor: '#B57BFF', color: 'white' }
+                    : { background: '#15101f', borderColor: 'rgba(181,123,255,0.2)', color: '#9ca3af' }
+                  }
+                >
                   {s === 'hombre' ? '♂ Masculino' : '♀ Femenino'}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Nivel de actividad */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Nivel de actividad</label>
             <div className="flex flex-col gap-2">
               {ACTIVIDADES.map(a => (
-                <button key={a.val} onClick={() => setActividad(a.val)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-colors
-                    ${actividad === a.val ? 'bg-[#F5C518]/10 border-[#F5C518]/50 text-white' : 'bg-[#1a1a1a] border-white/10 text-gray-400 hover:border-white/20'}`}>
+                <button
+                  key={a.val}
+                  onClick={() => setActividad(a.val)}
+                  className="w-full text-left px-4 py-3 rounded-xl border transition-all"
+                  style={actividad === a.val
+                    ? { background: 'rgba(181,123,255,0.12)', borderColor: 'rgba(181,123,255,0.6)', color: 'white' }
+                    : { background: '#15101f', borderColor: 'rgba(181,123,255,0.2)', color: '#9ca3af' }
+                  }
+                >
                   <span className="font-semibold text-sm">{a.label}</span>
                   <span className="text-xs text-gray-500 ml-2">{a.sub}</span>
                 </button>
@@ -240,14 +261,19 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Objetivo */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Objetivo</label>
             <div className="flex flex-col gap-2">
               {OBJETIVOS.map(o => (
-                <button key={o.val} onClick={() => setObjetivo(o.val)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-colors
-                    ${objetivo === o.val ? 'bg-[#F5C518]/10 border-[#F5C518]/50 text-white' : 'bg-[#1a1a1a] border-white/10 text-gray-400 hover:border-white/20'}`}>
+                <button
+                  key={o.val}
+                  onClick={() => setObjetivo(o.val)}
+                  className="w-full text-left px-4 py-3 rounded-xl border transition-all"
+                  style={objetivo === o.val
+                    ? { background: 'rgba(181,123,255,0.12)', borderColor: 'rgba(181,123,255,0.6)', color: 'white' }
+                    : { background: '#15101f', borderColor: 'rgba(181,123,255,0.2)', color: '#9ca3af' }
+                  }
+                >
                   <span className="font-semibold text-sm">{o.label}</span>
                   <span className="text-xs text-gray-500 ml-2">{o.sub}</span>
                 </button>
@@ -264,7 +290,12 @@ export default function OnboardingPage() {
           <button
             onClick={handleSubmit}
             disabled={guardando}
-            className="w-full bg-[#F5C518] text-black font-bold py-4 rounded-2xl text-base disabled:opacity-40">
+            className="w-full text-white font-bold py-4 rounded-2xl text-base disabled:opacity-40"
+            style={{
+              background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)',
+              boxShadow: '0 0 24px rgba(181, 123, 255, 0.4)',
+            }}
+          >
             {guardando ? 'Calculando...' : 'Calcular y guardar mi plan'}
           </button>
         </div>
