@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2 } from 'lucide-react'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -382,6 +382,11 @@ export default function RutinasPage() {
   const [ejActivo, setEjActivo] = useState(0)
   const [fotoAbierta, setFotoAbierta] = useState(false)
 
+  // Nombre del usuario (primer nombre)
+  const [userName, setUserName] = useState<string | null>(null)
+  // Calendario abierto/cerrado por rutina
+  const [calendarAbierto, setCalendarAbierto] = useState<Record<string, boolean>>({})
+
   // Compartir rutina por código
   const [modalCompartir, setModalCompartir] = useState<string | null>(null)
   const [codigoCompartir, setCodigoCompartir] = useState<string | null>(null)
@@ -403,6 +408,14 @@ export default function RutinasPage() {
       if (data.user) setUserId(data.user.id)
     })
   }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    supabase.from('perfiles').select('nombre_completo').eq('user_id', userId).single()
+      .then(({ data }) => {
+        if (data?.nombre_completo) setUserName((data.nombre_completo as string).split(' ')[0])
+      })
+  }, [userId])
 
   const cargarRutinas = useCallback(async () => {
     if (!userId) return
@@ -930,113 +943,140 @@ export default function RutinasPage() {
               const diaDisplay = `${diaSel} ${dateSel.getDate()} de ${MESES[dateSel.getMonth()].toLowerCase()}`
 
               return (
-                <div key={rutina.id} className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden">
+                <div key={rutina.id} className="rounded-2xl overflow-hidden border border-[#B57BFF]/40" style={{ background: 'rgba(181,123,255,0.04)', boxShadow: '0 0 32px rgba(181,123,255,0.10)' }}>
 
-                  {/* Cabecera rutina */}
-                  <div className="px-5 pt-5 pb-3 flex items-start justify-between">
-                    <div>
-                      <div className="text-xl font-black leading-tight">{rutina.nombre}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{rutina.dias_semana} días por semana</div>
+                  {/* Cabecera: nombre usuario + código compartir + borrar */}
+                  <div className="px-5 pt-5 pb-4 flex items-start justify-between border-b border-white/5">
+                    <div className="min-w-0">
+                      {userName
+                        ? <div className="text-xl font-black leading-tight">{userName}</div>
+                        : <div className="text-xl font-black leading-tight">{rutina.nombre}</div>
+                      }
+                      {userName && <div className="text-xs text-[#B57BFF]/60 mt-0.5">{rutina.nombre}</div>}
                     </div>
-                    {confirmBorrar === rutina.id ? (
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span className="text-xs text-gray-400">¿Eliminar?</span>
-                        <button
-                          onClick={() => borrarRutina(rutina.id)}
-                          disabled={borrando}
-                          className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg px-2.5 py-1 hover:bg-red-500/30 transition-colors disabled:opacity-50">
-                          {borrando ? '...' : 'Sí'}
-                        </button>
-                        <button
-                          onClick={() => setConfirmBorrar(null)}
-                          className="text-xs text-gray-500 border border-white/10 rounded-lg px-2.5 py-1 hover:text-white transition-colors">
-                          No
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
-                        <button
-                          onClick={() => generarCodigoCompartir(rutina.id)}
-                          title="Compartir rutina"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-[#B57BFF]/80 hover:text-[#B57BFF] bg-[#B57BFF]/8 hover:bg-[#B57BFF]/15 border border-[#B57BFF]/20 hover:border-[#B57BFF]/45 rounded-lg px-2 py-1.5 transition-all">
-                          <Share2 className="w-3 h-3" />
-                          <span>{rutina.codigo_compartir?.startsWith('FIT-') ? rutina.codigo_compartir : 'Compartir'}</span>
-                        </button>
-                        <button
-                          onClick={() => setConfirmBorrar(rutina.id)}
-                          className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none"
-                          title="Eliminar rutina">
-                          🗑
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
+                      {confirmBorrar === rutina.id ? (
+                        <>
+                          <span className="text-[10px] text-gray-400">¿Eliminar?</span>
+                          <button
+                            onClick={() => borrarRutina(rutina.id)}
+                            disabled={borrando}
+                            className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg px-2 py-1 disabled:opacity-50">
+                            {borrando ? '...' : 'Sí'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmBorrar(null)}
+                            className="text-[10px] text-gray-500 border border-white/10 rounded-lg px-2 py-1">
+                            No
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => generarCodigoCompartir(rutina.id)}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#B57BFF]/80 hover:text-[#B57BFF] bg-[#B57BFF]/8 hover:bg-[#B57BFF]/15 border border-[#B57BFF]/20 rounded-lg px-2.5 py-1.5 transition-all">
+                            <Share2 className="w-3 h-3" />
+                            <span>{rutina.codigo_compartir?.startsWith('FIT-') ? rutina.codigo_compartir : 'Compartir'}</span>
+                          </button>
+                          <button
+                            onClick={() => setConfirmBorrar(rutina.id)}
+                            className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">
+                            🗑
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  {/* ── CALENDARIO ── */}
-                  <div className="px-5 pb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <button
-                        onClick={() => prevMes(rutina.id)}
-                        className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-                        ‹
-                      </button>
-                      <span className="text-xs font-semibold text-gray-300">
-                        {MESES[mes.m]} {mes.y}
+                  {/* Fila del día: cuadrito + info + ícono calendario */}
+                  <div className="px-5 py-4 flex items-center gap-4">
+                    <div
+                      className="shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)' }}>
+                      <span className="text-3xl font-black leading-none text-white">{dateSel.getDate()}</span>
+                      <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide mt-0.5">
+                        {diaSel.slice(0, 3).toUpperCase()}
                       </span>
-                      <button
-                        onClick={() => nextMes(rutina.id)}
-                        className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-                        ›
-                      </button>
                     </div>
-
-                    <div className="grid grid-cols-7 mb-1">
-                      {DIAS_CORTO.map(d => (
-                        <div key={d} className="text-[9px] text-gray-600 text-center uppercase tracking-wide">{d}</div>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Entrenamiento de hoy</div>
+                      <div className="text-sm font-semibold text-white capitalize">{diaDisplay}</div>
+                      <div className="text-[11px] text-[#B57BFF]/60 mt-0.5">
+                        {ejsDia.length} ejercicio{ejsDia.length !== 1 ? 's' : ''} · {rutina.dias_semana} días/sem
+                      </div>
                     </div>
-
-                    <div className="grid grid-cols-7">
-                      {cells.map((date, i) => {
-                        if (!date) return <div key={i} className="h-9" />
-
-                        const fs = toLocalDate(date)
-                        const diaSem = diaSemanaLocal(date)
-                        const esEnt  = diasEnt.has(diaSem)
-                        const esDone = completados.has(fs)
-                        const esSel  = fechaSel === fs
-                        const esHoy  = hoyStr === fs
-
-                        let circulo = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold mx-auto transition-all relative select-none '
-
-                        if (esSel && esDone)      circulo += 'bg-green-500 text-white'
-                        else if (esSel && esHoy)  circulo += 'bg-[#B57BFF] text-white'
-                        else if (esSel)            circulo += 'bg-[#B57BFF] text-white'
-                        else if (esDone)           circulo += 'bg-green-500/15 text-green-400'
-                        else if (esHoy)            circulo += 'ring-1 ring-[#B57BFF] text-[#B57BFF]'
-                        else if (esEnt)            circulo += 'text-white hover:bg-white/8 cursor-pointer'
-                        else                       circulo += 'text-gray-700 hover:bg-white/5 cursor-pointer'
-
-                        return (
-                          <div key={i} className="h-9 flex items-center justify-center">
-                            <div
-                              className={circulo}
-                              onClick={() => setFechaActiva(prev => ({ ...prev, [rutina.id]: fs }))}>
-                              {date.getDate()}
-                              {esDone && !esSel && (
-                                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full" />
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                    <button
+                      onClick={() => setCalendarAbierto(prev => ({ ...prev, [rutina.id]: !prev[rutina.id] }))}
+                      className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+                      style={{
+                        background: calendarAbierto[rutina.id] ? 'rgba(181,123,255,0.20)' : 'rgba(181,123,255,0.08)',
+                        border: '1px solid rgba(181,123,255,0.30)',
+                        color: '#B57BFF',
+                      }}>
+                      <Calendar className="w-5 h-5" />
+                    </button>
                   </div>
 
-                  {/* ── CONTENIDO DEL DÍA SELECCIONADO ── */}
-                  <div className="px-5 pb-5">
-                    <div className="text-[11px] text-gray-500 font-medium mb-3 capitalize">{diaDisplay}</div>
+                  {/* Calendario plegable */}
+                  {calendarAbierto[rutina.id] && (
+                    <div className="px-5 pb-4 pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <button
+                          onClick={() => prevMes(rutina.id)}
+                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5">
+                          ‹
+                        </button>
+                        <span className="text-xs font-semibold text-gray-300">{MESES[mes.m]} {mes.y}</span>
+                        <button
+                          onClick={() => nextMes(rutina.id)}
+                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5">
+                          ›
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 mb-1">
+                        {DIAS_CORTO.map(d => (
+                          <div key={d} className="text-[9px] text-gray-600 text-center uppercase tracking-wide">{d}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7">
+                        {cells.map((date, i) => {
+                          if (!date) return <div key={i} className="h-9" />
+                          const fs = toLocalDate(date)
+                          const diaSem = diaSemanaLocal(date)
+                          const esEnt  = diasEnt.has(diaSem)
+                          const esDone = completados.has(fs)
+                          const esSel  = fechaSel === fs
+                          const esHoy  = hoyStr === fs
+                          let circulo = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold mx-auto transition-all relative select-none '
+                          if (esSel && esDone)      circulo += 'bg-green-500 text-white'
+                          else if (esSel && esHoy)  circulo += 'bg-[#B57BFF] text-white'
+                          else if (esSel)            circulo += 'bg-[#B57BFF] text-white'
+                          else if (esDone)           circulo += 'bg-green-500/15 text-green-400'
+                          else if (esHoy)            circulo += 'ring-1 ring-[#B57BFF] text-[#B57BFF]'
+                          else if (esEnt)            circulo += 'text-white hover:bg-white/8 cursor-pointer'
+                          else                       circulo += 'text-gray-700 hover:bg-white/5 cursor-pointer'
+                          return (
+                            <div key={i} className="h-9 flex items-center justify-center">
+                              <div
+                                className={circulo}
+                                onClick={() => {
+                                  setFechaActiva(prev => ({ ...prev, [rutina.id]: fs }))
+                                  setCalendarAbierto(prev => ({ ...prev, [rutina.id]: false }))
+                                }}>
+                                {date.getDate()}
+                                {esDone && !esSel && (
+                                  <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
+                  {/* Lista de ejercicios */}
+                  <div className="px-5 pb-5">
                     {ejsDia.length === 0 ? (
                       <div className="text-xs text-gray-600 py-4 text-center border border-dashed border-white/8 rounded-xl mb-3">
                         Sin ejercicios para {diaSel}
@@ -1044,26 +1084,13 @@ export default function RutinasPage() {
                     ) : (
                       <div className="mb-3">
                         {ejsDia.map((ej, i) => (
-                          <div key={ej.id} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
-                            <span className="text-[#B57BFF] text-xs font-bold w-4 text-center shrink-0">{i + 1}</span>
+                          <div key={ej.id} className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-black/20 mb-1.5">
+                            <span className="text-[#B57BFF] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
-                              <div className="text-[10px] text-gray-500 mt-0.5">{ej.ejercicios?.musculo_principal}</div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              {esCardio(ej) ? (
-                                <div className="text-xs text-gray-400 font-medium">🏃 Cardio</div>
-                              ) : (
-                                <>
-                                  <div className="text-xs text-gray-400 font-medium">{ej.series}×{ej.repeticiones}</div>
-                                  {ej.descanso_segundos > 0 && (
-                                    <div className="text-[10px] text-gray-700">{ej.descanso_segundos}s</div>
-                                  )}
-                                </>
-                              )}
                             </div>
                             {confirmBorrarEj === ej.id ? (
-                              <div className="flex items-center gap-1 shrink-0 ml-1">
+                              <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   onClick={() => borrarEjercicio(ej.id)}
                                   disabled={borrandoEj}
@@ -1079,7 +1106,7 @@ export default function RutinasPage() {
                             ) : (
                               <button
                                 onClick={() => setConfirmBorrarEj(ej.id)}
-                                className="text-gray-700 hover:text-red-400 transition-colors ml-1 shrink-0 text-base leading-none">
+                                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 text-sm leading-none ml-1">
                                 ✕
                               </button>
                             )}
@@ -1088,16 +1115,17 @@ export default function RutinasPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mt-1">
                       <button
                         onClick={() => abrirModalEj(rutina.id, diaSel)}
-                        className="flex-1 border border-white/15 rounded-xl py-2.5 text-xs text-gray-400 hover:border-white/30 hover:text-white transition-colors font-medium">
+                        className="flex-1 border border-[#22D3EE] rounded-xl py-2.5 text-xs text-[#22D3EE] font-semibold hover:bg-[#22D3EE]/5 transition-colors">
                         ＋ Agregar
                       </button>
                       <button
                         onClick={() => iniciarSesion(rutina, diaSel, fechaSel)}
                         disabled={ejsDia.length === 0}
-                        className="flex-[2] bg-[#B57BFF] text-white font-bold rounded-xl py-2.5 text-sm disabled:opacity-25 transition-opacity">
+                        className="flex-[2] text-[#0a0a0a] font-bold rounded-xl py-2.5 text-sm disabled:opacity-25 transition-opacity"
+                        style={{ background: 'linear-gradient(135deg, #22D3EE, #0891B2)', boxShadow: '0 0 16px rgba(34,211,238,0.25)' }}>
                         ▶ Iniciar sesión
                       </button>
                     </div>
