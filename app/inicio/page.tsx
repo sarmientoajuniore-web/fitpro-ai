@@ -430,6 +430,9 @@ export default function InicioPage() {
   const imagenProteina = perfil?.sexo === 'mujer'
     ? '/caricaturas/mujer-proteina.png'
     : '/caricaturas/hombre-proteina.png'
+  const imagenProgreso = perfil?.sexo === 'mujer'
+    ? '/caricaturas/mujer-progreso.png'
+    : '/caricaturas/hombre-progreso.png'
 
   const macros = [
     { lbl: 'Proteína',      con: Math.round(consumo.proteina), meta: metaPro,  color: 'bg-[#38B6FF]',  text: 'text-[#38B6FF]'  },
@@ -923,40 +926,102 @@ export default function InicioPage() {
           }
           .modulo-caricatura { height: 72px; width: auto; }
           @media (max-width: 640px) { .modulo-caricatura { height: 52px; } }
+          @keyframes orbitCW  { from { transform: rotate(0deg);    } to { transform: rotate(360deg);   } }
+          @keyframes orbitCCW { from { transform: rotate(0deg);    } to { transform: rotate(-360deg);  } }
+          .orbit-btn { transition: transform 0.15s ease; display: block; }
+          .orbit-btn:active { transform: scale(1.12); }
+          @media (hover: hover) { .orbit-btn:hover { transform: scale(1.08); } }
         `}</style>
-        {/* MÓDULOS */}
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="relative">
-            <img
-              src={imagenEntrena}
-              alt=""
-              className="modulo-caricatura absolute z-10 pointer-events-none select-none"
-              style={{ right: '-14px', bottom: '8px', animation: 'rutinaFloatSalto 3s ease-in-out infinite' }}
-            />
-            <a href="/rutinas"
-              className="block rounded-xl p-4 transition-all border border-[#FFD0A3]/50 hover:border-[#FFD0A3]/80"
-              style={{ background: 'linear-gradient(135deg, #1a0c00 0%, #110800 100%)', boxShadow: '0 0 18px rgba(255,157,66,0.10)' }}>
-              <div className="text-2xl mb-2">📋</div>
-              <div className="text-sm font-semibold mb-1 text-[#FF9D42]">Rutinas</div>
-              <div className="text-xs text-gray-500">Mis entrenamientos</div>
-            </a>
+        {/* MÓDULOS ORBITALES */}
+        <div style={{ position: 'relative', height: 290, width: '100%', marginTop: 4 }}>
+
+          {/* Círculo central FitPro */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 98, height: 98, borderRadius: '50%',
+            border: '3px solid #B57BFF',
+            boxShadow: '0 0 28px rgba(181,123,255,0.50), 0 0 8px rgba(181,123,255,0.25)',
+            background: 'linear-gradient(135deg, #1a0a2e 0%, #0a0318 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 10, pointerEvents: 'none',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 900, color: 'white', letterSpacing: '-0.3px' }}>
+              Fit<span style={{ color: '#B57BFF' }}>Pro</span>
+            </span>
           </div>
-          <div className="relative">
-            <img
-              src={imagenProteina}
-              alt=""
-              className="modulo-caricatura absolute z-10 pointer-events-none select-none"
-              style={{ right: '-14px', bottom: '8px', animation: 'progresoBalanceo 3s ease-in-out infinite' }}
-            />
-            <a href="/progreso"
-              className="block rounded-xl p-4 transition-all border border-[#DCC4FF]/50 hover:border-[#DCC4FF]/80"
-              style={{ background: 'linear-gradient(135deg, #0e0820 0%, #090618 100%)', boxShadow: '0 0 18px rgba(181,123,255,0.10)' }}>
-              <div className="text-2xl mb-2">📈</div>
-              <div className="text-sm font-semibold mb-1 text-[#B57BFF]">Progreso</div>
-              <div className="text-xs text-gray-500">Seguimiento corporal</div>
-            </a>
+
+          {/* Brazo Rutinas — arranca a la derecha */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: 0, height: 0, transformOrigin: '0 0',
+            animation: 'orbitCW 18s linear infinite',
+          }}>
+            {/* Posicionador: centro del planeta a 95px del origen */}
+            <div style={{ position: 'absolute', top: -52, left: 43, width: 104, height: 104 }}>
+              {/* Contra-rotación para que el contenido quede siempre recto */}
+              <div style={{ width: '100%', height: '100%', animation: 'orbitCCW 18s linear infinite' }}>
+                <a href="/rutinas" className="orbit-btn" style={{
+                  width: 104, height: 104, borderRadius: '50%',
+                  border: '2.5px solid #2EE57D',
+                  boxShadow: '0 0 20px rgba(46,229,125,0.45), 0 0 6px rgba(46,229,125,0.2)',
+                  background: 'linear-gradient(160deg, #030f07 0%, #071f0e 100%)',
+                  position: 'relative', overflow: 'hidden', textDecoration: 'none',
+                }}>
+                  <img
+                    src={imagenEntrena} alt=""
+                    style={{
+                      position: 'absolute', bottom: 14, left: '50%',
+                      transform: 'translateX(-50%)',
+                      height: 76, width: 'auto',
+                      pointerEvents: 'none', userSelect: 'none',
+                    }}
+                  />
+                  <span style={{
+                    position: 'absolute', bottom: 4, left: 0, right: 0,
+                    textAlign: 'center', fontSize: 9, fontWeight: 700,
+                    color: '#2EE57D', letterSpacing: '0.3px',
+                  }}>Rutinas</span>
+                </a>
+              </div>
+            </div>
           </div>
+
+          {/* Brazo Progreso — arranca 180° opuesto (delay = -9s) */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: 0, height: 0, transformOrigin: '0 0',
+            animation: 'orbitCW 18s linear infinite',
+            animationDelay: '-9s',
+          }}>
+            <div style={{ position: 'absolute', top: -52, left: 43, width: 104, height: 104 }}>
+              <div style={{ width: '100%', height: '100%', animation: 'orbitCCW 18s linear infinite', animationDelay: '-9s' }}>
+                <a href="/progreso" className="orbit-btn" style={{
+                  width: 104, height: 104, borderRadius: '50%',
+                  border: '2.5px solid #FFD400',
+                  boxShadow: '0 0 20px rgba(255,212,0,0.45), 0 0 6px rgba(255,212,0,0.2)',
+                  background: 'linear-gradient(160deg, #0f0c00 0%, #1c1500 100%)',
+                  position: 'relative', overflow: 'hidden', textDecoration: 'none',
+                }}>
+                  <img
+                    src={imagenProgreso} alt=""
+                    style={{
+                      position: 'absolute', bottom: 14, left: '50%',
+                      transform: 'translateX(-50%)',
+                      height: 76, width: 'auto',
+                      pointerEvents: 'none', userSelect: 'none',
+                    }}
+                  />
+                  <span style={{
+                    position: 'absolute', bottom: 4, left: 0, right: 0,
+                    textAlign: 'center', fontSize: 9, fontWeight: 700,
+                    color: '#FFD400', letterSpacing: '0.3px',
+                  }}>Progreso</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
