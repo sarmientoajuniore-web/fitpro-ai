@@ -1536,10 +1536,10 @@ export default function RutinasPage() {
                 if (!ej) return null
                 const cardio = esCardio(ej)
                 return (
-                  <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-3 flex flex-col">
                     <div
-                      className="rounded-2xl border border-[#B57BFF]/40 p-4"
-                      style={{ background: 'rgba(181,123,255,0.06)', boxShadow: '0 0 24px rgba(181,123,255,0.08)' }}
+                      className="rounded-2xl border border-[#B57BFF]/40 p-4 w-full"
+                      style={{ background: 'rgba(181,123,255,0.06)', boxShadow: '0 0 24px rgba(181,123,255,0.08)', boxSizing: 'border-box' }}
                     >
                       {/* Nombre + meta */}
                       <div className="mb-3">
@@ -1550,6 +1550,8 @@ export default function RutinasPage() {
                             fontSize: 'clamp(13px, 4.5vw, 24px)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '100%',
                             color: '#22D3EE',
                             lineHeight: 1.15,
                           }}
@@ -1660,23 +1662,23 @@ export default function RutinasPage() {
                             <div key={i} className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_2.25rem] gap-2 mb-2 items-center">
                               <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#B57BFF]' : 'text-gray-600'}`}>{i + 1}</div>
                               <input type="text" value={serie.reps} onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
-                                className={`bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold focus:outline-none transition-colors
+                                className={`w-full min-w-0 bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold focus:outline-none transition-colors
                                   ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`} />
                               <input type="number" min="0" step="0.5" value={serie.peso} onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)} placeholder="—"
-                                className={`bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
+                                className={`w-full min-w-0 bg-[#1a1a1a] border rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
                                   ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10'}`} />
                               <button onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
                                 className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
                                   ${serie.ok ? 'bg-[#B57BFF] text-white scale-110' : 'bg-[#1a1a1a] border border-white/15 text-gray-600'}`}>✓</button>
-                              {(registros[ej.id] || []).length > 1 ? (
-                                <button
-                                  onClick={() => eliminarSerie(ej.id, i)}
-                                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FF5C5C]/10 text-[#FF5C5C] active:bg-[#FF5C5C]/20 transition-colors">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              ) : (
-                                <div className="w-9 h-9" />
-                              )}
+                              <button
+                                onClick={() => eliminarSerie(ej.id, i)}
+                                disabled={(registros[ej.id] || []).length <= 1}
+                                className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors
+                                  ${(registros[ej.id] || []).length > 1
+                                    ? 'bg-[#FF5C5C]/10 text-[#FF5C5C] active:bg-[#FF5C5C]/20'
+                                    : 'opacity-20 text-gray-600 cursor-not-allowed'}`}>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
                         </>
