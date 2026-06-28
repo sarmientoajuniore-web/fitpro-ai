@@ -475,7 +475,7 @@ export default function InicioPage() {
             {/* ── Saludo + muñequito ── */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>
-                <h2 className="text-2xl font-bold text-[#B57BFF]">¡Hola, {nombre}! 💪</h2>
+                <h2 className="text-2xl font-bold text-[#B57BFF]">¡Hola, {nombre}!</h2>
                 <p className="text-[11px] text-[#B57BFF]/45 mt-0.5 uppercase tracking-widest">Nutrición</p>
               </div>
               <img
@@ -946,24 +946,20 @@ export default function InicioPage() {
         <div
           className="rounded-2xl border border-[#B57BFF]/40 mb-4"
           style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)', boxShadow: '0 0 24px rgba(181,123,255,0.12)' }}>
-          <div className="px-5 pt-4 pb-0">
-            <p className="text-xs font-semibold text-[#B57BFF]/70 uppercase tracking-widest">Tus módulos</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">toca una bolita para entrar</p>
-          </div>
-          <div style={{ position: 'relative', height: 290, width: '100%' }}>
+          <div style={{ position: 'relative', height: 370, width: '100%' }}>
 
           {/* Círculo central FitPro */}
           <div style={{
             position: 'absolute', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 98, height: 98, borderRadius: '50%',
+            width: 112, height: 112, borderRadius: '50%',
             border: '3px solid #B57BFF',
-            boxShadow: '0 0 28px rgba(181,123,255,0.50), 0 0 8px rgba(181,123,255,0.25)',
+            boxShadow: '0 0 32px rgba(181,123,255,0.55), 0 0 10px rgba(181,123,255,0.28)',
             background: 'linear-gradient(135deg, #1a0a2e 0%, #0a0318 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 10, pointerEvents: 'none',
           }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color: 'white', letterSpacing: '-0.3px' }}>
+            <span style={{ fontSize: 16, fontWeight: 900, color: 'white', letterSpacing: '-0.3px' }}>
               Fit<span style={{ color: '#B57BFF' }}>Pro</span>
             </span>
           </div>
@@ -974,23 +970,23 @@ export default function InicioPage() {
             width: 0, height: 0, transformOrigin: '0 0',
             animation: 'orbitCW 18s linear infinite',
           }}>
-            {/* Posicionador: centro del planeta a 95px del origen */}
-            <div style={{ position: 'absolute', top: -52, left: 43, width: 104, height: 104 }}>
+            {/* Posicionador: centro del planeta a 118px del origen */}
+            <div style={{ position: 'absolute', top: -58, left: 60, width: 116, height: 116 }}>
               {/* Contra-rotación para que el contenido quede siempre recto */}
               <div style={{ width: '100%', height: '100%', animation: 'orbitCCW 18s linear infinite' }}>
                 <a href="/rutinas" className="orbit-btn" style={{
-                  width: 104, height: 104, borderRadius: '50%',
+                  width: 116, height: 116, borderRadius: '50%',
                   border: '2.5px solid #2EE57D',
-                  boxShadow: '0 0 20px rgba(46,229,125,0.45), 0 0 6px rgba(46,229,125,0.2)',
+                  boxShadow: '0 0 22px rgba(46,229,125,0.45), 0 0 7px rgba(46,229,125,0.2)',
                   background: 'linear-gradient(160deg, #030f07 0%, #071f0e 100%)',
                   position: 'relative', overflow: 'hidden', textDecoration: 'none',
                 }}>
                   <img
                     src={imagenEntrena} alt=""
                     style={{
-                      position: 'absolute', bottom: 14, left: '50%',
+                      position: 'absolute', bottom: 16, left: '50%',
                       transform: 'translateX(-50%)',
-                      height: 76, width: 'auto',
+                      height: 84, width: 'auto',
                       pointerEvents: 'none', userSelect: 'none',
                     }}
                   />
@@ -1011,21 +1007,21 @@ export default function InicioPage() {
             animation: 'orbitCW 18s linear infinite',
             animationDelay: '-9s',
           }}>
-            <div style={{ position: 'absolute', top: -52, left: 43, width: 104, height: 104 }}>
+            <div style={{ position: 'absolute', top: -58, left: 60, width: 116, height: 116 }}>
               <div style={{ width: '100%', height: '100%', animation: 'orbitCCW 18s linear infinite', animationDelay: '-9s' }}>
                 <a href="/progreso" className="orbit-btn" style={{
-                  width: 104, height: 104, borderRadius: '50%',
+                  width: 116, height: 116, borderRadius: '50%',
                   border: '2.5px solid #FFD400',
-                  boxShadow: '0 0 20px rgba(255,212,0,0.45), 0 0 6px rgba(255,212,0,0.2)',
+                  boxShadow: '0 0 22px rgba(255,212,0,0.45), 0 0 7px rgba(255,212,0,0.2)',
                   background: 'linear-gradient(160deg, #0f0c00 0%, #1c1500 100%)',
                   position: 'relative', overflow: 'hidden', textDecoration: 'none',
                 }}>
                   <img
                     src={imagenProgreso} alt=""
                     style={{
-                      position: 'absolute', bottom: 14, left: '50%',
+                      position: 'absolute', bottom: 16, left: '50%',
                       transform: 'translateX(-50%)',
-                      height: 76, width: 'auto',
+                      height: 84, width: 'auto',
                       pointerEvents: 'none', userSelect: 'none',
                     }}
                   />
