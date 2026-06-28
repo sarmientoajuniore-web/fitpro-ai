@@ -295,8 +295,8 @@ export default function ProgresoPage() {
   const pctCambioPeso = pesoInicial && cambioPeso != null
     ? Math.min(Math.abs(cambioPeso) / pesoInicial * 100 * 5, 100) : 0
   const imagenEntrenaPeso = sexoPerfil === 'mujer'
-    ? '/caricaturas/mujer-entrena.png'
-    : '/caricaturas/hombre-entrena.png'
+    ? '/caricaturas/mujer-progreso.png'
+    : '/caricaturas/hombre-progreso.png'
 
   // ── Datos derivados: ejercicio seleccionado ──
   const chartEjercicio = useMemo(() => {
