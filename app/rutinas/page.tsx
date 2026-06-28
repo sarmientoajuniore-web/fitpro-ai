@@ -1460,58 +1460,85 @@ export default function RutinasPage() {
               </div>
             ) : (
               <>
-                <div className="px-5 pb-2 shrink-0">
+                {/* Buscador con ícono cian */}
+                <div className="px-5 pb-3 shrink-0">
+                  <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#22D3EE]/40 rounded-xl px-4 py-2.5 focus-within:border-[#22D3EE]/70 transition-colors">
+                    <Search className="w-4 h-4 text-[#22D3EE] shrink-0" />
+                    <input
+                      value={busquedaEj}
+                      onChange={e => setBusquedaEj(e.target.value)}
+                      placeholder="Buscar ejercicio..."
+                      className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {/* Chips de músculo — horizontal scroll */}
+                <div className="px-5 pb-3 shrink-0">
                   <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                     {GRUPOS_MUSCULARES.map(g => g.nombre).map(grupo => (
-                      <button key={grupo} onClick={() => setCatFiltro(grupo)}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
-                          ${catFiltro === grupo ? 'bg-[#B57BFF] text-white' : 'bg-[#1a1a1a] text-gray-400 border border-white/10'}`}>
+                      <button
+                        key={grupo}
+                        onClick={() => setCatFiltro(grupo)}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                        style={catFiltro === grupo
+                          ? { background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', color: '#fff' }
+                          : { background: '#1a1a1a', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.10)' }}>
                         {grupo}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="px-5 pb-3 shrink-0">
-                  <input
-                    value={busquedaEj}
-                    onChange={e => setBusquedaEj(e.target.value)}
-                    placeholder="Buscar por nombre o músculo..."
-                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#B57BFF]/40"
-                  />
-                </div>
                 {errorEj && (
                   <div className="mx-5 mb-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 shrink-0">{errorEj}</div>
                 )}
-                <div className="flex-1 overflow-y-auto px-5 pb-5">
+                {/* Cuadrícula 2 columnas */}
+                <div className="flex-1 overflow-y-auto px-4 pb-5">
                   {cargandoCat ? (
-                    [...Array(6)].map((_, i) => <div key={i} className="h-14 bg-[#1a1a1a] rounded-xl animate-pulse mb-2" />)
-                  ) : ejsCat.length === 0 ? (
-                    <div className="text-center text-gray-600 text-sm py-10">
-                      Sin resultados
+                    <div className="grid grid-cols-2 gap-3">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="bg-[#1a1a1a] rounded-2xl animate-pulse h-44" />
+                      ))}
                     </div>
-                  ) : ejsCat.map(ej => (
-                    <button
-                      key={ej.id}
-                      onClick={() => setDetalleEj(ej)}
-                      className="w-full text-left px-4 py-3.5 rounded-xl hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 flex items-center gap-3">
-                      {ej.imagenes && ej.imagenes[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={ej.imagenes[0]}
-                          alt={ej.nombre}
-                          loading="lazy"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          className="w-11 h-11 rounded-lg border border-white/10 bg-black/30 object-contain shrink-0"
-                        />
-                      ) : (
-                        <div className="w-11 h-11 rounded-lg border border-white/10 bg-black/30 shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{ej.nombre}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{ej.musculo_principal}</div>
-                      </div>
-                    </button>
-                  ))}
+                  ) : ejsCat.length === 0 ? (
+                    <div className="text-center text-gray-600 text-sm py-10">Sin resultados</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {ejsCat.map(ej => (
+                        <div key={ej.id} className="bg-[#1a1a1a] border border-white/8 rounded-2xl overflow-hidden flex flex-col min-w-0">
+                          {/* Foto — toca para ver detalle */}
+                          <button onClick={() => setDetalleEj(ej)} className="block w-full shrink-0">
+                            {ej.imagenes && ej.imagenes[0] ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={ej.imagenes[0]}
+                                alt={ej.nombre}
+                                loading="lazy"
+                                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                className="w-full h-32 object-contain bg-black/40"
+                              />
+                            ) : (
+                              <div className="w-full h-32 bg-black/40 flex items-center justify-center">
+                                <Dumbbell className="w-8 h-8 text-gray-700" />
+                              </div>
+                            )}
+                          </button>
+                          {/* Nombre + botón agregar */}
+                          <div className="p-2.5 flex flex-col gap-2 flex-1">
+                            <div className="text-xs font-medium leading-snug text-white overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                              {ej.nombre}
+                            </div>
+                            <button
+                              onClick={() => agregarEjercicioDirecto(ej)}
+                              disabled={insertandoEjId !== null}
+                              className="mt-auto w-full rounded-lg py-1.5 text-[11px] font-bold text-[#22D3EE] disabled:opacity-50 transition-colors"
+                              style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.25)' }}>
+                              {insertandoEjId === ej.id ? '…' : '+ Agregar'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
