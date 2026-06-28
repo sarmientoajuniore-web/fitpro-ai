@@ -170,6 +170,7 @@ export default function InicioPage() {
   const [permisoNotif,    setPermisoNotif]    = useState<NotificationPermission>('default')
   const [recordatoriosOn, setRecordatoriosOn] = useState(false)
   const [aguaSaltando,    setAguaSaltando]    = useState(false)
+  const [listaAbierta,    setListaAbierta]    = useState(false)
 
   // ── Formulario de agregar alimento ────────────────────────────────────────
   const [formAbierto,    setFormAbierto]    = useState(false)
@@ -561,7 +562,7 @@ export default function InicioPage() {
                 ))}
               </div>
 
-              {/* ── Lista de alimentos del día ── */}
+              {/* ── Lista de alimentos del día (acordeón) ── */}
               {cargandoRegistros && (
                 <div className="flex justify-center py-3">
                   <div className="w-4 h-4 rounded-full border border-white/20 border-t-white/60 animate-spin" />
@@ -569,31 +570,40 @@ export default function InicioPage() {
               )}
 
               {!cargandoRegistros && registros.length > 0 && (
-                <div className="border-t border-[#B57BFF]/10 pt-3 mb-3">
-                  <p className="text-[10px] text-[#B57BFF]/40 uppercase tracking-widest mb-2">
-                    Alimentos · {registros.length} {registros.length === 1 ? 'item' : 'items'}
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    {registros.map(r => (
-                      <div key={r.id} className="flex items-center gap-2 px-3 py-2.5 bg-white/4 rounded-xl border border-white/5">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-white truncate">{r.nombre_comida}</div>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[10px] text-gray-600">{formatCantidad(r)}</span>
-                            <span className="text-[10px] font-bold text-[#B57BFF]/90">{r.calorias} kcal</span>
-                            <span className="text-[10px] text-blue-400/70">P{r.proteina}</span>
-                            <span className="text-[10px] text-[#FF9D42]/50">C{r.carbos}</span>
-                            <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
+                <div className="mb-3">
+                  <button
+                    onClick={() => setListaAbierta(v => !v)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/4 border border-[#B57BFF]/15 hover:border-[#B57BFF]/30 transition-colors">
+                    <span className="text-xs font-semibold text-[#B57BFF]/70">
+                      Ver lo que comí {esHoy ? 'hoy' : 'ese día'} ({registros.length})
+                    </span>
+                    <span className="text-[10px] text-[#B57BFF]/50 ml-2 select-none">
+                      {listaAbierta ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {listaAbierta && (
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      {registros.map(r => (
+                        <div key={r.id} className="flex items-center gap-2 px-3 py-2.5 bg-white/4 rounded-xl border border-white/5">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-white truncate">{r.nombre_comida}</div>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-[10px] text-gray-600">{formatCantidad(r)}</span>
+                              <span className="text-[10px] font-bold text-[#B57BFF]/90">{r.calorias} kcal</span>
+                              <span className="text-[10px] text-blue-400/70">P{r.proteina}</span>
+                              <span className="text-[10px] text-[#FF9D42]/50">C{r.carbos}</span>
+                              <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => eliminarAlimento(r.id)}
+                            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-600 hover:text-red-400 text-xs transition-colors">
+                            ✕
+                          </button>
                         </div>
-                        <button
-                          onClick={() => eliminarAlimento(r.id)}
-                          className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-600 hover:text-red-400 text-xs transition-colors">
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -933,7 +943,14 @@ export default function InicioPage() {
           @media (hover: hover) { .orbit-btn:hover { transform: scale(1.08); } }
         `}</style>
         {/* MÓDULOS ORBITALES */}
-        <div style={{ position: 'relative', height: 290, width: '100%', marginTop: 4 }}>
+        <div
+          className="rounded-2xl border border-[#B57BFF]/40 mb-4"
+          style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)', boxShadow: '0 0 24px rgba(181,123,255,0.12)' }}>
+          <div className="px-5 pt-4 pb-0">
+            <p className="text-xs font-semibold text-[#B57BFF]/70 uppercase tracking-widest">Tus módulos</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">toca una bolita para entrar</p>
+          </div>
+          <div style={{ position: 'relative', height: 290, width: '100%' }}>
 
           {/* Círculo central FitPro */}
           <div style={{
@@ -1022,6 +1039,7 @@ export default function InicioPage() {
             </div>
           </div>
 
+          </div>
         </div>
 
       </div>
