@@ -409,6 +409,7 @@ export default function InicioPage() {
   const calRestantes = metaCal - Math.round(consumo.calorias)
   const calExcedido  = consumo.calorias > metaCal
   const pctCal         = metaCal > 0 ? Math.min((consumo.calorias / metaCal) * 100, 100) : 0
+  const polloEtapa     = pctCal < 20 ? 1 : pctCal < 40 ? 2 : pctCal < 65 ? 3 : pctCal < 90 ? 4 : 5
   const tdeeNum        = perfil?.tdee ?? 0
   const estadoLabel    = metaCal < tdeeNum - 50 ? 'DÉFICIT' : metaCal > tdeeNum + 50 ? 'SUPERÁVIT' : 'MANTENIM.'
   const estadoBadgeClass = metaCal < tdeeNum - 50
@@ -509,35 +510,29 @@ export default function InicioPage() {
               {/* ── Pollito de calorías + cajitas ── */}
               <div className="flex items-start gap-4 mb-4">
 
-                {/* Pollito con efecto de "comerse" de arriba hacia abajo */}
+                {/* Pollo de calorías: 5 etapas según porcentaje consumido */}
                 <div className="flex flex-col items-center shrink-0 gap-1.5">
-                  <div className="relative overflow-hidden" style={{ width: 108, height: 108 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/pollito.png"
-                      alt="Calorías"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        objectPosition: 'bottom center',
-                        display: 'block',
-                        userSelect: 'none',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    {/* Overlay que cubre de arriba hacia abajo al consumir calorías */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: `${pctCal}%`,
-                        background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)',
-                        transition: 'height 0.6s ease',
-                      }}
-                    />
+                  <div className="relative shrink-0" style={{ width: 108, height: 108 }}>
+                    {([1, 2, 3, 4, 5] as const).map(n => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={n}
+                        src={`/pollo-${n}.png`}
+                        alt="Calorías"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          objectPosition: 'bottom center',
+                          userSelect: 'none',
+                          pointerEvents: 'none',
+                          opacity: polloEtapa === n ? 1 : 0,
+                          transition: 'opacity 0.4s ease',
+                        }}
+                      />
+                    ))}
                   </div>
                   <div className="text-center leading-none">
                     <div className={`text-xl font-black tabular-nums ${calExcedido ? 'text-red-400' : 'text-[#B57BFF]'}`}>
