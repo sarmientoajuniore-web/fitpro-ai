@@ -11,6 +11,10 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'FitPro',
   },
+  icons: {
+    icon: '/fitpro-icono-512.png',
+    apple: '/fitpro-icono-192.png',
+  },
   formatDetection: { telephone: false },
 }
 
