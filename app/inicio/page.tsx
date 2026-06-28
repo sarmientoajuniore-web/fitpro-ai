@@ -397,7 +397,8 @@ export default function InicioPage() {
   }
 
   // ── Valores de presentación ───────────────────────────────────────────────
-  const nombre   = perfil?.nombre_completo?.split(' ')[0] ?? ''
+  const _n       = perfil?.nombre_completo?.trim().split(/\s+/)[0] ?? ''
+  const nombre   = _n ? _n[0].toUpperCase() + _n.slice(1).toLowerCase() : ''
   const tdee     = perfil?.tdee?.toLocaleString() ?? '—'
   const kcal     = perfil?.calorias_objetivo?.toLocaleString() ?? '—'
   const objLabel = perfil?.objetivo ? (OBJETIVO_LABEL[perfil.objetivo] ?? 'Personalizado') : '—'
