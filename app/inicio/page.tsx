@@ -506,25 +506,45 @@ export default function InicioPage() {
                 </button>
               </div>
 
-              {/* ── Anillo + cajitas ── */}
-              <div className="flex items-center gap-4 mb-4">
+              {/* ── Pollito de calorías + cajitas ── */}
+              <div className="flex items-start gap-4 mb-4">
 
-                {/* Anillo circular de progreso */}
-                <div className="relative shrink-0" style={{ width: 108, height: 108 }}>
-                  <div
-                    className="w-full h-full rounded-full"
-                    style={{
-                      background: `conic-gradient(${calExcedido ? '#FF5C5C' : '#B57BFF'} ${pctCal}%, rgba(255,255,255,0.06) 0%)`,
-                    }}>
+                {/* Pollito con efecto de "comerse" de arriba hacia abajo */}
+                <div className="flex flex-col items-center shrink-0 gap-1.5">
+                  <div className="relative overflow-hidden" style={{ width: 108, height: 108 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/pollito.png"
+                      alt="Calorías"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        objectPosition: 'bottom center',
+                        display: 'block',
+                        userSelect: 'none',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    {/* Overlay que cubre de arriba hacia abajo al consumir calorías */}
                     <div
-                      className="absolute inset-[11px] rounded-full flex flex-col items-center justify-center"
-                      style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)' }}>
-                      <span className={`text-xl font-black leading-none tabular-nums ${calExcedido ? 'text-red-400' : 'text-[#B57BFF]'}`}>
-                        {Math.abs(calRestantes).toLocaleString()}
-                      </span>
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wide mt-0.5">
-                        {calExcedido ? 'excedido' : 'restantes'}
-                      </span>
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: `${pctCal}%`,
+                        background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)',
+                        transition: 'height 0.6s ease',
+                      }}
+                    />
+                  </div>
+                  <div className="text-center leading-none">
+                    <div className={`text-xl font-black tabular-nums ${calExcedido ? 'text-red-400' : 'text-[#B57BFF]'}`}>
+                      {Math.abs(calRestantes).toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wide mt-0.5">
+                      {calExcedido ? 'excedido' : 'kcal rest.'}
                     </div>
                   </div>
                 </div>
