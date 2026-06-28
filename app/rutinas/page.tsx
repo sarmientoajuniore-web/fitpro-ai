@@ -1135,25 +1135,30 @@ export default function RutinasPage() {
 
         {/* ── BANNER: ¡Reta a un amigo! ── */}
         <div
-          className="rounded-2xl p-4 mb-4"
+          className="rounded-2xl mb-4 overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #22D3EE 100%)' }}
         >
-          <div className="flex items-center gap-3">
-            {/* Caricatura */}
-            <div
-              className="shrink-0 w-[70px] h-[70px] rounded-xl overflow-hidden flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.18)' }}
-            >
+          {/* Fila principal */}
+          <div className="flex items-stretch">
+            {/* Caricatura libre: sin recuadro, apoyada en la base del banner */}
+            <div className="shrink-0 flex flex-col justify-end" style={{ width: '88px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imagenEntrena}
                 alt="Entrena"
-                className="w-full h-full object-cover"
+                style={{
+                  display: 'block',
+                  width: '88px',
+                  height: '110px',
+                  objectFit: 'contain',
+                  objectPosition: 'bottom center',
+                  filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.55))',
+                }}
               />
             </div>
 
             {/* Texto y botones */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 py-4 pr-4 pl-2">
               <div className="text-white font-black text-[15px] leading-tight">¡Reta a un amigo!</div>
               <div className="text-white/80 text-xs mt-0.5 leading-relaxed">Comparte tu rutina o pega un código</div>
               <div className="flex gap-2 mt-3">
@@ -1178,7 +1183,7 @@ export default function RutinasPage() {
 
           {/* Campo para pegar código (expandible) */}
           {mostrarPegar && (
-            <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.25)' }}>
+            <div className="px-4 pb-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.25)' }}>
               <div className="flex gap-2 mb-3">
                 <input
                   value={inputImportar}
