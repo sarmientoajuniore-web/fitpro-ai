@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import ReportButton from '@/components/ui/ReportButton'
 import {
-  LineChart, Line, BarChart, Bar, ReferenceLine,
+  LineChart, Line, BarChart, Bar, ReferenceLine, LabelList,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 
@@ -120,6 +120,7 @@ export default function ProgresoPage() {
   const [pesoInput, setPesoInput]   = useState('')
   const [guardando, setGuardando]   = useState(false)
   const [errorPeso, setErrorPeso]   = useState<string | null>(null)
+  const [sexoPerfil, setSexoPerfil] = useState<string | null>(null)
 
   // ── Ejercicios ──
   const [sesiones, setSesiones]           = useState<SesionRow[]>([])
@@ -179,7 +180,7 @@ export default function ProgresoPage() {
           .in('fecha', ultimos7),
         supabase
           .from('perfiles')
-          .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo')
+          .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo, sexo')
           .eq('id', user.id)
           .single(),
       ])
@@ -212,6 +213,7 @@ export default function ProgresoPage() {
       setMetaCarbos(perfilData?.carbos_objetivo ?? 0)
       setMetaGrasas(perfilData?.grasas_objetivo ?? 0)
       setObjetivoPersona((perfilData?.objetivo as ObjetivoPersona) ?? 'mantener')
+      setSexoPerfil(perfilData?.sexo ?? null)
       const comidasMap = new Map<string, number>()
       ;(comidasData ?? []).forEach(r => {
         comidasMap.set(r.fecha, (comidasMap.get(r.fecha) ?? 0) + (r.calorias ?? 0))
@@ -287,6 +289,14 @@ export default function ProgresoPage() {
   const yMinPeso = pesosArr.length > 0 ? Math.floor(Math.min(...pesosArr) - 1) : 40
   const yMaxPeso = pesosArr.length > 0 ? Math.ceil(Math.max(...pesosArr)  + 1) : 120
   const chartPeso = historialPeso.map(r => ({ fecha: formatFechaCorta(r.fecha), peso: r.peso_kg }))
+  // Intervalo del eje X: muestra todas las fechas si hay ≤7 registros, si no inicio y fin
+  const chartPesoInterval = historialPeso.length <= 7 ? 0 : 'preserveStartEnd' as const
+  // Barra de progreso: % del cambio sobre el peso inicial (cap 100%)
+  const pctCambioPeso = pesoInicial && cambioPeso != null
+    ? Math.min(Math.abs(cambioPeso) / pesoInicial * 100 * 5, 100) : 0
+  const imagenEntrenaPeso = sexoPerfil === 'mujer'
+    ? '/caricaturas/mujer-entrena.png'
+    : '/caricaturas/hombre-entrena.png'
 
   // ── Datos derivados: ejercicio seleccionado ──
   const chartEjercicio = useMemo(() => {
@@ -430,7 +440,124 @@ export default function ProgresoPage() {
             {tab === 'peso' && (
               <div className="flex flex-col gap-4">
 
-                {/* Input peso hoy */}
+                {/* ── Hero: actual + caricatura ── */}
+                <div
+                  className="rounded-2xl border border-[#B57BFF]/40 overflow-hidden"
+                  style={{ background: 'linear-gradient(135deg, #12062a 0%, #0a0318 100%)', boxShadow: '0 0 28px rgba(181,123,255,0.13)' }}>
+
+                  <div className="flex items-end justify-between px-5 pt-5 pb-4 gap-2">
+                    {/* Peso actual */}
+                    <div className="shrink-0">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Actual</p>
+                      {pesoActual != null ? (
+                        <>
+                          <p className="text-5xl font-black text-white leading-none">{pesoActual}</p>
+                          <p className="text-sm text-[#B57BFF]/60 mt-0.5">kg</p>
+                          <p className="text-[10px] text-gray-600 mt-1">
+                            {formatFechaDDMMYYYY(historialPeso[historialPeso.length - 1].fecha)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-2xl font-black text-gray-600">—</p>
+                      )}
+                    </div>
+
+                    {/* Caricatura central */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagenEntrenaPeso}
+                      alt=""
+                      style={{ height: 110, width: 'auto', objectFit: 'contain', objectPosition: 'bottom', pointerEvents: 'none', userSelect: 'none', flexShrink: 0 }}
+                    />
+
+                    {/* Cambio desde el inicio (lado derecho) */}
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Desde inicio</p>
+                      {cambioPeso != null ? (
+                        <>
+                          <p className={`text-2xl font-black leading-none ${cambioPeso < 0 ? 'text-[#2EE57D]' : cambioPeso > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                            {cambioPeso > 0 ? '+' : ''}{cambioPeso}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5">kg</p>
+                        </>
+                      ) : (
+                        <p className="text-2xl font-black text-gray-600">—</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso del cambio */}
+                  {cambioPeso != null && pesoInicial != null && (
+                    <div className="px-5 pb-5">
+                      <div className="h-2 bg-white/8 rounded-full overflow-hidden mb-2">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${pctCambioPeso}%`,
+                            background: cambioPeso <= 0
+                              ? 'linear-gradient(90deg, #B57BFF 0%, #2EE57D 100%)'
+                              : 'linear-gradient(90deg, #B57BFF 0%, #FF5C5C 100%)',
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-snug">
+                        {cambioPeso < 0
+                          ? <>Llevas <span className="text-[#2EE57D] font-semibold">{Math.abs(cambioPeso)} kg perdidos</span> · peso inicial: {pesoInicial} kg</>
+                          : cambioPeso > 0
+                          ? <>Llevas <span className="text-red-400 font-semibold">{cambioPeso} kg ganados</span> · peso inicial: {pesoInicial} kg</>
+                          : <span className="text-gray-500">Sin cambio desde el inicio ({pesoInicial} kg)</span>
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {pesoActual == null && (
+                    <p className="text-center pb-6 text-gray-600 text-sm">
+                      Registra tu primer peso para comenzar el seguimiento
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Gráfica de evolución con fechas ── */}
+                {historialPeso.length >= 2 && (
+                  <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
+                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Evolución del peso</p>
+                    <ResponsiveContainer width="100%" height={210}>
+                      <LineChart data={chartPeso} margin={{ top: 18, right: 12, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="fecha" {...AXIS} interval={chartPesoInterval} />
+                        <YAxis domain={[yMinPeso, yMaxPeso]} {...AXIS} width={42} tickFormatter={v => `${v}kg`} />
+                        <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso']} />
+                        <Line
+                          type="monotone"
+                          dataKey="peso"
+                          stroke="#B57BFF"
+                          strokeWidth={2}
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          dot={(props: any) => {
+                            const isLast = props.index === chartPeso.length - 1
+                            return <circle key={props.index} cx={props.cx} cy={props.cy} r={isLast ? 5 : 3} fill={isLast ? '#2EE57D' : '#B57BFF'} />
+                          }}
+                          activeDot={{ r: 6, fill: '#2EE57D', strokeWidth: 0 }}
+                        >
+                          <LabelList
+                            dataKey="peso"
+                            position="top"
+                            style={{ fill: 'rgba(181,123,255,0.75)', fontSize: 10, fontWeight: 700 }}
+                          />
+                        </Line>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {historialPeso.length === 1 && (
+                  <p className="text-center py-6 text-gray-600 text-xs">
+                    Registra al menos 2 pesajes para ver la gráfica
+                  </p>
+                )}
+
+                {/* ── Input registrar peso de hoy ── */}
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Registrar peso de hoy</p>
                   <div className="flex gap-3 items-center">
@@ -439,7 +566,7 @@ export default function ProgresoPage() {
                       value={pesoInput}
                       onChange={e => { setPesoInput(e.target.value); setErrorPeso(null) }}
                       onKeyDown={e => e.key === 'Enter' && guardarPeso()}
-                      placeholder="Ej: 75.5"
+                      placeholder="Ej: 95.5"
                       step="0.1" min="20" max="500"
                       className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60 placeholder-gray-600"
                     />
@@ -447,69 +574,14 @@ export default function ProgresoPage() {
                     <button
                       onClick={guardarPeso}
                       disabled={guardando || !pesoInput}
-                      className="bg-[#B57BFF] text-white font-bold px-5 py-3 rounded-xl text-sm disabled:opacity-40 shrink-0">
+                      className="font-bold px-5 py-3 rounded-xl text-sm text-white disabled:opacity-40 shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)' }}>
                       {guardando ? '...' : 'Guardar'}
                     </button>
                   </div>
                   {errorPeso && <p className="mt-2 text-xs text-red-400">{errorPeso}</p>}
                 </div>
 
-                {/* Resumen peso */}
-                {pesoActual != null && (
-                  <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Peso actual</p>
-                        <p className="text-3xl font-black">
-                          {pesoActual}
-                          <span className="text-sm text-gray-500 font-normal"> kg</span>
-                        </p>
-                        {historialPeso.length > 0 && (
-                          <p className="text-[10px] text-gray-600 mt-0.5">
-                            {formatFechaDDMMYYYY(historialPeso[historialPeso.length - 1].fecha)}
-                          </p>
-                        )}
-                      </div>
-                      {cambioPeso != null && (
-                        <div className="text-right">
-                          <p className={`text-xl font-bold ${cambioPeso < 0 ? 'text-green-400' : cambioPeso > 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                            {cambioPeso > 0 ? '+' : ''}{cambioPeso} kg
-                          </p>
-                          <p className="text-xs text-gray-500">desde el inicio</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Gráfica peso */}
-                {historialPeso.length >= 2 && (
-                  <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Evolución del peso</p>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <LineChart data={chartPeso} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="fecha" {...AXIS} interval="preserveStartEnd" />
-                        <YAxis domain={[yMinPeso, yMaxPeso]} {...AXIS} width={42} tickFormatter={v => `${v}kg`} />
-                        <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso']} />
-                        <Line type="monotone" dataKey="peso" stroke="#B57BFF" strokeWidth={2}
-                          dot={{ fill: '#B57BFF', r: 3, strokeWidth: 0 }}
-                          activeDot={{ r: 5, fill: '#B57BFF', strokeWidth: 0 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {historialPeso.length === 0 && (
-                  <p className="text-center py-12 text-gray-600 text-sm">
-                    Registra tu primer peso para comenzar el seguimiento
-                  </p>
-                )}
-                {historialPeso.length === 1 && (
-                  <p className="text-center py-6 text-gray-600 text-xs">
-                    Registra al menos 2 pesajes para ver la gráfica
-                  </p>
-                )}
               </div>
             )}
 
