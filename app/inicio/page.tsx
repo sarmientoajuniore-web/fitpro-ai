@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 
 const supabase = createClient()
 
@@ -21,6 +22,12 @@ const OBJETIVO_LABEL: Record<string, string> = {
 }
 
 const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+const PESTANAS = [
+  { key: 'local'   as const, label: 'Mi lista'         },
+  { key: 'off'     as const, label: 'Buscar online'    },
+  { key: 'barcode' as const, label: 'Código de barras' },
+]
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -186,6 +193,18 @@ export default function InicioPage() {
   const [guardandoAlim,  setGuardandoAlim]  = useState(false)
   const busquedaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── Pestañas del buscador ─────────────────────────────────────────────────
+  const [origenBusqueda, setOrigenBusqueda] = useState<'local' | 'off' | 'barcode'>('local')
+  const [busquedaLocal,   setBusquedaLocal]   = useState('')
+  const [resultadosLocal, setResultadosLocal] = useState<AlimentoBusqueda[]>([])
+  const [buscandoLocal,   setBuscandoLocal]   = useState(false)
+  const [buscandoBarcode, setBuscandoBarcode] = useState(false)
+  const [errorBarcode,    setErrorBarcode]    = useState<string | null>(null)
+  const [scanKey,         setScanKey]         = useState(0)
+  const busquedaLocalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const videoRef   = useRef<HTMLVideoElement | null>(null)
+  const scannerRef = useRef<{ stop: () => void } | null>(null)
+
   // ── Carga inicial: perfil + agua ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
@@ -265,7 +284,7 @@ export default function InicioPage() {
   // ── Búsqueda de alimentos vía Open Food Facts (debounced 500 ms) ────────────
   useEffect(() => {
     if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current)
-    if (!formAbierto || alimentoSel || busquedaAlim.trim().length < 2) {
+    if (!formAbierto || alimentoSel || origenBusqueda !== 'off' || busquedaAlim.trim().length < 2) {
       setResultadosAlim([])
       setBuscandoAlim(false)
       setErrorBusqueda(null)
@@ -303,7 +322,106 @@ export default function InicioPage() {
       }
     }, 500)
     return () => { if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current) }
-  }, [busquedaAlim, formAbierto, alimentoSel])
+  }, [busquedaAlim, formAbierto, alimentoSel, origenBusqueda])
+
+  // ── Búsqueda local en tabla "alimentos" (Supabase) ────────────────────────
+  useEffect(() => {
+    if (busquedaLocalTimerRef.current) clearTimeout(busquedaLocalTimerRef.current)
+    if (!formAbierto || alimentoSel || origenBusqueda !== 'local' || busquedaLocal.trim().length < 2) {
+      setResultadosLocal([])
+      setBuscandoLocal(false)
+      return
+    }
+    setBuscandoLocal(true)
+    busquedaLocalTimerRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('alimentos')
+        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g')
+        .ilike('nombre', `%${busquedaLocal.trim()}%`)
+        .limit(15)
+      setResultadosLocal(
+        (data ?? []).map(a => ({
+          id:            a.id,
+          nombre:        a.nombre,
+          calorias_100g: a.calorias_100g ?? 0,
+          proteina_100g: a.proteina_100g ?? 0,
+          carbos_100g:   a.carbos_100g   ?? 0,
+          grasas_100g:   a.grasas_100g   ?? 0,
+        }))
+      )
+      setBuscandoLocal(false)
+    }, 300)
+    return () => { if (busquedaLocalTimerRef.current) clearTimeout(busquedaLocalTimerRef.current) }
+  }, [busquedaLocal, formAbierto, alimentoSel, origenBusqueda])
+
+  // ── Escáner de código de barras (ZXing) ───────────────────────────────────
+  useEffect(() => {
+    const deberiaEscanear = origenBusqueda === 'barcode' && formAbierto && !alimentoSel
+    if (!deberiaEscanear) {
+      scannerRef.current?.stop()
+      scannerRef.current = null
+      return
+    }
+
+    let activo = true
+    ;(async () => {
+      if (!videoRef.current) return
+      try {
+        const codeReader = new BrowserMultiFormatReader()
+        const controls = await codeReader.decodeFromConstraints(
+          { video: { facingMode: { ideal: 'environment' } } },
+          videoRef.current,
+          async (result) => {
+            if (!result || !activo) return
+            activo = false
+            scannerRef.current?.stop()
+            scannerRef.current = null
+
+            const codigo = result.getText()
+            setBuscandoBarcode(true)
+            setErrorBarcode(null)
+            try {
+              const res  = await fetch(`/api/alimentos/codigo?code=${encodeURIComponent(codigo)}`)
+              const json = await res.json() as {
+                status: number
+                product?: { code?: string; product_name?: string; brands?: string; nutriments?: Record<string, number> }
+              }
+              if (json.status === 1 && json.product?.product_name) {
+                const p = json.product
+                const n = p.nutriments ?? {}
+                setAlimentoSel({
+                  id:            p.code ?? codigo,
+                  nombre:        p.product_name + (p.brands ? ` · ${p.brands}` : ''),
+                  calorias_100g: Math.round((n['energy-kcal_100g'] ?? 0) * 10) / 10,
+                  proteina_100g: Math.round((n.proteins_100g       ?? 0) * 10) / 10,
+                  carbos_100g:   Math.round((n.carbohydrates_100g  ?? 0) * 10) / 10,
+                  grasas_100g:   Math.round((n.fat_100g            ?? 0) * 10) / 10,
+                })
+                setPesoPorcion('100')
+              } else {
+                setErrorBarcode('Producto no encontrado, búscalo por nombre.')
+              }
+            } catch {
+              setErrorBarcode('No se pudo consultar el producto.')
+            } finally {
+              setBuscandoBarcode(false)
+            }
+          }
+        )
+        if (activo) scannerRef.current = controls
+        else controls.stop()
+      } catch {
+        if (activo) setErrorBarcode('No se pudo acceder a la cámara. Verifica los permisos.')
+      }
+    })()
+
+    return () => {
+      activo = false
+      scannerRef.current?.stop()
+      scannerRef.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origenBusqueda, formAbierto, alimentoSel, scanKey])
 
   // ── Navegación de fecha ───────────────────────────────────────────────────
   const irDiaAnterior  = () => setFechaSeleccionada(f => sumarDias(f, -1))
@@ -355,20 +473,41 @@ export default function InicioPage() {
   }
 
   const cerrarFormulario = () => {
+    scannerRef.current?.stop()
+    scannerRef.current = null
     setFormAbierto(false)
     setAlimentoSel(null)
     setBusquedaAlim('')
+    setBusquedaLocal('')
     setResultadosAlim([])
+    setResultadosLocal([])
     setGramosInput('100')
     setModoRegistro('gramos')
     setUnidadesInput('1')
     setPesoPorcion('100')
+    setOrigenBusqueda('local')
+    setErrorBarcode(null)
+    setBuscandoBarcode(false)
+    setScanKey(0)
   }
 
   const seleccionarAlimento = (a: AlimentoBusqueda) => {
     setAlimentoSel(a)
     setPesoPorcion(String(gramosPorUnidad(a.nombre)))
     setResultadosAlim([])
+    setResultadosLocal([])
+  }
+
+  const cambiarPestana = (nueva: 'local' | 'off' | 'barcode') => {
+    setOrigenBusqueda(nueva)
+    setAlimentoSel(null)
+    setBusquedaAlim('')
+    setBusquedaLocal('')
+    setResultadosAlim([])
+    setResultadosLocal([])
+    setErrorBarcode(null)
+    setErrorBusqueda(null)
+    setBuscandoBarcode(false)
   }
 
   // ── Agua ──────────────────────────────────────────────────────────────────
@@ -668,50 +807,151 @@ export default function InicioPage() {
                     </button>
                   </div>
 
-                  {/* Estado A: buscando alimento */}
+                  {/* Estado A: buscando alimento (pestañas) */}
                   {!alimentoSel ? (
                     <>
-                      <div className="mb-2">
-                        <input
-                          type="text"
-                          placeholder="Buscar alimento…"
-                          value={busquedaAlim}
-                          onChange={e => setBusquedaAlim(e.target.value)}
-                          autoFocus
-                          className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#B57BFF]/40 focus:bg-black/60 transition-all"
-                        />
+                      {/* ── Selector de pestañas ── */}
+                      <div className="flex gap-1 mb-3 bg-black/30 p-1 rounded-xl">
+                        {PESTANAS.map(({ key, label }) => (
+                          <button
+                            key={key}
+                            onClick={() => cambiarPestana(key)}
+                            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all leading-tight ${
+                              origenBusqueda === key
+                                ? key === 'local'
+                                  ? 'bg-[#7B2FF7] text-white shadow-[0_0_8px_rgba(123,47,247,0.35)]'
+                                  : 'bg-[#0891B2] text-white shadow-[0_0_8px_rgba(8,145,178,0.35)]'
+                                : 'text-gray-500 hover:text-gray-300'
+                            }`}>
+                            {label}
+                          </button>
+                        ))}
                       </div>
 
-                      {buscandoAlim && (
-                        <p className="text-xs text-gray-600 text-center py-2">Buscando en internet…</p>
+                      {/* ── Mi lista (Supabase) ── */}
+                      {origenBusqueda === 'local' && (
+                        <>
+                          <div className="mb-2">
+                            <input
+                              type="text"
+                              placeholder="Buscar en mi lista…"
+                              value={busquedaLocal}
+                              onChange={e => setBusquedaLocal(e.target.value)}
+                              autoFocus
+                              className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#7B2FF7]/40 focus:bg-black/60 transition-all"
+                            />
+                          </div>
+                          {buscandoLocal && (
+                            <p className="text-xs text-gray-600 text-center py-2">Buscando…</p>
+                          )}
+                          {!buscandoLocal && busquedaLocal.trim().length >= 2 && resultadosLocal.length === 0 && (
+                            <p className="text-xs text-gray-600 text-center py-2">
+                              No encontrado en tu lista. Prueba &quot;Buscar online&quot;.
+                            </p>
+                          )}
+                          {resultadosLocal.length > 0 && (
+                            <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
+                              {resultadosLocal.map(a => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => seleccionarAlimento(a)}
+                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#7B2FF7]/10 border border-transparent hover:border-[#7B2FF7]/20 transition-all">
+                                  <div className="text-xs font-semibold text-white">{a.nombre}</div>
+                                  <div className="text-[10px] text-gray-500 mt-0.5">
+                                    <span className="text-[#B57BFF]/70">{a.calorias_100g} kcal</span>
+                                    {' · '}
+                                    <span className="text-blue-400/60">P{a.proteina_100g}</span>
+                                    {' · '}
+                                    <span className="text-[#B57BFF]/40">C{a.carbos_100g}</span>
+                                    {' · '}
+                                    <span className="text-orange-400/40">G{a.grasas_100g}</span>
+                                    {' /100g'}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
 
-                      {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
-                        <p className="text-xs text-gray-600 text-center py-2">
-                          {errorBusqueda ?? `No se encontró "${busquedaAlim}"`}
-                        </p>
+                      {/* ── Buscar online (Open Food Facts) ── */}
+                      {origenBusqueda === 'off' && (
+                        <>
+                          <div className="mb-2">
+                            <input
+                              type="text"
+                              placeholder="Buscar en internet…"
+                              value={busquedaAlim}
+                              onChange={e => setBusquedaAlim(e.target.value)}
+                              autoFocus
+                              className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-[#0891B2]/40 focus:bg-black/60 transition-all"
+                            />
+                          </div>
+                          {buscandoAlim && (
+                            <p className="text-xs text-gray-600 text-center py-2">Buscando en internet…</p>
+                          )}
+                          {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
+                            <p className="text-xs text-gray-600 text-center py-2">
+                              {errorBusqueda ?? `No se encontró "${busquedaAlim}"`}
+                            </p>
+                          )}
+                          {resultadosAlim.length > 0 && (
+                            <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
+                              {resultadosAlim.map(a => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => seleccionarAlimento(a)}
+                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#0891B2]/10 border border-transparent hover:border-[#0891B2]/20 transition-all">
+                                  <div className="text-xs font-semibold text-white">{a.nombre}</div>
+                                  <div className="text-[10px] text-gray-500 mt-0.5">
+                                    <span className="text-[#38B6FF]/80">{a.calorias_100g} kcal</span>
+                                    {' · '}
+                                    <span className="text-blue-400/60">P{a.proteina_100g}</span>
+                                    {' · '}
+                                    <span className="text-[#B57BFF]/40">C{a.carbos_100g}</span>
+                                    {' · '}
+                                    <span className="text-orange-400/40">G{a.grasas_100g}</span>
+                                    {' /100g'}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
 
-                      {resultadosAlim.length > 0 && (
-                        <div className="max-h-44 overflow-y-auto flex flex-col gap-1">
-                          {resultadosAlim.map(a => (
-                            <button
-                              key={a.id}
-                              onClick={() => seleccionarAlimento(a)}
-                              className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#B57BFF]/8 border border-transparent hover:border-[#B57BFF]/15 transition-all">
-                              <div className="text-xs font-semibold text-white">{a.nombre}</div>
-                              <div className="text-[10px] text-gray-500 mt-0.5">
-                                <span className="text-[#B57BFF]/70">{a.calorias_100g} kcal</span>
-                                {' · '}
-                                <span className="text-blue-400/60">P{a.proteina_100g}</span>
-                                {' · '}
-                                <span className="text-[#B57BFF]/40">C{a.carbos_100g}</span>
-                                {' · '}
-                                <span className="text-orange-400/40">G{a.grasas_100g}</span>
-                                {' /100g'}
+                      {/* ── Código de barras (ZXing) ── */}
+                      {origenBusqueda === 'barcode' && (
+                        <div>
+                          {buscandoBarcode ? (
+                            <div className="flex flex-col items-center justify-center py-8 gap-3">
+                              <div className="w-6 h-6 rounded-full border-2 border-[#0891B2] border-t-transparent animate-spin" />
+                              <p className="text-xs text-gray-500">Buscando producto…</p>
+                            </div>
+                          ) : errorBarcode ? (
+                            <div className="flex flex-col items-center justify-center py-6 gap-3">
+                              <p className="text-xs text-orange-400 text-center">{errorBarcode}</p>
+                              <button
+                                onClick={() => { setErrorBarcode(null); setScanKey(k => k + 1) }}
+                                className="text-xs font-semibold text-[#0891B2] hover:text-[#38B6FF] border border-[#0891B2]/30 rounded-xl px-4 py-1.5 transition-colors">
+                                Escanear de nuevo
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative rounded-xl overflow-hidden bg-black/60" style={{ aspectRatio: '4/3' }}>
+                              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                              <video
+                                ref={videoRef}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="border-2 border-[#0891B2]/70 rounded-lg" style={{ width: '60%', height: '35%', boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
                               </div>
-                            </button>
-                          ))}
+                              <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/50">
+                                Apunta al código de barras
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
