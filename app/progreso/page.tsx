@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { calcularMacros } from '@/lib/dietas/calcular'
+import type { MacrosObjetivo, NivelActividad, Sexo } from '@/lib/dietas/calcular'
 import {
   LineChart, Line, BarChart, Bar, ReferenceLine, LabelList,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -141,6 +143,13 @@ export default function ProgresoPage() {
   const [resumenPeriodo, setResumenPeriodo] = useState({ calorias: 0, proteina: 0, carbos: 0, grasas: 0, diasConRegistro: 0 })
   const [cargandoResumenPeriodo, setCargandoResumenPeriodo] = useState(false)
 
+  // ── Recálculo de calorías al cambiar de peso ──
+  const [perfilCalculo, setPerfilCalculo] = useState<{
+    peso_kg: number; altura_cm: number; edad: number
+    sexo: string; nivel_actividad: string; objetivo: string
+  } | null>(null)
+  const [modalRecalculo, setModalRecalculo] = useState<{ actuales: MacrosObjetivo; nuevos: MacrosObjetivo; nuevoPeso: number } | null>(null)
+
   const hoyStr = useMemo(() => toLocalDateStr(new Date()), [])
 
   useEffect(() => {
@@ -180,7 +189,7 @@ export default function ProgresoPage() {
           .in('fecha', ultimos7),
         supabase
           .from('perfiles')
-          .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo, sexo')
+          .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo, sexo, bmr, peso_kg, altura_cm, edad, nivel_actividad')
           .eq('id', user.id)
           .single(),
       ])
@@ -217,8 +226,21 @@ export default function ProgresoPage() {
       setMetaProteina(perfilData?.proteina_objetivo ?? 0)
       setMetaCarbos(perfilData?.carbos_objetivo ?? 0)
       setMetaGrasas(perfilData?.grasas_objetivo ?? 0)
-      setObjetivoPersona((perfilData?.objetivo as ObjetivoPersona) ?? 'mantener')
+      const objDB = perfilData?.objetivo
+      const objValido = (['bajar', 'mantener', 'subir'] as const).includes(objDB as ObjetivoPersona)
+        ? (objDB as ObjetivoPersona) : 'bajar'
+      setObjetivoPersona(objValido)
       setSexoPerfil(perfilData?.sexo ?? null)
+      if (perfilData?.peso_kg && perfilData?.altura_cm && perfilData?.edad) {
+        setPerfilCalculo({
+          peso_kg:         Number(perfilData.peso_kg),
+          altura_cm:       Number(perfilData.altura_cm),
+          edad:            Number(perfilData.edad),
+          sexo:            perfilData.sexo || 'hombre',
+          nivel_actividad: perfilData.nivel_actividad || 'moderada',
+          objetivo:        objValido,
+        })
+      }
       const comidasMap = new Map<string, number>()
       ;(comidasData ?? []).forEach(r => {
         comidasMap.set(r.fecha, (comidasMap.get(r.fecha) ?? 0) + (r.calorias ?? 0))
@@ -283,6 +305,45 @@ export default function ProgresoPage() {
       .order('fecha', { ascending: true })
     setHistorialPeso((data ?? []) as RegistroPeso[])
     setGuardando(false)
+    if (perfilCalculo && perfilCalculo.peso_kg > 0 && Math.abs(kg - perfilCalculo.peso_kg) >= 2) {
+      const baseParams = {
+        altura_cm:       Number(perfilCalculo.altura_cm),
+        edad:            Number(perfilCalculo.edad),
+        sexo:            (perfilCalculo.sexo === 'mujer' ? 'mujer' : 'hombre') as Sexo,
+        nivel_actividad: ((['sedentario', 'moderada', 'alta'] as const).includes(perfilCalculo.nivel_actividad as NivelActividad)
+          ? perfilCalculo.nivel_actividad : 'moderada') as NivelActividad,
+        objetivo:        perfilCalculo.objetivo as ObjetivoPersona,
+      }
+      const actuales = calcularMacros({ peso_kg: Number(perfilCalculo.peso_kg), ...baseParams })
+      const nuevos   = calcularMacros({ peso_kg: kg, ...baseParams })
+      setModalRecalculo({ actuales, nuevos, nuevoPeso: kg })
+    }
+  }
+
+  // ── Actualizar calorías tras recálculo ──
+  const aplicarRecalculo = async () => {
+    if (!userId || !modalRecalculo || !perfilCalculo) return
+    const { nuevos, nuevoPeso } = modalRecalculo
+    const { error } = await supabase
+      .from('perfiles')
+      .update({
+        peso_kg:           nuevoPeso,
+        bmr:               nuevos.bmr,
+        tdee:              nuevos.tdee,
+        calorias_objetivo: nuevos.calorias,
+        proteina_objetivo: nuevos.proteina,
+        carbos_objetivo:   nuevos.carbos,
+        grasas_objetivo:   nuevos.grasas,
+      })
+      .eq('id', userId)
+    if (error) return
+    setTdee(nuevos.tdee)
+    setMetaDiaria(nuevos.calorias)
+    setMetaProteina(nuevos.proteina)
+    setMetaCarbos(nuevos.carbos)
+    setMetaGrasas(nuevos.grasas)
+    setPerfilCalculo(prev => prev ? { ...prev, peso_kg: nuevoPeso } : prev)
+    setModalRecalculo(null)
   }
 
   // ── Datos derivados: peso ──
@@ -975,6 +1036,82 @@ export default function ProgresoPage() {
           </>
         )}
       </div>
+
+      {/* ── Modal: recalcular calorías al cambiar de peso ── */}
+      {modalRecalculo && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+        >
+          <div className="w-full max-w-lg rounded-t-3xl p-6 pb-10"
+            style={{
+              background: 'linear-gradient(160deg, #120626 0%, #08021a 100%)',
+              border: '1px solid rgba(181,123,255,0.3)',
+              boxShadow: '0 -8px 48px rgba(181,123,255,0.2)',
+            }}>
+
+            {/* Drag handle decorativo */}
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+
+            {/* Header */}
+            <p className="text-4xl text-center mb-2">⚖️</p>
+            <h3 className="text-lg font-bold text-white text-center mb-1">¡Tu peso ha cambiado!</h3>
+            <p className="text-xs text-gray-400 text-center mb-5">
+              Con{' '}
+              <span className="text-white font-semibold">{modalRecalculo.nuevoPeso} kg</span>
+              {' '}tus calorías óptimas son distintas. ¿Quieres actualizarlas?
+            </p>
+
+            {/* Comparación calorías */}
+            <div className="flex flex-col gap-2 mb-3">
+              {[
+                { label: 'Mantenimiento (TDEE)', antes: modalRecalculo.actuales.tdee,     despues: modalRecalculo.nuevos.tdee },
+                { label: 'Meta diaria',          antes: modalRecalculo.actuales.calorias,  despues: modalRecalculo.nuevos.calorias },
+              ].map(row => (
+                <div key={row.label}
+                  className="flex items-center justify-between rounded-2xl px-4 py-3"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <span className="text-xs text-gray-400">{row.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-600">{row.antes.toLocaleString()} kcal</span>
+                    <span className="text-gray-600 text-[10px]">→</span>
+                    <span className="text-sm font-bold text-[#B57BFF]">{row.despues.toLocaleString()} kcal</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Macros */}
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {[
+                { label: 'Proteína', antes: modalRecalculo.actuales.proteina, despues: modalRecalculo.nuevos.proteina, color: '#38B6FF' },
+                { label: 'Carbos',   antes: modalRecalculo.actuales.carbos,   despues: modalRecalculo.nuevos.carbos,   color: '#FF9D42' },
+                { label: 'Grasas',   antes: modalRecalculo.actuales.grasas,   despues: modalRecalculo.nuevos.grasas,   color: '#FF5C5C' },
+              ].map(m => (
+                <div key={m.label} className="rounded-xl py-2.5 px-3 text-center"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-[10px] text-gray-500 mb-0.5">{m.label}</p>
+                  <p className="text-[10px] text-gray-600">{m.antes}g →</p>
+                  <p className="text-sm font-bold" style={{ color: m.color }}>{m.despues}g</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Botones */}
+            <button
+              onClick={aplicarRecalculo}
+              className="w-full py-3.5 rounded-2xl text-white font-bold text-sm mb-2"
+              style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)' }}>
+              Actualizar mis calorías y macros
+            </button>
+            <button
+              onClick={() => setModalRecalculo(null)}
+              className="w-full py-2 text-sm text-gray-500">
+              Ahora no
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )
