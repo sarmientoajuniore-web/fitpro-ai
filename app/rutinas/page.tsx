@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar } from 'lucide-react'
-import ReportButton from '@/components/ui/ReportButton'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1988,7 +1987,6 @@ export default function RutinasPage() {
         </div>
       )}
 
-      <ReportButton />
     </div>
   )
 }

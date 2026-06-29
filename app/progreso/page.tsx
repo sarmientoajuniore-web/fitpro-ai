@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import ReportButton from '@/components/ui/ReportButton'
 import {
   LineChart, Line, BarChart, Bar, ReferenceLine, LabelList,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -127,6 +126,7 @@ export default function ProgresoPage() {
   const [sesiones, setSesiones]           = useState<SesionRow[]>([])
   const [ejerciciosList, setEjerciciosList] = useState<{ id: string; nombre: string }[]>([])
   const [ejercicioSel, setEjercicioSel]   = useState<string>('')
+  const [expandedEj, setExpandedEj]       = useState<Set<string>>(new Set())
 
   // ── Nutrición ──
   const [nutriData, setNutriData]   = useState<NutriDia[]>([])
@@ -335,6 +335,33 @@ export default function ProgresoPage() {
   const yMinEj = ejArr.length > 0 ? Math.floor(Math.min(...ejArr) - 2.5) : 0
   const yMaxEj = ejArr.length > 0 ? Math.ceil(Math.max(...ejArr)  + 2.5) : 100
 
+  // ── Datos derivados: ejercicios (vista de PRs) ──
+  const ejercicioChartMap = useMemo(() => {
+    const map = new Map<string, { fecha: string; label: string; peso: number }[]>()
+    ejerciciosList.forEach(ej => {
+      const porFecha = new Map<string, number>()
+      sesiones
+        .filter(s => s.ejercicio_id === ej.id && s.peso_kg != null)
+        .forEach(s => {
+          const prev = porFecha.get(s.fecha) ?? 0
+          if ((s.peso_kg ?? 0) > prev) porFecha.set(s.fecha, s.peso_kg!)
+        })
+      const data = Array.from(porFecha.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([fecha, peso]) => ({ fecha, label: formatFechaCorta(fecha), peso }))
+      map.set(ej.id, data)
+    })
+    return map
+  }, [sesiones, ejerciciosList])
+
+  const ejercicioIdsHoy = useMemo(
+    () => new Set(sesiones.filter(s => s.fecha === hoyStr && s.peso_kg != null).map(s => s.ejercicio_id)),
+    [sesiones, hoyStr]
+  )
+
+  const ejerciciosHoy   = useMemo(() => ejerciciosList.filter(e =>  ejercicioIdsHoy.has(e.id)), [ejerciciosList, ejercicioIdsHoy])
+  const ejerciciosOtros = useMemo(() => ejerciciosList.filter(e => !ejercicioIdsHoy.has(e.id)), [ejerciciosList, ejercicioIdsHoy])
+
   // ── Datos derivados: nutrición ──
   const comidasMax = Math.max(...nutriData.map(d => d.consumido), metaDiaria, 1)
   const yMaxNutri  = Math.ceil(comidasMax * 1.2)
@@ -410,7 +437,7 @@ export default function ProgresoPage() {
       </div>
 
       <div className="p-5">
-        <h2 className="text-xl font-bold mb-4">Progreso <span className="text-[#B57BFF]">Corporal</span></h2>
+        <h2 className="text-xl font-bold mb-4">Progreso</h2>
 
         {/* TABS */}
         <div className="flex gap-2 mb-5">
@@ -596,72 +623,108 @@ export default function ProgresoPage() {
                   </p>
                 ) : (
                   <>
-                    {/* Selector */}
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Selecciona un ejercicio</p>
-                      <select
-                        value={ejercicioSel}
-                        onChange={e => setEjercicioSel(e.target.value)}
-                        className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60">
-                        {ejerciciosList.map(e => (
-                          <option key={e.id} value={e.id}>{e.nombre}</option>
-                        ))}
-                      </select>
+                    {/* A · Entrenados hoy */}
+                    <div>
+                      <p className="text-[10px] text-[#22D3EE]/70 uppercase tracking-widest mb-2 px-1">Entrenados hoy</p>
+                      {ejerciciosHoy.length === 0 ? (
+                        <p className="text-xs text-gray-600 px-1">Sin entrenamientos registrados hoy</p>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {ejerciciosHoy.map(ej => {
+                            const data = ejercicioChartMap.get(ej.id) ?? []
+                            const pr = data.length > 0 ? Math.max(...data.map(d => d.peso)) : 0
+                            const hoyPeso = data.find(d => d.fecha === hoyStr)?.peso ?? 0
+                            const prevMax = data.filter(d => d.fecha < hoyStr).reduce((m, d) => Math.max(m, d.peso), 0)
+                            const esNuevoPR = prevMax > 0 && hoyPeso > prevMax
+                            return (
+                              <div key={ej.id} className="rounded-2xl p-4"
+                                style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.2)' }}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-sm font-bold text-white">{ej.nombre}</p>
+                                  {esNuevoPR ? (
+                                    <span className="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded-full">
+                                      🏆 ¡Nuevo PR! {hoyPeso}kg
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs font-semibold text-[#22D3EE]">PR {pr}kg</span>
+                                  )}
+                                </div>
+                                {data.length >= 2 ? (
+                                  <ResponsiveContainer width="100%" height={90}>
+                                    <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                                      <XAxis dataKey="label" {...AXIS} />
+                                      <YAxis {...AXIS} width={36} />
+                                      <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso máx.']} />
+                                      <Line type="monotone" dataKey="peso" stroke="#22D3EE" strokeWidth={2}
+                                        dot={{ fill: '#22D3EE', r: 2, strokeWidth: 0 }}
+                                        activeDot={{ r: 4, fill: '#22D3EE', strokeWidth: 0 }} />
+                                    </LineChart>
+                                  </ResponsiveContainer>
+                                ) : (
+                                  <p className="text-[10px] text-[#22D3EE]/40 mt-1">Primera sesión — ¡vuelve a entrenar para ver tu progreso!</p>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Récord */}
-                    {recordEjercicio != null && (
-                      <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Récord personal</p>
-                            <p className="text-3xl font-black text-[#B57BFF]">
-                              {recordEjercicio}
-                              <span className="text-sm text-gray-500 font-normal"> kg</span>
-                            </p>
-                            {recordFecha && (
-                              <p className="text-[10px] text-gray-600 mt-0.5">{formatFechaDDMMYYYY(recordFecha)}</p>
-                            )}
-                          </div>
-                          {chartEjercicio.length > 0 && (
-                            <div className="text-right">
-                              <p className="text-xs text-gray-500 mb-0.5">Último registro</p>
-                              <p className="text-lg font-bold text-white">
-                                {chartEjercicio[chartEjercicio.length - 1].peso} kg
-                              </p>
-                              <p className="text-[10px] text-gray-600 mt-0.5">
-                                {formatFechaDDMMYYYY(chartEjercicio[chartEjercicio.length - 1].fechaRaw)}
-                              </p>
-                            </div>
-                          )}
+                    {/* B · Otros ejercicios (acordeón) */}
+                    {ejerciciosOtros.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 px-1">Otros ejercicios</p>
+                        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden">
+                          {ejerciciosOtros.map((ej, idx) => {
+                            const data = ejercicioChartMap.get(ej.id) ?? []
+                            const pr = data.length > 0 ? Math.max(...data.map(d => d.peso)) : 0
+                            const isExpanded = expandedEj.has(ej.id)
+                            const isLast = idx === ejerciciosOtros.length - 1
+                            return (
+                              <div key={ej.id} className={!isLast ? 'border-b border-white/5' : ''}>
+                                <button
+                                  className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+                                  onClick={() => setExpandedEj(prev => {
+                                    const next = new Set(prev)
+                                    if (next.has(ej.id)) next.delete(ej.id)
+                                    else next.add(ej.id)
+                                    return next
+                                  })}
+                                >
+                                  <span className="text-sm text-white font-medium">
+                                    {ej.nombre}
+                                    {pr > 0 && <span className="text-gray-500 font-normal"> · PR {pr}kg</span>}
+                                  </span>
+                                  <span className={`text-gray-500 text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                </button>
+                                {isExpanded && (
+                                  <div className="px-4 pb-4">
+                                    {data.length >= 2 ? (
+                                      <ResponsiveContainer width="100%" height={130}>
+                                        <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                          <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" />
+                                          <YAxis {...AXIS} width={36} tickFormatter={v => `${v}kg`} />
+                                          <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso máx.']} />
+                                          <Line type="monotone" dataKey="peso" stroke="#B57BFF" strokeWidth={2}
+                                            dot={{ fill: '#B57BFF', r: 2, strokeWidth: 0 }}
+                                            activeDot={{ r: 4, fill: '#B57BFF', strokeWidth: 0 }} />
+                                        </LineChart>
+                                      </ResponsiveContainer>
+                                    ) : (
+                                      <p className="text-[10px] text-gray-600">
+                                        {data.length === 0
+                                          ? 'Sin datos de peso para este ejercicio'
+                                          : 'Entrena al menos 2 veces para ver la gráfica'}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
-                    )}
-
-                    {/* Gráfica ejercicio */}
-                    {chartEjercicio.length >= 2 && (
-                      <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                        <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Evolución del peso levantado</p>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <LineChart data={chartEjercicio} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="fecha" {...AXIS} interval="preserveStartEnd" />
-                            <YAxis domain={[yMinEj, yMaxEj]} {...AXIS} width={42} tickFormatter={v => `${v}kg`} />
-                            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso máx.']} />
-                            <Line type="monotone" dataKey="peso" stroke="#B57BFF" strokeWidth={2}
-                              dot={{ fill: '#B57BFF', r: 3, strokeWidth: 0 }}
-                              activeDot={{ r: 5, fill: '#B57BFF', strokeWidth: 0 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-
-                    {chartEjercicio.length < 2 && (
-                      <p className="text-center py-6 text-gray-600 text-xs">
-                        {chartEjercicio.length === 0
-                          ? 'Sin datos de peso para este ejercicio'
-                          : 'Entrena este ejercicio al menos 2 veces para ver la gráfica'}
-                      </p>
                     )}
                   </>
                 )}
@@ -863,7 +926,6 @@ export default function ProgresoPage() {
         )}
       </div>
 
-      <ReportButton />
     </div>
   )
 }
