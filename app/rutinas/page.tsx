@@ -353,6 +353,9 @@ export default function RutinasPage() {
   const [confirmBorrarEj, setConfirmBorrarEj] = useState<string | null>(null)
   const [borrandoEj, setBorrandoEj]           = useState(false)
 
+  // Reordenar días de la rutina (panel expandible)
+  const [reordenarDiasId, setReordenarDiasId] = useState<string | null>(null)
+
   // Wizard de creación
   const [wizard, setWizard]               = useState<WizardState | null>(null)
   const [guardandoRutina, setGuardandoRutina] = useState(false)
@@ -610,6 +613,61 @@ export default function RutinasPage() {
     setBorrandoEj(false)
     setConfirmBorrarEj(null)
     cargarRutinas()
+  }
+
+  // ── Mover ejercicio ↑↓ dentro del día (intercambia campo "orden") ──
+  const moverEjercicio = async (rutinaId: string, ejId: string, dir: 'arriba' | 'abajo') => {
+    const rutina = rutinas.find(r => r.id === rutinaId)
+    if (!rutina) return
+    const ej = rutina.rutina_ejercicios.find(e => e.id === ejId)
+    if (!ej || !ej.dia_semana) return
+    const lista = rutina.rutina_ejercicios
+      .filter(e => e.dia_semana === ej.dia_semana)
+      .sort((a, b) => a.orden - b.orden)
+    const idx = lista.findIndex(e => e.id === ejId)
+    if (dir === 'arriba' && idx === 0) return
+    if (dir === 'abajo' && idx === lista.length - 1) return
+    const idxB = dir === 'arriba' ? idx - 1 : idx + 1
+    const ejA = lista[idx]
+    const ejB = lista[idxB]
+    await Promise.all([
+      supabase.from('rutina_ejercicios').update({ orden: ejB.orden }).eq('id', ejA.id),
+      supabase.from('rutina_ejercicios').update({ orden: ejA.orden }).eq('id', ejB.id),
+    ])
+    setRutinas(prev => prev.map(r => {
+      if (r.id !== rutinaId) return r
+      return {
+        ...r,
+        rutina_ejercicios: r.rutina_ejercicios.map(e => {
+          if (e.id === ejA.id) return { ...e, orden: ejB.orden }
+          if (e.id === ejB.id) return { ...e, orden: ejA.orden }
+          return e
+        }),
+      }
+    }))
+  }
+
+  // ── Intercambiar todos los ejercicios entre dos días ──
+  const intercambiarDias = async (rutinaId: string, diaA: string, diaB: string) => {
+    const rutina = rutinas.find(r => r.id === rutinaId)
+    if (!rutina) return
+    const idsA = rutina.rutina_ejercicios.filter(e => e.dia_semana === diaA).map(e => e.id)
+    const idsB = rutina.rutina_ejercicios.filter(e => e.dia_semana === diaB).map(e => e.id)
+    await Promise.all([
+      ...(idsA.length ? [supabase.from('rutina_ejercicios').update({ dia_semana: diaB }).in('id', idsA)] : []),
+      ...(idsB.length ? [supabase.from('rutina_ejercicios').update({ dia_semana: diaA }).in('id', idsB)] : []),
+    ])
+    setRutinas(prev => prev.map(r => {
+      if (r.id !== rutinaId) return r
+      return {
+        ...r,
+        rutina_ejercicios: r.rutina_ejercicios.map(e => {
+          if (e.dia_semana === diaA) return { ...e, dia_semana: diaB }
+          if (e.dia_semana === diaB) return { ...e, dia_semana: diaA }
+          return e
+        }),
+      }
+    }))
   }
 
   // ── Agregar ejercicio ──
@@ -1167,10 +1225,27 @@ export default function RutinasPage() {
                     ) : (
                       <div className="mb-3">
                         {ejsDia.map((ej, i) => (
-                          <div key={ej.id} className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-black/20 mb-1.5">
+                          <div key={ej.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-black/20 mb-1.5">
                             <span className="text-[#B57BFF] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
+                            </div>
+                            {/* Flechitas reordenar */}
+                            <div className="flex flex-col gap-0.5 shrink-0">
+                              <button
+                                onClick={() => moverEjercicio(rutina.id, ej.id, 'arriba')}
+                                disabled={i === 0}
+                                className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                  ${i === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                ▲
+                              </button>
+                              <button
+                                onClick={() => moverEjercicio(rutina.id, ej.id, 'abajo')}
+                                disabled={i === ejsDia.length - 1}
+                                className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                  ${i === ejsDia.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                ▼
+                              </button>
                             </div>
                             {confirmBorrarEj === ej.id ? (
                               <div className="flex items-center gap-1 shrink-0">
@@ -1189,7 +1264,7 @@ export default function RutinasPage() {
                             ) : (
                               <button
                                 onClick={() => setConfirmBorrarEj(ej.id)}
-                                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 text-sm leading-none ml-1">
+                                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 text-sm leading-none">
                                 ✕
                               </button>
                             )}
@@ -1212,6 +1287,61 @@ export default function RutinasPage() {
                         ▶ Iniciar sesión
                       </button>
                     </div>
+
+                    {/* ── Reordenar días ── */}
+                    {(() => {
+                      const diasOrdenados = DIAS.filter(d => diasEnt.has(d))
+                      if (diasOrdenados.length < 2) return null
+                      const abierto = reordenarDiasId === rutina.id
+                      return (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => setReordenarDiasId(abierto ? null : rutina.id)}
+                            className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-[#B57BFF] transition-colors w-full">
+                            <span className="text-xs">⇅</span>
+                            <span>Reordenar días de entrenamiento</span>
+                            <span className="ml-auto text-[10px]">{abierto ? '▲' : '▼'}</span>
+                          </button>
+                          {abierto && (
+                            <div className="mt-2 bg-black/30 rounded-xl border border-white/8 p-3 space-y-2">
+                              {diasOrdenados.map((dia, di) => {
+                                const ejsD = rutina.rutina_ejercicios
+                                  .filter(e => e.dia_semana === dia)
+                                  .sort((a, b) => a.orden - b.orden)
+                                const musculos = [...new Set(
+                                  ejsD.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
+                                )].slice(0, 3).join(', ')
+                                return (
+                                  <div key={dia} className="flex items-center gap-2">
+                                    <div className="flex flex-col gap-0.5 shrink-0">
+                                      <button
+                                        onClick={() => intercambiarDias(rutina.id, diasOrdenados[di - 1], dia)}
+                                        disabled={di === 0}
+                                        className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                          ${di === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                        ▲
+                                      </button>
+                                      <button
+                                        onClick={() => intercambiarDias(rutina.id, dia, diasOrdenados[di + 1])}
+                                        disabled={di === diasOrdenados.length - 1}
+                                        className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                          ${di === diasOrdenados.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                        ▼
+                                      </button>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-xs font-semibold text-white">{dia}</span>
+                                      {musculos && <span className="text-[10px] text-gray-500 ml-1.5">{musculos}</span>}
+                                    </div>
+                                    <span className="text-[10px] text-gray-600 shrink-0">{ejsD.length} ej.</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               )
@@ -1493,15 +1623,32 @@ export default function RutinasPage() {
                 ) : (
                   <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden mb-3">
                     {wizardEjsDia.map((ej, i) => (
-                      <div key={ej.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
+                      <div key={ej.id} className="flex items-center gap-2 px-4 py-3 border-b border-white/5 last:border-0">
                         <span className="text-[#B57BFF] text-xs font-bold w-4 text-center shrink-0">{i + 1}</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
                           <div className="text-[10px] text-gray-500 mt-0.5">{ej.ejercicios?.musculo_principal}</div>
                         </div>
                         <div className="text-xs text-gray-500 shrink-0">{esCardio(ej) ? '🏃 Cardio' : `${ej.series}×${ej.repeticiones}`}</div>
+                        {/* Flechitas reordenar */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button
+                            onClick={() => wizard?.rutinaId && moverEjercicio(wizard.rutinaId, ej.id, 'arriba')}
+                            disabled={i === 0}
+                            className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                              ${i === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-500 active:text-[#B57BFF]'}`}>
+                            ▲
+                          </button>
+                          <button
+                            onClick={() => wizard?.rutinaId && moverEjercicio(wizard.rutinaId, ej.id, 'abajo')}
+                            disabled={i === wizardEjsDia.length - 1}
+                            className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                              ${i === wizardEjsDia.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-500 active:text-[#B57BFF]'}`}>
+                            ▼
+                          </button>
+                        </div>
                         {confirmBorrarEj === ej.id ? (
-                          <div className="flex items-center gap-1 shrink-0 ml-1">
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               onClick={() => borrarEjercicio(ej.id)}
                               disabled={borrandoEj}
@@ -1517,7 +1664,7 @@ export default function RutinasPage() {
                         ) : (
                           <button
                             onClick={() => setConfirmBorrarEj(ej.id)}
-                            className="text-gray-700 hover:text-red-400 transition-colors ml-1 shrink-0 text-base leading-none">
+                            className="text-gray-700 hover:text-red-400 transition-colors shrink-0 text-base leading-none">
                             ✕
                           </button>
                         )}
