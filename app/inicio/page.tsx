@@ -177,6 +177,7 @@ export default function InicioPage() {
   const [busquedaAlim,   setBusquedaAlim]   = useState('')
   const [resultadosAlim, setResultadosAlim] = useState<AlimentoBusqueda[]>([])
   const [buscandoAlim,   setBuscandoAlim]   = useState(false)
+  const [errorBusqueda,  setErrorBusqueda]  = useState<string | null>(null)
   const [alimentoSel,    setAlimentoSel]    = useState<AlimentoBusqueda | null>(null)
   const [gramosInput,    setGramosInput]    = useState('100')
   const [modoRegistro,   setModoRegistro]   = useState<'gramos' | 'unidades'>('gramos')
@@ -261,24 +262,46 @@ export default function InicioPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mlBebidos])
 
-  // ── Búsqueda de alimentos (debounced 300 ms) ──────────────────────────────
+  // ── Búsqueda de alimentos vía Open Food Facts (debounced 500 ms) ────────────
   useEffect(() => {
     if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current)
     if (!formAbierto || alimentoSel || busquedaAlim.trim().length < 2) {
       setResultadosAlim([])
       setBuscandoAlim(false)
+      setErrorBusqueda(null)
       return
     }
     setBuscandoAlim(true)
+    setErrorBusqueda(null)
     busquedaTimerRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('alimentos')
-        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g')
-        .ilike('nombre', `%${busquedaAlim.trim()}%`)
-        .limit(10)
-      setResultadosAlim(data ?? [])
-      setBuscandoAlim(false)
-    }, 300)
+      try {
+        const res = await fetch(`/api/alimentos/buscar?q=${encodeURIComponent(busquedaAlim.trim())}`)
+        const json = await res.json()
+        const productos: Array<{
+          code: string | null
+          product_name: string
+          brands: string
+          nutriments?: Record<string, number>
+        }> = Array.isArray(json?.products) ? json.products : []
+
+        const mapped: AlimentoBusqueda[] = productos.map((p, i) => ({
+          id:            p.code ?? `off-${i}`,
+          nombre:        p.product_name + (p.brands ? ` · ${p.brands}` : ''),
+          calorias_100g: Math.round((p.nutriments?.['energy-kcal_100g'] ?? 0) * 10) / 10,
+          proteina_100g: Math.round((p.nutriments?.['proteins_100g']       ?? 0) * 10) / 10,
+          carbos_100g:   Math.round((p.nutriments?.['carbohydrates_100g']  ?? 0) * 10) / 10,
+          grasas_100g:   Math.round((p.nutriments?.['fat_100g']            ?? 0) * 10) / 10,
+        }))
+
+        setResultadosAlim(mapped)
+        if (mapped.length === 0) setErrorBusqueda(json?.error ?? null)
+      } catch {
+        setResultadosAlim([])
+        setErrorBusqueda('No se pudo conectar con el buscador de alimentos.')
+      } finally {
+        setBuscandoAlim(false)
+      }
+    }, 500)
     return () => { if (busquedaTimerRef.current) clearTimeout(busquedaTimerRef.current) }
   }, [busquedaAlim, formAbierto, alimentoSel])
 
@@ -297,10 +320,11 @@ export default function InicioPage() {
       : Math.max(Math.round((parseFloat(unidadesInput) || 1) * (parseFloat(pesoPorcion) || 1)), 1)
     const unids    = modoRegistro === 'unidades' ? (parseFloat(unidadesInput) || null) : null
     const gramsPU  = modoRegistro === 'unidades' ? (parseFloat(pesoPorcion)   || null) : null
+    const esUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(alimentoSel.id)
     setGuardandoAlim(true)
     const { error: errComida } = await supabase.from('registro_comidas').insert({
       user_id:           userId,
-      alimento_id:       alimentoSel.id,
+      alimento_id:       esUUID ? alimentoSel.id : null,
       nombre_comida:     alimentoSel.nombre,
       tipo_comida:       'merienda',
       cantidad_gramos:   g,
@@ -659,12 +683,12 @@ export default function InicioPage() {
                       </div>
 
                       {buscandoAlim && (
-                        <p className="text-xs text-gray-600 text-center py-2">Buscando…</p>
+                        <p className="text-xs text-gray-600 text-center py-2">Buscando en internet…</p>
                       )}
 
                       {!buscandoAlim && busquedaAlim.trim().length >= 2 && resultadosAlim.length === 0 && (
                         <p className="text-xs text-gray-600 text-center py-2">
-                          Sin resultados para &ldquo;{busquedaAlim}&rdquo;
+                          {errorBusqueda ?? `No se encontró "${busquedaAlim}"`}
                         </p>
                       )}
 
