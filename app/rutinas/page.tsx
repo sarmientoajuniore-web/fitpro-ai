@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar } from 'lucide-react'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar, ArrowLeftRight } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -355,6 +355,14 @@ export default function RutinasPage() {
 
   // Reordenar días de la rutina (panel expandible)
   const [reordenarDiasId, setReordenarDiasId] = useState<string | null>(null)
+
+  // Plegar/desplegar lista de ejercicios por rutina (true = plegado)
+  const [ejPlegados, setEjPlegados] = useState<Record<string, boolean>>({})
+
+  // Vista semanal
+  const [vistaSemanal, setVistaSemanal]         = useState<string | null>(null)
+  const [diaOrigenSemanal, setDiaOrigenSemanal] = useState<string | null>(null)
+  const [avisoSemanal, setAvisoSemanal]         = useState<string | null>(null)
 
   // Wizard de creación
   const [wizard, setWizard]               = useState<WizardState | null>(null)
@@ -1104,6 +1112,14 @@ export default function RutinasPage() {
                       {userName && <div className="text-xs text-[#B57BFF]/60 mt-0.5">{rutina.nombre}</div>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
+                      {confirmBorrar !== rutina.id && (
+                        <button
+                          onClick={() => { setVistaSemanal(rutina.id); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
+                          className="flex items-center gap-1 text-[11px] text-[#B57BFF] border border-[#B57BFF]/30 rounded-lg px-2.5 py-1.5 hover:bg-[#B57BFF]/10 transition-colors shrink-0">
+                          <ArrowLeftRight className="w-3.5 h-3.5" />
+                          <span>Mover entreno</span>
+                        </button>
+                      )}
                       {confirmBorrar === rutina.id ? (
                         <>
                           <span className="text-[10px] text-gray-400">¿Eliminar?</span>
@@ -1216,132 +1232,155 @@ export default function RutinasPage() {
                     </div>
                   )}
 
-                  {/* Lista de ejercicios */}
+                  {/* Lista de ejercicios — plegable */}
                   <div className="px-5 pb-5">
-                    {ejsDia.length === 0 ? (
-                      <div className="text-xs text-gray-600 py-4 text-center border border-dashed border-white/8 rounded-xl mb-3">
-                        Sin ejercicios para {diaSel}
-                      </div>
-                    ) : (
-                      <div className="mb-3">
-                        {ejsDia.map((ej, i) => (
-                          <div key={ej.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-black/20 mb-1.5">
-                            <span className="text-[#B57BFF] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
-                            </div>
-                            {/* Flechitas reordenar */}
-                            <div className="flex flex-col gap-0.5 shrink-0">
-                              <button
-                                onClick={() => moverEjercicio(rutina.id, ej.id, 'arriba')}
-                                disabled={i === 0}
-                                className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                  ${i === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                ▲
-                              </button>
-                              <button
-                                onClick={() => moverEjercicio(rutina.id, ej.id, 'abajo')}
-                                disabled={i === ejsDia.length - 1}
-                                className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                  ${i === ejsDia.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                ▼
-                              </button>
-                            </div>
-                            {confirmBorrarEj === ej.id ? (
-                              <div className="flex items-center gap-1 shrink-0">
+
+                    {/* Encabezado plegador */}
+                    <button
+                      onClick={() => setEjPlegados(prev => ({ ...prev, [rutina.id]: !prev[rutina.id] }))}
+                      className="flex items-center w-full mb-3">
+                      <span
+                        className="text-sm font-black tracking-wider"
+                        style={{ fontFamily: "'Oswald', sans-serif", color: '#22D3EE' }}>
+                        EJERCICIOS
+                      </span>
+                      <span className="ml-2 text-[11px] font-semibold text-[#B57BFF]">
+                        {ejsDia.length} {ejsDia.length === 1 ? 'ejercicio' : 'ejercicios'}
+                      </span>
+                      <span
+                        className="ml-auto text-gray-500 text-xs transition-transform duration-300"
+                        style={{ display: 'inline-block', transform: ejPlegados[rutina.id] ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                        ▲
+                      </span>
+                    </button>
+
+                    {/* Contenido plegable */}
+                    <div className={`overflow-hidden transition-all duration-300 ${ejPlegados[rutina.id] ? 'max-h-0' : 'max-h-[9999px]'}`}>
+                      {ejsDia.length === 0 ? (
+                        <div className="text-xs text-gray-600 py-4 text-center border border-dashed border-white/8 rounded-xl mb-3">
+                          Sin ejercicios para {diaSel}
+                        </div>
+                      ) : (
+                        <div className="mb-3">
+                          {ejsDia.map((ej, i) => (
+                            <div key={ej.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-black/20 mb-1.5">
+                              <span className="text-[#B57BFF] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
+                              </div>
+                              {/* Flechitas reordenar */}
+                              <div className="flex flex-col gap-0.5 shrink-0">
                                 <button
-                                  onClick={() => borrarEjercicio(ej.id)}
-                                  disabled={borrandoEj}
-                                  className="text-[10px] text-red-400 border border-red-500/30 rounded px-1.5 py-0.5 hover:bg-red-500/20 transition-colors disabled:opacity-50">
-                                  {borrandoEj ? '...' : 'Sí'}
+                                  onClick={() => moverEjercicio(rutina.id, ej.id, 'arriba')}
+                                  disabled={i === 0}
+                                  className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                    ${i === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                  ▲
                                 </button>
                                 <button
-                                  onClick={() => setConfirmBorrarEj(null)}
-                                  className="text-[10px] text-gray-500 border border-white/10 rounded px-1.5 py-0.5 hover:text-white transition-colors">
-                                  No
+                                  onClick={() => moverEjercicio(rutina.id, ej.id, 'abajo')}
+                                  disabled={i === ejsDia.length - 1}
+                                  className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                    ${i === ejsDia.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                  ▼
                                 </button>
                               </div>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmBorrarEj(ej.id)}
-                                className="text-gray-600 hover:text-red-400 transition-colors shrink-0 text-sm leading-none">
-                                ✕
-                              </button>
+                              {confirmBorrarEj === ej.id ? (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => borrarEjercicio(ej.id)}
+                                    disabled={borrandoEj}
+                                    className="text-[10px] text-red-400 border border-red-500/30 rounded px-1.5 py-0.5 hover:bg-red-500/20 transition-colors disabled:opacity-50">
+                                    {borrandoEj ? '...' : 'Sí'}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmBorrarEj(null)}
+                                    className="text-[10px] text-gray-500 border border-white/10 rounded px-1.5 py-0.5 hover:text-white transition-colors">
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmBorrarEj(ej.id)}
+                                  className="text-gray-600 hover:text-red-400 transition-colors shrink-0 text-sm leading-none">
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          onClick={() => abrirModalEj(rutina.id, diaSel)}
+                          className="flex-1 border border-[#22D3EE] rounded-xl py-2.5 text-xs text-[#22D3EE] font-semibold hover:bg-[#22D3EE]/5 transition-colors">
+                          ＋ Agregar
+                        </button>
+                        <button
+                          onClick={() => iniciarSesion(rutina, diaSel, fechaSel)}
+                          disabled={ejsDia.length === 0}
+                          className="flex-[2] text-[#0a0a0a] font-bold rounded-xl py-2.5 text-sm disabled:opacity-25 transition-opacity"
+                          style={{ background: 'linear-gradient(135deg, #22D3EE, #0891B2)', boxShadow: '0 0 16px rgba(34,211,238,0.25)' }}>
+                          ▶ Iniciar sesión
+                        </button>
+                      </div>
+
+                      {/* ── Reordenar días ── */}
+                      {(() => {
+                        const diasOrdenados = DIAS.filter(d => diasEnt.has(d))
+                        if (diasOrdenados.length < 2) return null
+                        const abierto = reordenarDiasId === rutina.id
+                        return (
+                          <div className="mt-3">
+                            <button
+                              onClick={() => setReordenarDiasId(abierto ? null : rutina.id)}
+                              className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-[#B57BFF] transition-colors w-full">
+                              <span className="text-xs">⇅</span>
+                              <span>Reordenar días de entrenamiento</span>
+                              <span className="ml-auto text-[10px]">{abierto ? '▲' : '▼'}</span>
+                            </button>
+                            {abierto && (
+                              <div className="mt-2 bg-black/30 rounded-xl border border-white/8 p-3 space-y-2">
+                                {diasOrdenados.map((dia, di) => {
+                                  const ejsD = rutina.rutina_ejercicios
+                                    .filter(e => e.dia_semana === dia)
+                                    .sort((a, b) => a.orden - b.orden)
+                                  const musculos = [...new Set(
+                                    ejsD.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
+                                  )].slice(0, 3).join(', ')
+                                  return (
+                                    <div key={dia} className="flex items-center gap-2">
+                                      <div className="flex flex-col gap-0.5 shrink-0">
+                                        <button
+                                          onClick={() => intercambiarDias(rutina.id, diasOrdenados[di - 1], dia)}
+                                          disabled={di === 0}
+                                          className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                            ${di === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                          ▲
+                                        </button>
+                                        <button
+                                          onClick={() => intercambiarDias(rutina.id, dia, diasOrdenados[di + 1])}
+                                          disabled={di === diasOrdenados.length - 1}
+                                          className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
+                                            ${di === diasOrdenados.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
+                                          ▼
+                                        </button>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-semibold text-white">{dia}</span>
+                                        {musculos && <span className="text-[10px] text-gray-500 ml-1.5">{musculos}</span>}
+                                      </div>
+                                      <span className="text-[10px] text-gray-600 shrink-0">{ejsD.length} ej.</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 mt-1">
-                      <button
-                        onClick={() => abrirModalEj(rutina.id, diaSel)}
-                        className="flex-1 border border-[#22D3EE] rounded-xl py-2.5 text-xs text-[#22D3EE] font-semibold hover:bg-[#22D3EE]/5 transition-colors">
-                        ＋ Agregar
-                      </button>
-                      <button
-                        onClick={() => iniciarSesion(rutina, diaSel, fechaSel)}
-                        disabled={ejsDia.length === 0}
-                        className="flex-[2] text-[#0a0a0a] font-bold rounded-xl py-2.5 text-sm disabled:opacity-25 transition-opacity"
-                        style={{ background: 'linear-gradient(135deg, #22D3EE, #0891B2)', boxShadow: '0 0 16px rgba(34,211,238,0.25)' }}>
-                        ▶ Iniciar sesión
-                      </button>
+                        )
+                      })()}
                     </div>
-
-                    {/* ── Reordenar días ── */}
-                    {(() => {
-                      const diasOrdenados = DIAS.filter(d => diasEnt.has(d))
-                      if (diasOrdenados.length < 2) return null
-                      const abierto = reordenarDiasId === rutina.id
-                      return (
-                        <div className="mt-3">
-                          <button
-                            onClick={() => setReordenarDiasId(abierto ? null : rutina.id)}
-                            className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-[#B57BFF] transition-colors w-full">
-                            <span className="text-xs">⇅</span>
-                            <span>Reordenar días de entrenamiento</span>
-                            <span className="ml-auto text-[10px]">{abierto ? '▲' : '▼'}</span>
-                          </button>
-                          {abierto && (
-                            <div className="mt-2 bg-black/30 rounded-xl border border-white/8 p-3 space-y-2">
-                              {diasOrdenados.map((dia, di) => {
-                                const ejsD = rutina.rutina_ejercicios
-                                  .filter(e => e.dia_semana === dia)
-                                  .sort((a, b) => a.orden - b.orden)
-                                const musculos = [...new Set(
-                                  ejsD.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
-                                )].slice(0, 3).join(', ')
-                                return (
-                                  <div key={dia} className="flex items-center gap-2">
-                                    <div className="flex flex-col gap-0.5 shrink-0">
-                                      <button
-                                        onClick={() => intercambiarDias(rutina.id, diasOrdenados[di - 1], dia)}
-                                        disabled={di === 0}
-                                        className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                          ${di === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                        ▲
-                                      </button>
-                                      <button
-                                        onClick={() => intercambiarDias(rutina.id, dia, diasOrdenados[di + 1])}
-                                        disabled={di === diasOrdenados.length - 1}
-                                        className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                          ${di === diasOrdenados.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                        ▼
-                                      </button>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <span className="text-xs font-semibold text-white">{dia}</span>
-                                      {musculos && <span className="text-[10px] text-gray-500 ml-1.5">{musculos}</span>}
-                                    </div>
-                                    <span className="text-[10px] text-gray-600 shrink-0">{ejsD.length} ej.</span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
                   </div>
                 </div>
               )
@@ -1827,6 +1866,121 @@ export default function RutinasPage() {
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════
+          VISTA SEMANAL
+      ══════════════════════════════════ */}
+      {vistaSemanal && (() => {
+        const rutinaS = rutinas.find(r => r.id === vistaSemanal)
+        if (!rutinaS) return null
+        const hoyDia = diaSemanaLocal(new Date())
+        return (
+          <div className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto" style={{ background: '#0d0f13' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+              <div>
+                <div className="text-[10px] text-gray-500 uppercase tracking-widest">Cambiar día de entreno</div>
+                <div
+                  className="font-black text-sm mt-0.5"
+                  style={{ fontFamily: "'Oswald', sans-serif", color: '#22D3EE' }}>
+                  {rutinaS.nombre.toUpperCase()}
+                </div>
+              </div>
+              <button
+                onClick={() => { setVistaSemanal(null); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
+                className="text-xs text-gray-500 hover:text-white border border-white/10 rounded-lg px-3 py-1.5">
+                ← Volver
+              </button>
+            </div>
+
+            {/* Instrucción */}
+            <div className="px-5 pt-3 pb-1 text-[11px] shrink-0" style={{ color: '#6b7280' }}>
+              {diaOrigenSemanal
+                ? <span>Toca el día destino para mover el entreno del <span className="font-semibold" style={{ color: '#22D3EE' }}>{diaOrigenSemanal}</span></span>
+                : 'Toca un día con entreno para seleccionarlo y moverlo'}
+            </div>
+
+            {/* Aviso verde */}
+            {avisoSemanal && (
+              <div className="mx-5 mt-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl text-xs text-green-400 text-center shrink-0">
+                {avisoSemanal}
+              </div>
+            )}
+
+            {/* 7 días */}
+            <div className="flex-1 overflow-y-auto px-5 pt-3 pb-8 space-y-2.5">
+              {DIAS.map(dia => {
+                const ejsDelDia = rutinaS.rutina_ejercicios.filter(e => e.dia_semana === dia)
+                const tieneEntreno = ejsDelDia.length > 0
+                const esHoy = dia === hoyDia
+                const esOrigen = diaOrigenSemanal === dia
+                const musculos = [...new Set(
+                  ejsDelDia.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
+                )].slice(0, 3).join(' · ')
+
+                return (
+                  <button
+                    key={dia}
+                    onClick={async () => {
+                      if (diaOrigenSemanal === null) {
+                        if (tieneEntreno) setDiaOrigenSemanal(dia)
+                        return
+                      }
+                      if (diaOrigenSemanal === dia) { setDiaOrigenSemanal(null); return }
+                      const tieneDestino = rutinaS.rutina_ejercicios.some(e => e.dia_semana === dia)
+                      await intercambiarDias(vistaSemanal, diaOrigenSemanal, dia)
+                      setDiaOrigenSemanal(null)
+                      setAvisoSemanal(tieneDestino ? '✓ Días intercambiados' : '✓ Entreno movido')
+                      setTimeout(() => setAvisoSemanal(null), 2500)
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left
+                      ${esOrigen
+                        ? 'border-[#22D3EE] bg-[#22D3EE]/8'
+                        : esHoy
+                          ? 'border-[#B57BFF]/60 bg-[#B57BFF]/5'
+                          : tieneEntreno
+                            ? 'border-white/10 bg-black/20'
+                            : 'border-white/5 bg-transparent'}`}
+                  >
+                    {/* Nombre corto del día en Oswald */}
+                    <div
+                      className="text-sm font-black w-8 shrink-0"
+                      style={{
+                        fontFamily: "'Oswald', sans-serif",
+                        color: esOrigen ? '#22D3EE' : esHoy ? '#B57BFF' : '#6b7280',
+                      }}>
+                      {dia.slice(0, 3).toUpperCase()}
+                    </div>
+
+                    {/* Pill de entreno o Descanso */}
+                    {tieneEntreno ? (
+                      <div
+                        className="flex-1 min-w-0 px-3 py-1.5 rounded-xl text-xs font-black truncate"
+                        style={{
+                          fontFamily: "'Oswald', sans-serif",
+                          fontSize: '13px',
+                          background: esOrigen
+                            ? 'rgba(34,211,238,0.15)'
+                            : 'linear-gradient(135deg, rgba(181,123,255,0.18), rgba(123,47,247,0.12))',
+                          color: esOrigen ? '#22D3EE' : '#B57BFF',
+                        }}>
+                        {musculos || 'Entrenamiento'}
+                      </div>
+                    ) : (
+                      <div className="flex-1 text-xs text-gray-600 italic">Descanso</div>
+                    )}
+
+                    {/* Contador de ejercicios */}
+                    {tieneEntreno && (
+                      <span className="text-[10px] text-gray-600 shrink-0">{ejsDelDia.length} ej.</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══════════════════════════════════
           SESIÓN (pantalla completa)
