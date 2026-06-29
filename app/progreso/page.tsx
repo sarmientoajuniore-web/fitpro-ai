@@ -95,6 +95,7 @@ type SesionRow = {
   fecha: string
 }
 type NutriDia = { fecha: string; label: string; consumido: number }
+type CardioRow = { fecha: string; duracion_minutos: number | null; calorias_quemadas: number | null }
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -129,6 +130,9 @@ export default function ProgresoPage() {
   const [ejerciciosList, setEjerciciosList] = useState<{ id: string; nombre: string; imagen: string | null }[]>([])
   const [ejercicioSel, setEjercicioSel]   = useState<string>('')
   const [expandedEj, setExpandedEj]       = useState<Set<string>>(new Set())
+
+  // ── Cardio ──
+  const [cardioRows, setCardioRows] = useState<CardioRow[]>([])
 
   // ── Nutrición ──
   const [nutriData, setNutriData]   = useState<NutriDia[]>([])
@@ -171,6 +175,7 @@ export default function ProgresoPage() {
         { data: sesionesData },
         { data: comidasData },
         { data: perfilData },
+        { data: cardioData },
       ] = await Promise.all([
         supabase
           .from('peso_corporal')
@@ -193,6 +198,12 @@ export default function ProgresoPage() {
           .select('calorias_objetivo, tdee, proteina_objetivo, carbos_objetivo, grasas_objetivo, objetivo, sexo, bmr, peso_kg, altura_cm, edad, nivel_actividad')
           .eq('id', user.id)
           .single(),
+        supabase
+          .from('sesiones')
+          .select('fecha, duracion_minutos, calorias_quemadas')
+          .eq('user_id', user.id)
+          .not('duracion_minutos', 'is', null)
+          .order('fecha', { ascending: false }),
       ])
 
       // — Peso —
@@ -251,6 +262,9 @@ export default function ProgresoPage() {
         label: formatDiaLabel(f),
         consumido: Math.round(comidasMap.get(f) ?? 0),
       })))
+
+      // — Cardio —
+      setCardioRows((cardioData ?? []) as CardioRow[])
 
       setCargando(false)
     }
@@ -486,11 +500,47 @@ export default function ProgresoPage() {
     : deficitSuperavitPeriodo >= 0 ? 'Déficit real' : 'Superávit real'
   const deficitLabel = `${deficitLabelBase} ${periodoTxt}`
 
+  // ── Datos derivados: cardio ──
+  const cardioPorFecha = useMemo(() => {
+    const map = new Map<string, { min: number; kcal: number }>()
+    cardioRows.forEach(r => {
+      const prev = map.get(r.fecha) ?? { min: 0, kcal: 0 }
+      map.set(r.fecha, {
+        min:  prev.min  + (r.duracion_minutos  ?? 0),
+        kcal: prev.kcal + (r.calorias_quemadas ?? 0),
+      })
+    })
+    return map
+  }, [cardioRows])
+
+  const cardioHoyMin  = cardioPorFecha.get(hoyStr)?.min  ?? 0
+  const cardioHoyKcal = cardioPorFecha.get(hoyStr)?.kcal ?? 0
+
+  const cardioChartData = useMemo(() => {
+    const dates = [...new Set(cardioRows.map(r => r.fecha))].sort()
+    return dates.slice(-30).map(f => ({
+      label: formatFechaCorta(f),
+      kcal:  cardioPorFecha.get(f)?.kcal ?? 0,
+      isHoy: f === hoyStr,
+    }))
+  }, [cardioRows, cardioPorFecha, hoyStr])
+
+  const cardioHistorial = useMemo(() => {
+    const dates = [...new Set(cardioRows.map(r => r.fecha))].sort().reverse()
+    return dates.map(f => ({
+      fecha: f,
+      label: formatFechaCorta(f),
+      min:  cardioPorFecha.get(f)?.min  ?? 0,
+      kcal: cardioPorFecha.get(f)?.kcal ?? 0,
+    }))
+  }, [cardioRows, cardioPorFecha])
+
   // ── UI helpers ──
   const TABS = [
     { key: 'peso',       label: 'Peso'       },
     { key: 'ejercicios', label: 'Ejercicios' },
     { key: 'nutricion',  label: 'Nutrición'  },
+    { key: 'cardio',     label: 'Cardio'     },
   ]
 
   return (
@@ -1051,6 +1101,84 @@ export default function ProgresoPage() {
                       <p className="text-[10px] text-gray-600 mt-1">
                         El peso estimado es una aproximación. El resultado real depende de tu metabolismo y otros factores.
                       </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════ CARDIO ═══════════════ */}
+            {tab === 'cardio' && (
+              <div className="flex flex-col gap-4">
+
+                {/* 1 · Cuadritos de hoy */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[#1a1a1a] border border-[#B57BFF]/30 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Hoy · Minutos</p>
+                    <p className="text-4xl font-black leading-none mb-1"
+                      style={{ fontFamily: "'Oswald', sans-serif", color: '#B57BFF' }}>
+                      {cardioHoyMin}
+                    </p>
+                    <p className="text-[10px] text-gray-600">min</p>
+                  </div>
+                  <div className="bg-[#1a1a1a] border border-[#22D3EE]/30 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Hoy · Kcal</p>
+                    <p className="text-4xl font-black leading-none mb-1"
+                      style={{ fontFamily: "'Oswald', sans-serif", color: '#22D3EE' }}>
+                      {cardioHoyKcal}
+                    </p>
+                    <p className="text-[10px] text-gray-600">kcal</p>
+                  </div>
+                </div>
+
+                {cardioChartData.length === 0 ? (
+                  <p className="text-center py-16 text-gray-600 text-sm leading-relaxed">
+                    Aún no tienes sesiones de cardio<br />registradas.
+                  </p>
+                ) : (
+                  <>
+                    {/* 2 · Gráfica de barras kcal */}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-3">Calorías quemadas</p>
+                      <ResponsiveContainer width="100%" height={190}>
+                        <BarChart data={cardioChartData} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="label" {...AXIS} />
+                          <YAxis {...AXIS} width={42} />
+                          <Tooltip
+                            {...TOOLTIP_STYLE}
+                            formatter={(v) => [typeof v === 'number' ? `${v.toLocaleString()} kcal` : v, 'Calorías']}
+                          />
+                          <Bar dataKey="kcal" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                            {cardioChartData.map((d, i) => (
+                              <Cell key={`cardio-bar-${i}`} fill={d.isHoy ? '#22D3EE' : '#B57BFF'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* 3 · Historial */}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-3">Historial</p>
+                      <div className="flex flex-col">
+                        {cardioHistorial.map(d => (
+                          <div key={d.fecha}
+                            className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0">
+                            <span className="text-xs text-gray-400">{d.label}</span>
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm font-bold"
+                                style={{ fontFamily: "'Oswald', sans-serif", color: '#B57BFF' }}>
+                                {d.min} min
+                              </span>
+                              <span className="text-sm font-bold"
+                                style={{ fontFamily: "'Oswald', sans-serif", color: '#22D3EE' }}>
+                                {d.kcal} kcal
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
