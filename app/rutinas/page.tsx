@@ -382,6 +382,12 @@ export default function RutinasPage() {
   const [ejActivo, setEjActivo] = useState(0)
   const [fotoAbierta, setFotoAbierta] = useState(false)
 
+  // Refs para el guardado automático (debounce al escribir kg/reps)
+  const debounceAutoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const registrosRef        = useRef<Record<string, SerieDato[]>>({})
+  const sesionRef           = useRef<SesionState | null>(null)
+  const userIdRef           = useRef<string | null>(null)
+
   // Nombre del usuario (primer nombre) y sexo para caricatura
   const [userName, setUserName] = useState<string | null>(null)
   const [userSexo, setUserSexo] = useState<string | null>(null)
@@ -479,6 +485,14 @@ export default function RutinasPage() {
     setEjActivo(0)
     setFotoAbierta(false)
   }, [sesion])
+
+  // Mantener refs sincronizados para el auto-guardado
+  useEffect(() => { registrosRef.current = registros }, [registros])
+  useEffect(() => { sesionRef.current = sesion }, [sesion])
+  useEffect(() => { userIdRef.current = userId }, [userId])
+
+  // Limpiar debounce pendiente al desmontar
+  useEffect(() => () => { if (debounceAutoSaveRef.current) clearTimeout(debounceAutoSaveRef.current) }, [])
 
   // Búsqueda combinada: grupo muscular seleccionado + texto (por nombre o músculo principal).
   // Solo se muestran ejercicios con imagen: el catálogo original en español aún no tiene
@@ -743,11 +757,51 @@ export default function RutinasPage() {
     setSesionOk(false)
   }
 
-  const updateSerie = (ejId: string, idx: number, campo: keyof SerieDato, valor: string | boolean) =>
+  const updateSerie = (ejId: string, idx: number, campo: keyof SerieDato, valor: string | boolean) => {
     setRegistros(prev => ({
       ...prev,
       [ejId]: prev[ejId].map((s, i) => i === idx ? { ...s, [campo]: valor } : s),
     }))
+
+    // Guardado automático al editar campos de datos (no al marcar el check)
+    if (campo === 'peso' || campo === 'reps' || campo === 'duracionMin' || campo === 'calorias' || campo === 'intensidad') {
+      if (debounceAutoSaveRef.current) clearTimeout(debounceAutoSaveRef.current)
+      debounceAutoSaveRef.current = setTimeout(async () => {
+        const currentSesion  = sesionRef.current
+        const currentRegs    = registrosRef.current
+        const currentUserId  = userIdRef.current
+        if (!currentSesion || !currentUserId) return
+        const fecha = currentSesion.fecha
+        const filas: object[] = []
+        currentSesion.ejercicios.forEach(ej => {
+          const cardio = esCardio(ej)
+          ;(currentRegs[ej.id] || []).forEach((dato, i) => {
+            filas.push({
+              user_id:           currentUserId,
+              rutina_id:         currentSesion.rutina.id,
+              ejercicio_id:      ej.ejercicio_id,
+              dia_semana:        currentSesion.dia,
+              numero_serie:      i + 1,
+              repeticiones:      cardio ? null : dato.reps,
+              peso_kg:           cardio ? null : (parseFloat(dato.peso) || null),
+              duracion_minutos:  cardio ? (parseInt(dato.duracionMin, 10) || null) : null,
+              calorias_quemadas: cardio ? (parseInt(dato.calorias, 10) || null) : null,
+              intensidad:        cardio ? (dato.intensidad || null) : null,
+              completada:        dato.ok,
+              fecha,
+            })
+          })
+        })
+        if (filas.length === 0) return
+        await supabase.from('sesiones').upsert(filas, { onConflict: 'user_id,ejercicio_id,numero_serie,fecha,dia_semana' })
+        setSesionesMap(prev => {
+          const set = new Set(prev[currentSesion.rutina.id] ?? [])
+          set.add(fecha)
+          return { ...prev, [currentSesion.rutina.id]: set }
+        })
+      }, 900)
+    }
+  }
 
   const agregarSerie = (ejId: string) =>
     setRegistros(prev => {
@@ -1692,11 +1746,6 @@ export default function RutinasPage() {
                             lineHeight: 1.15,
                           }}
                         >{ej.ejercicios?.nombre}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {cardio ? 'Cardio' : ej.ejercicios?.musculo_principal}
-                          {!cardio && ` · plan ${ej.series}×${ej.repeticiones}`}
-                          {ej.descanso_segundos > 0 && ` · ${ej.descanso_segundos}s descanso`}
-                        </div>
                         {historial[ej.ejercicio_id] && (
                           <div className="text-[10px] text-[#B57BFF]/60 mt-1.5 flex items-center gap-2 flex-wrap">
                             <span>{historial[ej.ejercicio_id]}</span>
