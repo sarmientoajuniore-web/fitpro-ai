@@ -5,19 +5,19 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function RegistroPage() {
-  const [nombre, setNombre] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email,      setEmail]      = useState('')
+  const [password,   setPassword]   = useState('')
+  const [telefono,   setTelefono]   = useState('')
   const [privacidad, setPrivacidad] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error,      setError]      = useState('')
+  const [loading,    setLoading]    = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   const handleRegistro = async () => {
     setLoading(true)
     setError('')
-    if (!nombre || !email || !password) {
+    if (!email || !password || !telefono) {
       setError('Por favor completa todos los campos')
       setLoading(false)
       return
@@ -32,17 +32,23 @@ export default function RegistroPage() {
       setLoading(false)
       return
     }
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { nombre_completo: nombre } }
-    })
-    if (error) {
-      setError(error.message)
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+    if (authError) {
+      setError(authError.message)
       setLoading(false)
-    } else {
-      router.push('/onboarding')
+      return
     }
+
+    // Guardar teléfono en perfiles (la fila la crea el trigger de auth)
+    if (authData.user) {
+      await supabase
+        .from('perfiles')
+        .update({ telefono: telefono.trim() })
+        .eq('id', authData.user.id)
+    }
+
+    router.push('/onboarding')
   }
 
   return (
@@ -57,18 +63,20 @@ export default function RegistroPage() {
         </div>
         <div className="bg-[#110d1a] border border-[#B57BFF]/20 rounded-2xl p-6 flex flex-col gap-4">
           <div>
-            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Nombre completo</label>
-            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Junior Sarmiento"
-              className="w-full bg-[#15101f] border border-[#B57BFF]/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF] transition-colors placeholder-gray-600" />
-          </div>
-          <div>
             <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Correo electrónico</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@correo.com"
               className="w-full bg-[#15101f] border border-[#B57BFF]/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF] transition-colors placeholder-gray-600" />
           </div>
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Contraseña</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRegistro()} placeholder="Mínimo 6 caracteres"
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres"
+              className="w-full bg-[#15101f] border border-[#B57BFF]/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF] transition-colors placeholder-gray-600" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Teléfono</label>
+            <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleRegistro()}
+              placeholder="+56 9 1234 5678"
               className="w-full bg-[#15101f] border border-[#B57BFF]/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF] transition-colors placeholder-gray-600" />
           </div>
 

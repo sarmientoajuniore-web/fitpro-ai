@@ -51,7 +51,6 @@ export default function OnboardingPage() {
   const router = useRouter()
 
   const [nombre,    setNombre]    = useState('')
-  const [telefono,  setTelefono]  = useState('')
   const [edad,      setEdad]      = useState('')
   const [sexo,      setSexo]      = useState<'hombre' | 'mujer' | ''>('')
   const [altura,    setAltura]    = useState('')
@@ -84,7 +83,6 @@ export default function OnboardingPage() {
       sexo,
       altura_cm:          h,
       peso_kg:            p,
-      telefono:           telefono.trim() || null,
       nivel_actividad:    actividad,
       objetivo,
       bmr:                calc.bmr,
@@ -194,14 +192,6 @@ export default function OnboardingPage() {
             <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">Nombre completo</label>
             <input type="text" value={nombre} onChange={e => setNombre(e.target.value)}
               placeholder="Tu nombre" className={inputCls} />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-400 uppercase tracking-widest mb-2 block">
-              Teléfono <span className="text-gray-600 normal-case">(opcional)</span>
-            </label>
-            <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)}
-              placeholder="+56 9 1234 5678" className={inputCls} />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
