@@ -90,7 +90,6 @@ type SesionRow = {
   ejercicio_id: string
   peso_kg: number | null
   fecha: string
-  ejercicios: { nombre: string } | null
 }
 type NutriDia = { fecha: string; label: string; consumido: number }
 
@@ -170,7 +169,7 @@ export default function ProgresoPage() {
           .order('fecha', { ascending: true }),
         supabase
           .from('sesiones')
-          .select('ejercicio_id, peso_kg, fecha, ejercicios(nombre)')
+          .select('ejercicio_id, peso_kg, fecha')
           .eq('user_id', user.id)
           .not('peso_kg', 'is', null)
           .order('fecha', { ascending: true }),
@@ -193,15 +192,18 @@ export default function ProgresoPage() {
       if (hoyReg) setPesoInput(String(hoyReg.peso_kg))
 
       // — Ejercicios —
-      const sRows = (sesionesData ?? []) as unknown as SesionRow[]
+      const sRows = (sesionesData ?? []) as SesionRow[]
       setSesiones(sRows)
-      const ejMap = new Map<string, string>()
-      sRows.forEach(s => {
-        if (!ejMap.has(s.ejercicio_id) && s.ejercicios?.nombre) {
-          ejMap.set(s.ejercicio_id, s.ejercicios.nombre)
-        }
-      })
-      const ejList = Array.from(ejMap.entries())
+      const uniqueEjIds = [...new Set(sRows.map(s => s.ejercicio_id))]
+      const ejNombresMap = new Map<string, string>()
+      if (uniqueEjIds.length > 0) {
+        const { data: ejerciciosData } = await supabase
+          .from('ejercicios')
+          .select('id, nombre')
+          .in('id', uniqueEjIds)
+        ;(ejerciciosData ?? []).forEach((e: { id: string; nombre: string }) => ejNombresMap.set(e.id, e.nombre))
+      }
+      const ejList = Array.from(ejNombresMap.entries())
         .map(([id, nombre]) => ({ id, nombre }))
         .sort((a, b) => a.nombre.localeCompare(b.nombre))
       setEjerciciosList(ejList)
