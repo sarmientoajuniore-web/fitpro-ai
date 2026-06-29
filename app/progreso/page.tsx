@@ -123,7 +123,7 @@ export default function ProgresoPage() {
 
   // ── Ejercicios ──
   const [sesiones, setSesiones]           = useState<SesionRow[]>([])
-  const [ejerciciosList, setEjerciciosList] = useState<{ id: string; nombre: string }[]>([])
+  const [ejerciciosList, setEjerciciosList] = useState<{ id: string; nombre: string; imagen: string | null }[]>([])
   const [ejercicioSel, setEjercicioSel]   = useState<string>('')
   const [expandedEj, setExpandedEj]       = useState<Set<string>>(new Set())
 
@@ -195,16 +195,18 @@ export default function ProgresoPage() {
       const sRows = (sesionesData ?? []) as SesionRow[]
       setSesiones(sRows)
       const uniqueEjIds = [...new Set(sRows.map(s => s.ejercicio_id))]
-      const ejNombresMap = new Map<string, string>()
+      const ejInfoMap = new Map<string, { nombre: string; imagen: string | null }>()
       if (uniqueEjIds.length > 0) {
         const { data: ejerciciosData } = await supabase
           .from('ejercicios')
-          .select('id, nombre')
+          .select('id, nombre, imagenes')
           .in('id', uniqueEjIds)
-        ;(ejerciciosData ?? []).forEach((e: { id: string; nombre: string }) => ejNombresMap.set(e.id, e.nombre))
+        ;(ejerciciosData ?? []).forEach((e: { id: string; nombre: string; imagenes: string[] | null }) => {
+          ejInfoMap.set(e.id, { nombre: e.nombre, imagen: e.imagenes?.[0] ?? null })
+        })
       }
-      const ejList = Array.from(ejNombresMap.entries())
-        .map(([id, nombre]) => ({ id, nombre }))
+      const ejList = Array.from(ejInfoMap.entries())
+        .map(([id, info]) => ({ id, ...info }))
         .sort((a, b) => a.nombre.localeCompare(b.nombre))
       setEjerciciosList(ejList)
       if (ejList.length > 0) setEjercicioSel(ejList[0].id)
@@ -627,7 +629,10 @@ export default function ProgresoPage() {
                   <>
                     {/* A · Entrenados hoy */}
                     <div>
-                      <p className="text-[10px] text-[#22D3EE]/70 uppercase tracking-widest mb-2 px-1">Entrenados hoy</p>
+                      <p className="text-[11px] uppercase tracking-widest mb-3 px-1"
+                        style={{ color: '#22D3EE', fontFamily: "'Oswald', sans-serif", letterSpacing: '0.12em' }}>
+                        Entrenados hoy
+                      </p>
                       {ejerciciosHoy.length === 0 ? (
                         <p className="text-xs text-gray-600 px-1">Sin entrenamientos registrados hoy</p>
                       ) : (
@@ -640,17 +645,35 @@ export default function ProgresoPage() {
                             const esNuevoPR = prevMax > 0 && hoyPeso > prevMax
                             return (
                               <div key={ej.id} className="rounded-2xl p-4"
-                                style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.2)' }}>
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="text-sm font-bold text-white">{ej.nombre}</p>
+                                style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.22)' }}>
+                                {/* Cabecera: foto + nombre + badge */}
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                                    style={{ width: 44, height: 44, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(34,211,238,0.18)' }}>
+                                    {ej.imagen ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={ej.imagen} alt={ej.nombre} loading="lazy"
+                                        className="w-full h-full object-contain"
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                    ) : (
+                                      <span style={{ fontSize: 20, opacity: 0.3 }}>🏋️</span>
+                                    )}
+                                  </div>
+                                  <p className="flex-1 min-w-0 text-sm text-white uppercase leading-tight"
+                                    style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}>
+                                    {ej.nombre}
+                                  </p>
                                   {esNuevoPR ? (
-                                    <span className="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-2 py-0.5 rounded-full">
-                                      🏆 ¡Nuevo PR! {hoyPeso}kg
+                                    <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full"
+                                      style={{ color: '#22D3EE', background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.35)' }}>
+                                      🏆 ¡PR! {hoyPeso}kg
                                     </span>
                                   ) : (
-                                    <span className="text-xs font-semibold text-[#22D3EE]">PR {pr}kg</span>
+                                    <span className="shrink-0 text-xs font-bold"
+                                      style={{ color: '#22D3EE' }}>PR {pr}kg</span>
                                   )}
                                 </div>
+                                {/* Gráfica */}
                                 {data.length >= 2 ? (
                                   <ResponsiveContainer width="100%" height={90}>
                                     <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
@@ -663,7 +686,9 @@ export default function ProgresoPage() {
                                     </LineChart>
                                   </ResponsiveContainer>
                                 ) : (
-                                  <p className="text-[10px] text-[#22D3EE]/40 mt-1">Primera sesión — ¡vuelve a entrenar para ver tu progreso!</p>
+                                  <p className="text-[10px] mt-1" style={{ color: 'rgba(34,211,238,0.4)' }}>
+                                    Primera sesión — ¡vuelve a entrenar para ver tu progreso!
+                                  </p>
                                 )}
                               </div>
                             )
@@ -675,17 +700,22 @@ export default function ProgresoPage() {
                     {/* B · Otros ejercicios (acordeón) */}
                     {ejerciciosOtros.length > 0 && (
                       <div>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 px-1">Otros ejercicios</p>
-                        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden">
+                        <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-3 px-1"
+                          style={{ fontFamily: "'Oswald', sans-serif", letterSpacing: '0.12em' }}>
+                          Otros ejercicios
+                        </p>
+                        <div className="rounded-2xl overflow-hidden"
+                          style={{ background: '#111', border: '1px solid rgba(181,123,255,0.2)' }}>
                           {ejerciciosOtros.map((ej, idx) => {
                             const data = ejercicioChartMap.get(ej.id) ?? []
                             const pr = data.length > 0 ? Math.max(...data.map(d => d.peso)) : 0
                             const isExpanded = expandedEj.has(ej.id)
                             const isLast = idx === ejerciciosOtros.length - 1
                             return (
-                              <div key={ej.id} className={!isLast ? 'border-b border-white/5' : ''}>
+                              <div key={ej.id}
+                                style={{ borderBottom: !isLast ? '1px solid rgba(255,255,255,0.05)' : undefined }}>
                                 <button
-                                  className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left"
                                   onClick={() => setExpandedEj(prev => {
                                     const next = new Set(prev)
                                     if (next.has(ej.id)) next.delete(ej.id)
@@ -693,14 +723,32 @@ export default function ProgresoPage() {
                                     return next
                                   })}
                                 >
-                                  <span className="text-sm text-white font-medium">
+                                  {/* Foto */}
+                                  <div className="shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
+                                    style={{ width: 40, height: 42, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(181,123,255,0.15)' }}>
+                                    {ej.imagen ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={ej.imagen} alt={ej.nombre} loading="lazy"
+                                        className="w-full h-full object-contain"
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                    ) : (
+                                      <span style={{ fontSize: 18, opacity: 0.25 }}>🏋️</span>
+                                    )}
+                                  </div>
+                                  {/* Nombre */}
+                                  <span className="flex-1 min-w-0 text-sm text-white uppercase leading-tight"
+                                    style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}>
                                     {ej.nombre}
-                                    {pr > 0 && <span className="text-gray-500 font-normal"> · PR {pr}kg</span>}
                                   </span>
-                                  <span className={`text-gray-500 text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                  {/* PR + flecha */}
+                                  <span className="shrink-0 text-xs font-bold mr-1"
+                                    style={{ color: '#B57BFF' }}>
+                                    {pr > 0 ? `PR ${pr}kg` : '—'}
+                                  </span>
+                                  <span className={`text-gray-600 text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                                 </button>
                                 {isExpanded && (
-                                  <div className="px-4 pb-4">
+                                  <div className="px-3 pb-4">
                                     {data.length >= 2 ? (
                                       <ResponsiveContainer width="100%" height={130}>
                                         <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
