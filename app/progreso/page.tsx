@@ -6,6 +6,7 @@ import ReportButton from '@/components/ui/ReportButton'
 import {
   LineChart, Line, BarChart, Bar, ReferenceLine, LabelList,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell,
 } from 'recharts'
 
 const supabase = createBrowserClient(
@@ -676,140 +677,149 @@ export default function ProgresoPage() {
                   </p>
                 ) : (
                   <>
-                    {/* Selector de período */}
+                    {/* 1 · Selector Semana / Mes */}
                     <div className="flex gap-2">
-                      {PERIODOS_NUTRI.map(p => (
+                      {(['semana', 'mes'] as const).map(p => (
                         <button
-                          key={p.key}
-                          onClick={() => setPeriodoNutri(p.key)}
-                          className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                            periodoNutri === p.key
-                              ? 'bg-[#B57BFF] text-white'
-                              : 'bg-[#1a1a1a] text-gray-400 border border-white/10'
-                          }`}>
-                          {p.label}
+                          key={p}
+                          onClick={() => setPeriodoNutri(p)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+                            periodoNutri === p ? 'text-white' : 'bg-[#1a1a1a] text-gray-400 border border-white/10'
+                          }`}
+                          style={periodoNutri === p
+                            ? { background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)' }
+                            : undefined}
+                        >
+                          {p === 'semana' ? 'Semana' : 'Mes'}
                         </button>
                       ))}
                     </div>
 
-                    {periodoNutri === 'dia' && (
-                      <input
-                        type="date"
-                        value={fechaDiaNutri}
-                        max={hoyStr}
-                        onChange={e => setFechaDiaNutri(e.target.value)}
-                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#B57BFF]/60"
-                      />
-                    )}
+                    {/* 2a · Calorías del período */}
+                    {(() => {
+                      const meta = objCaloriasPeriodo
+                      const consumido = consumidoPeriodo
+                      const pct = meta > 0 ? Math.min((consumido / meta) * 100, 100) : 0
+                      const sePaso = consumido > meta
+                      const titulo = periodoNutri === 'mes' ? 'CALORÍAS DEL MES' : 'CALORÍAS DE LA SEMANA'
+                      return (
+                        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">{titulo}</p>
+                          <div className="flex items-baseline gap-2 mb-3">
+                            <span className="text-3xl font-black text-white">
+                              {Math.round(consumido).toLocaleString('es-ES')}
+                            </span>
+                            <span className="text-base text-gray-500">
+                              / {Math.round(meta).toLocaleString('es-ES')} kcal
+                            </span>
+                          </div>
+                          <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%`, background: sePaso ? '#EF4444' : '#22C55E' }}
+                            />
+                          </div>
+                          {cargandoResumenPeriodo ? (
+                            <p className="text-[10px] text-gray-600">Actualizando…</p>
+                          ) : (
+                            <p className={`text-xs font-semibold ${sePaso ? 'text-red-400' : 'text-green-400'}`}>
+                              {sePaso ? 'Te pasaste de tu meta' : '✓ Vas por debajo de tu meta'}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
 
-                    {/* Resumen detallado: objetivo del período vs. consumido real */}
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">
-                        {periodoNutri === 'dia'
-                          ? formatFechaDDMMYYYY(fechaDiaNutri)
-                          : periodoNutri === 'semana' ? 'Semana actual' : 'Mes actual'}
-                      </p>
-                      <div className="flex flex-col gap-5">
-                        {([
-                          { lbl: 'Calorías',      objPeriodo: objCaloriasPeriodo, objTranscurrido: objCalorias, consumido: resumenPeriodo.calorias, unidad: 'kcal' },
-                          { lbl: 'Proteína',      objPeriodo: objProteinaPeriodo, objTranscurrido: objProteina, consumido: resumenPeriodo.proteina, unidad: 'g'    },
-                          { lbl: 'Carbohidratos', objPeriodo: objCarbosPeriodo,   objTranscurrido: objCarbos,   consumido: resumenPeriodo.carbos,   unidad: 'g'    },
-                          { lbl: 'Grasas',        objPeriodo: objGrasasPeriodo,   objTranscurrido: objGrasas,   consumido: resumenPeriodo.grasas,   unidad: 'g'    },
-                        ] as const).map(m => {
-                          const { estado, color } = evaluarNutricion(m.consumido, m.objTranscurrido, objetivoPersona)
-                          const pct = m.objTranscurrido > 0 ? Math.min((m.consumido / m.objTranscurrido) * 100, 100) : 0
-                          const colorTexto = color === 'rojo' ? 'text-red-400' : 'text-green-400'
-                          const colorBarra = color === 'rojo' ? 'bg-red-500'  : 'bg-green-500'
-                          const etiqueta =
-                            estado === 'encima' ? 'por encima' :
-                            estado === 'debajo' ? 'por debajo' : 'en la meta'
-                          return (
-                            <div key={m.lbl}>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
-                                {m.lbl} · objetivo {periodoNutri === 'dia' ? 'del día' : periodoNutri === 'semana' ? 'de la semana' : 'del mes'}
-                              </p>
-                              <p className="text-2xl font-black text-[#B57BFF] mb-2">
-                                {Math.round(m.objPeriodo).toLocaleString()}
-                                <span className="text-sm text-gray-500 font-normal"> {m.unidad}</span>
-                              </p>
-                              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mb-1.5">
-                                <div className={`h-full rounded-full ${colorBarra}`} style={{ width: `${pct}%` }} />
-                              </div>
-                              <p className="text-[11px] text-gray-500">
-                                {periodoNutri === 'dia' ? (
-                                  <>Has comido {Math.round(m.consumido).toLocaleString()} de {Math.round(m.objTranscurrido).toLocaleString()} {m.unidad} · vas{' '}
-                                    <span className={`font-semibold ${colorTexto}`}>{etiqueta}</span></>
-                                ) : (
-                                  <>Llevas {rangoNutri.dias} de {rangoNutri.diasTotal} días · has comido {Math.round(m.consumido).toLocaleString()} de {Math.round(m.objTranscurrido).toLocaleString()} {m.unidad} · vas{' '}
-                                    <span className={`font-semibold ${colorTexto}`}>{etiqueta}</span></>
-                                )}
-                              </p>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {cargandoResumenPeriodo && (
-                        <p className="text-[10px] text-gray-600 mt-3">Actualizando…</p>
-                      )}
-                    </div>
-
-                    {/* Resumen del período activo */}
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">
-                        {RESUMEN_NUTRI_TXT[periodoNutri].titulo}
-                      </p>
-
-                      {/* a) y b) — GRUPO A: mantenimiento y objetivo del período, siempre con valor */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{mantenimientoLabel}</p>
-                          <p className="text-lg font-bold text-sky-400">
-                            {Math.round(mantenimientoPeriodo).toLocaleString()} kcal
+                    {/* 2b · Margen de calorías */}
+                    {(() => {
+                      const restantes = Math.round(objCaloriasPeriodo - consumidoPeriodo)
+                      const sePaso = restantes < 0
+                      const label = periodoNutri === 'mes' ? 'TE QUEDAN ESTE MES' : 'TE QUEDAN ESTA SEMANA'
+                      return (
+                        <div
+                          className="rounded-2xl p-5"
+                          style={{
+                            background: sePaso ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)',
+                            border: `1px solid ${sePaso ? 'rgba(239,68,68,0.35)' : 'rgba(34,197,94,0.35)'}`,
+                          }}
+                        >
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">🍔 {label}</p>
+                          <p className={`text-3xl font-black mb-1 ${sePaso ? 'text-red-400' : 'text-green-400'}`}>
+                            {Math.abs(restantes).toLocaleString('es-ES')} kcal
+                          </p>
+                          <p className={`text-xs ${sePaso ? 'text-red-400/80' : 'text-green-400/80'}`}>
+                            {sePaso
+                              ? `Te pasaste por ${Math.abs(restantes).toLocaleString('es-ES')} kcal`
+                              : '¡Puedes darte un gusto y seguir en meta!'}
                           </p>
                         </div>
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{objetivoPeriodoLabel}</p>
-                          <p className="text-lg font-bold text-[#B57BFF]">{Math.round(objCaloriasPeriodo).toLocaleString()} kcal</p>
+                      )
+                    })()}
+
+                    {/* 3 · Calidad de tu alimentación – anillos de macros */}
+                    {(() => {
+                      const macros = [
+                        { label: 'Proteína',      consumido: resumenPeriodo.proteina, meta: objProteinaPeriodo, color: '#38B6FF' },
+                        { label: 'Carbohidratos', consumido: resumenPeriodo.carbos,   meta: objCarbosPeriodo,   color: '#FF9D42' },
+                        { label: 'Grasas',        consumido: resumenPeriodo.grasas,   meta: objGrasasPeriodo,   color: '#FF5C5C' },
+                      ]
+                      const rawPcts = macros.map(m =>
+                        m.meta > 0 ? Math.round((m.consumido / m.meta) * 100) : 0
+                      )
+                      const displayPcts = rawPcts.map(p => Math.min(p, 100))
+                      const [rawProt, rawCarb, rawGras] = rawPcts
+                      const mensajeMacro =
+                        rawProt < 80  ? `💪 Tu proteína va al ${rawProt}% de la meta — ¡súbele un poco!` :
+                        rawCarb > 110 ? '🌾 Te pasaste un poco en carbohidratos — revisa las porciones.' :
+                        rawGras > 110 ? '🥑 Cuidado con las grasas, ya superaste la meta.' :
+                        rawProt >= 90 ? `💪 ¡Excelente! Tu proteína va en ${rawProt}% — ¡sigue así!` :
+                                        '🥗 Tus macros van bien por ahora.'
+                      return (
+                        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">Calidad de tu alimentación</p>
+                          <div className="flex justify-around">
+                            {macros.map((m, idx) => {
+                              const displayPct = displayPcts[idx]
+                              const rawPct = rawPcts[idx]
+                              return (
+                                <div key={m.label} className="flex flex-col items-center gap-2">
+                                  <div className="relative" style={{ width: 80, height: 80 }}>
+                                    <PieChart width={80} height={80}>
+                                      <Pie
+                                        data={[{ v: displayPct }, { v: Math.max(0, 100 - displayPct) }]}
+                                        cx={40} cy={40}
+                                        innerRadius={26} outerRadius={36}
+                                        startAngle={90} endAngle={-270}
+                                        dataKey="v"
+                                        strokeWidth={0}
+                                        isAnimationActive={false}
+                                      >
+                                        <Cell fill={m.color} />
+                                        <Cell fill="rgba(255,255,255,0.07)" />
+                                      </Pie>
+                                    </PieChart>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                      <span className="text-xs font-black text-white">{rawPct}%</span>
+                                    </div>
+                                  </div>
+                                  <p className="text-[10px] text-gray-400 text-center leading-tight" style={{ maxWidth: 70 }}>{m.label}</p>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-4 text-center leading-snug">{mensajeMacro}</p>
+                          {cargandoResumenPeriodo && (
+                            <p className="text-[10px] text-gray-600 text-center mt-1">Actualizando…</p>
+                          )}
                         </div>
-                      </div>
+                      )
+                    })()}
 
-                      <p className="text-[10px] text-gray-600 mt-3 mb-2">
-                        {diasConRegistro > 0
-                          ? `Calculado sobre ${diasConRegistro} día${diasConRegistro !== 1 ? 's' : ''} con registro`
-                          : 'Sin días con registro en este período'}
-                      </p>
-
-                      {/* c) y d) — GRUPO B: avance real, solo sobre días con registro */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{promedioConsumidoLabel}</p>
-                          <p className={`text-lg font-bold ${diasConRegistro > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
-                            {diasConRegistro > 0 ? `${Math.round(promedioConsumidoDia).toLocaleString()} kcal` : '—'}
-                          </p>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{deficitLabel}</p>
-                          <p className={`text-lg font-bold ${deficitColorClass}`}>
-                            {diasConRegistro > 0 ? `${Math.abs(Math.round(deficitSuperavitPeriodo)).toLocaleString()} kcal` : '—'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* e) Peso estimado */}
-                      <div className="mt-3 pt-3 border-t border-white/5">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">{pesoEstimadoLabel}</p>
-                        <p className={`text-xl font-bold ${pesoEstimadoColorClass}`}>{pesoEstimadoTexto}</p>
-                        <p className="text-[10px] text-gray-600 mt-1.5">
-                          Es una estimación. El resultado real depende de tu metabolismo y otros factores.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Gráfica calorías diarias */}
+                    {/* 4 · Gráfica de barras por día */}
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Calorías diarias</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Calorías por día</p>
                       <p className="text-[10px] text-gray-600 mb-4">
-                        Línea punteada = meta ({metaDiaria.toLocaleString()} kcal/día)
+                        Línea punteada = meta diaria ({metaDiaria.toLocaleString('es-ES')} kcal)
                       </p>
                       <ResponsiveContainer width="100%" height={190}>
                         <BarChart data={nutriData} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
@@ -820,39 +830,29 @@ export default function ProgresoPage() {
                             {...TOOLTIP_STYLE}
                             formatter={(v) => [typeof v === 'number' ? v.toLocaleString() : v, 'Consumido']}
                           />
-                          <ReferenceLine y={metaDiaria} stroke="rgba(255,255,255,0.3)" strokeDasharray="5 4" />
-                          <Bar dataKey="consumido" fill="#B57BFF" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          <ReferenceLine y={metaDiaria} stroke="#FFC93C" strokeDasharray="5 4" />
+                          <Bar dataKey="consumido" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                            {nutriData.map((d, i) => (
+                              <Cell key={`bar-${i}`} fill={d.consumido > metaDiaria ? '#FF7A3D' : '#B57BFF'} />
+                            ))}
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
 
-                    {/* Detalle día a día */}
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden">
-                      {nutriData.map((d, i) => {
-                        const excedido = d.consumido > metaDiaria
-                        const pct = metaDiaria > 0 ? Math.min((d.consumido / metaDiaria) * 100, 100) : 0
-                        return (
-                          <div key={d.fecha}
-                            className={`px-4 py-3 ${i < nutriData.length - 1 ? 'border-b border-white/5' : ''}`}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs text-gray-400">{d.label}</span>
-                              <span className={`text-xs font-medium ${
-                                d.consumido === 0 ? 'text-gray-600' : excedido ? 'text-red-400' : 'text-white'
-                              }`}>
-                                {d.consumido === 0
-                                  ? 'Sin registros'
-                                  : `${d.consumido.toLocaleString()} / ${metaDiaria.toLocaleString()} kcal`}
-                              </span>
-                            </div>
-                            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${excedido ? 'bg-red-500' : 'bg-[#B57BFF]'}`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })}
+                    {/* 5 · Peso estimado del período */}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wide">⚖️ Peso estimado del período</p>
+                        <p className={`text-base font-bold ${pesoEstimadoKg == null ? 'text-gray-500' : pesoEstimadoKg >= 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                          {pesoEstimadoKg == null
+                            ? '—'
+                            : `≈ ${formatNumeroEs(Math.abs(pesoEstimadoKg))} kg ${pesoEstimadoKg >= 0 ? 'perdido' : 'ganado'}`}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-gray-600 mt-1">
+                        El peso estimado es una aproximación. El resultado real depende de tu metabolismo y otros factores.
+                      </p>
                     </div>
                   </>
                 )}
