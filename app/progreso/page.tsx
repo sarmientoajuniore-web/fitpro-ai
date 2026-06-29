@@ -91,6 +91,7 @@ type RegistroPeso = { fecha: string; peso_kg: number }
 type SesionRow = {
   ejercicio_id: string
   peso_kg: number | null
+  repeticiones: string | null
   fecha: string
 }
 type NutriDia = { fecha: string; label: string; consumido: number }
@@ -178,7 +179,7 @@ export default function ProgresoPage() {
           .order('fecha', { ascending: true }),
         supabase
           .from('sesiones')
-          .select('ejercicio_id, peso_kg, fecha')
+          .select('ejercicio_id, peso_kg, repeticiones, fecha')
           .eq('user_id', user.id)
           .not('peso_kg', 'is', null)
           .order('fecha', { ascending: true }),
@@ -704,6 +705,20 @@ export default function ProgresoPage() {
                             const hoyPeso = data.find(d => d.fecha === hoyStr)?.peso ?? 0
                             const prevMax = data.filter(d => d.fecha < hoyStr).reduce((m, d) => Math.max(m, d.peso), 0)
                             const esNuevoPR = prevMax > 0 && hoyPeso > prevMax
+                            const repsEnPR = pr > 0
+                              ? sesiones
+                                  .filter(s => s.ejercicio_id === ej.id && s.peso_kg === pr && s.repeticiones != null)
+                                  .map(s => parseInt(s.repeticiones ?? '0', 10))
+                                  .filter(r => !isNaN(r) && r > 0)
+                                  .reduce((max, r) => Math.max(max, r), 0)
+                              : 0
+                            const repsEnHoy = hoyPeso > 0
+                              ? sesiones
+                                  .filter(s => s.ejercicio_id === ej.id && s.peso_kg === hoyPeso && s.fecha === hoyStr && s.repeticiones != null)
+                                  .map(s => parseInt(s.repeticiones ?? '0', 10))
+                                  .filter(r => !isNaN(r) && r > 0)
+                                  .reduce((max, r) => Math.max(max, r), 0)
+                              : 0
                             return (
                               <div key={ej.id} className="rounded-2xl p-4"
                                 style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.22)' }}>
@@ -727,11 +742,13 @@ export default function ProgresoPage() {
                                   {esNuevoPR ? (
                                     <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full"
                                       style={{ color: '#22D3EE', background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.35)' }}>
-                                      🏆 ¡PR! {hoyPeso}kg
+                                      🏆 {hoyPeso}kg{repsEnHoy > 0 ? ` × ${repsEnHoy}` : ''}
                                     </span>
                                   ) : (
                                     <span className="shrink-0 text-xs font-bold"
-                                      style={{ color: '#22D3EE' }}>PR {pr}kg</span>
+                                      style={{ color: '#22D3EE', fontFamily: "'Oswald', sans-serif" }}>
+                                      {pr > 0 ? `${pr}kg${repsEnPR > 0 ? ` × ${repsEnPR}` : ''}` : '—'}
+                                    </span>
                                   )}
                                 </div>
                                 {/* Gráfica */}
@@ -770,6 +787,13 @@ export default function ProgresoPage() {
                           {ejerciciosOtros.map((ej, idx) => {
                             const data = ejercicioChartMap.get(ej.id) ?? []
                             const pr = data.length > 0 ? Math.max(...data.map(d => d.peso)) : 0
+                            const prReps = pr > 0
+                              ? sesiones
+                                  .filter(s => s.ejercicio_id === ej.id && s.peso_kg === pr && s.repeticiones != null)
+                                  .map(s => parseInt(s.repeticiones ?? '0', 10))
+                                  .filter(r => !isNaN(r) && r > 0)
+                                  .reduce((max, r) => Math.max(max, r), 0)
+                              : 0
                             const isExpanded = expandedEj.has(ej.id)
                             const isLast = idx === ejerciciosOtros.length - 1
                             return (
@@ -801,10 +825,10 @@ export default function ProgresoPage() {
                                     style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}>
                                     {ej.nombre}
                                   </span>
-                                  {/* PR + flecha */}
+                                  {/* Peso máximo × reps */}
                                   <span className="shrink-0 text-xs font-bold mr-1"
-                                    style={{ color: '#B57BFF' }}>
-                                    {pr > 0 ? `PR ${pr}kg` : '—'}
+                                    style={{ color: '#22D3EE', fontFamily: "'Oswald', sans-serif" }}>
+                                    {pr > 0 ? `${pr}kg${prReps > 0 ? ` × ${prReps}` : ''}` : '—'}
                                   </span>
                                   <span className={`text-gray-600 text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                                 </button>

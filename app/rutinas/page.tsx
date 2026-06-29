@@ -2099,23 +2099,17 @@ export default function RutinasPage() {
                           {(registros[ej.id] || []).map((serie, i) => (
                             <div key={i} className={`rounded-xl p-3 mb-2 border transition-colors
                               ${serie.ok ? 'border-[#B57BFF]/30 bg-[#B57BFF]/5' : 'border-white/10 bg-black/30'}`}>
-                              <div className="grid grid-cols-3 gap-2 mb-2.5">
+                              <div className="grid grid-cols-2 gap-2 mb-2.5">
                                 <div>
-                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Min</label>
+                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Minutos</label>
                                   <input type="number" min="0" inputMode="numeric" value={serie.duracionMin}
                                     onChange={e => updateSerie(ej.id, i, 'duracionMin', e.target.value)} placeholder="—"
                                     className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
                                 </div>
                                 <div>
-                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Kcal</label>
+                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Calorías (kcal)</label>
                                   <input type="number" min="0" inputMode="numeric" value={serie.calorias}
                                     onChange={e => updateSerie(ej.id, i, 'calorias', e.target.value)} placeholder="—"
-                                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
-                                </div>
-                                <div>
-                                  <label className="text-[9px] text-gray-600 uppercase block mb-1 text-center">Intensidad</label>
-                                  <input type="text" value={serie.intensidad}
-                                    onChange={e => updateSerie(ej.id, i, 'intensidad', e.target.value)} placeholder="ej. nivel 6"
                                     className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl py-3 text-sm text-white text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#B57BFF]/40" />
                                 </div>
                               </div>
