@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar, ArrowLeftRight } from 'lucide-react'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar, ArrowLeftRight, Sparkles } from 'lucide-react'
+import GaleriaPlantillas from './GaleriaPlantillas'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -355,6 +356,9 @@ export default function RutinasPage() {
 
   // Reordenar días de la rutina (panel expandible)
   const [reordenarDiasId, setReordenarDiasId] = useState<string | null>(null)
+
+  // Galería de rutinas listas (Modelo B)
+  const [galeriaAbierta, setGaleriaAbierta] = useState(false)
 
   // Plegar/desplegar lista de ejercicios por rutina (true = plegado)
   const [ejPlegados, setEjPlegados] = useState<Record<string, boolean>>({})
@@ -1528,11 +1532,31 @@ export default function RutinasPage() {
         </div>
 
         <button
+          onClick={() => setGaleriaAbierta(true)}
+          className="w-full rounded-2xl py-4 text-white text-sm font-bold flex items-center justify-center gap-2 mb-3"
+          style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
+          <Sparkles className="w-4 h-4" />
+          Elegir una rutina lista
+        </button>
+
+        <button
           onClick={abrirWizard}
           className="w-full border border-dashed border-[#B57BFF]/30 rounded-2xl py-4 text-[#B57BFF] text-sm font-semibold hover:border-[#B57BFF] hover:bg-[#B57BFF]/5 transition-colors">
-          ＋ Crear nueva rutina
+          ＋ Crear desde cero (avanzado)
         </button>
       </div>
+
+      {/* ══════════════════════════════════
+          GALERÍA DE RUTINAS LISTAS (Modelo B)
+      ══════════════════════════════════ */}
+      {galeriaAbierta && userId && (
+        <GaleriaPlantillas
+          userId={userId}
+          userSexo={userSexo}
+          onClose={() => setGaleriaAbierta(false)}
+          onUsada={() => { setGaleriaAbierta(false); cargarRutinas() }}
+        />
+      )}
 
       {/* ══════════════════════════════════
           WIZARD — CREAR RUTINA (pantalla completa)
