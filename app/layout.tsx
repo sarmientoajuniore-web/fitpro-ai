@@ -33,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="min-h-screen bg-[#10130F] text-white">
+      <body className="min-h-screen bg-[#F4F6F1] text-[#1b201a]">
         {children}
         <PwaRegister />
       </body>

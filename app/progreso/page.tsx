@@ -115,6 +115,7 @@ const AXIS = {
 
 export default function ProgresoPage() {
   const [tab, setTab]     = useState('peso')
+  const [vista, setVista] = useState<'resumen' | 'detalle'>('resumen')
   const [userId, setUserId] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
 
@@ -473,11 +474,11 @@ export default function ProgresoPage() {
 
   // Déficit/superávit: verde si va bien según su objetivo (bajar/mantener/subir), rojo si va mal
   const deficitColorClass = diasConRegistro === 0
-    ? 'text-gray-500'
+    ? 'text-[#787f70]'
     : evaluarNutricion(consumidoPeriodo, mantenimientoRegistrado, objetivoPersona).color === 'verde'
       ? 'text-green-400'
       : 'text-red-400'
-  const pesoEstimadoColorClass = pesoEstimadoKg === null ? 'text-gray-500' : 'text-green-400'
+  const pesoEstimadoColorClass = pesoEstimadoKg === null ? 'text-[#787f70]' : 'text-green-400'
 
   const pesoEstimadoLabel = pesoEstimadoKg === null
     ? 'Peso estimado'
@@ -544,40 +545,125 @@ export default function ProgresoPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#10130F] text-white max-w-lg mx-auto">
+    <div className="min-h-screen bg-[#F4F6F1] text-[#1b201a] max-w-lg mx-auto">
 
       {/* HEADER */}
-      <div className="sticky top-0 bg-[#10130F] z-10 border-b border-white/10 px-5 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold">Fit<span className="text-[#22C55E]">Pro</span></h1>
-        <a href="/inicio" className="text-xs text-gray-400">← Inicio</a>
+      <div className="sticky top-0 bg-[#F4F6F1] z-10 border-b border-black/10 px-5 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold">Fit<span className="text-[#15803D]">Pro</span></h1>
+        <a href="/inicio" className="text-xs text-[#5d6358]">← Inicio</a>
       </div>
 
       <div className="p-5">
-        <h2 className="text-xl font-bold mb-4">Progreso</h2>
+        <h2 className="text-xl font-bold mb-4">Mi progreso</h2>
 
-        {/* TABS */}
-        <div className="flex gap-2 mb-5">
-          {TABS.map(({ key, label }) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors
-                ${tab === key
-                  ? 'bg-[#22C55E] text-white'
-                  : 'bg-[#191D17] text-gray-400 border border-white/10'}`}>
-              {label}
+        {/* TABS — solo en la vista de detalle */}
+        {vista === 'detalle' && (
+          <div className="mb-5">
+            <button
+              onClick={() => setVista('resumen')}
+              className="flex items-center gap-1 text-xs font-semibold text-[#15803D] mb-3 hover:opacity-80 transition-opacity">
+              ← Volver al resumen
             </button>
-          ))}
-        </div>
+            <div className="flex gap-2">
+              {TABS.map(({ key, label }) => (
+                <button key={key} onClick={() => setTab(key)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors
+                    ${tab === key
+                      ? 'bg-[#16A34A] text-white'
+                      : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Skeleton mientras carga */}
         {cargando && (
           <div className="flex flex-col gap-4">
             {[1,2,3].map(i => (
-              <div key={i} className="bg-[#191D17] border border-white/10 rounded-2xl animate-pulse h-28" />
+              <div key={i} className="bg-[#FFFFFF] border border-black/10 rounded-2xl animate-pulse h-28" />
             ))}
           </div>
         )}
 
-        {!cargando && (
+        {/* ═══════════════ VISTA RESUMEN ═══════════════ */}
+        {!cargando && vista === 'resumen' && (
+          <>
+            {/* ── Peso protagonista ── */}
+            <div
+              className="rounded-2xl border border-[#22C55E]/40 overflow-hidden mb-4"
+              style={{ background: 'linear-gradient(135deg, #E9F0E6 0%, #EDF2EA 100%)', boxShadow: '0 0 28px rgba(34,197,94,0.13)' }}>
+              <div className="px-5 pt-5 pb-5 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#15803D] uppercase tracking-widest mb-2">
+                  <span>⚖️</span> Mi peso
+                </div>
+                {pesoActual != null ? (
+                  <>
+                    <p className="text-5xl font-black text-[#15803D] leading-none">
+                      {pesoActual}<span className="text-lg text-[#15803D]/60 font-bold"> kg</span>
+                    </p>
+                    {cambioPeso != null && cambioPeso !== 0 && (
+                      <div className={`inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full ${cambioPeso < 0 ? 'bg-[#22C55E]/15 text-[#15803D]' : 'bg-[#EA7A1C]/15 text-[#B45309]'}`}>
+                        {cambioPeso < 0 ? '▼ ' : '▲ '}{Math.abs(cambioPeso)} kg {cambioPeso < 0 ? 'menos' : 'más'} desde que empezaste
+                      </div>
+                    )}
+                    {historialPeso.length >= 2 && (() => {
+                      const pts = historialPeso.map(h => h.peso_kg)
+                      const min = Math.min(...pts), max = Math.max(...pts)
+                      const range = max - min || 1
+                      const coords = pts.map((p, i) => {
+                        const x = (i / (pts.length - 1)) * 200
+                        const y = 34 - ((p - min) / range) * 30
+                        return `${x.toFixed(1)},${y.toFixed(1)}`
+                      }).join(' ')
+                      return (
+                        <svg viewBox="0 0 200 38" style={{ width: '100%', height: 34, marginTop: 12 }}>
+                          <polyline points={coords} fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )
+                    })()}
+                  </>
+                ) : (
+                  <p className="text-sm text-[#6d7362] py-3">Registra tu primer peso para comenzar el seguimiento</p>
+                )}
+                <button
+                  onClick={() => { setTab('peso'); setVista('detalle') }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-3 mt-4 text-sm font-bold text-white active:scale-[0.98] transition-all shadow-[0_0_18px_rgba(34,197,94,0.3)]"
+                  style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
+                  ＋ Registrar mi peso de hoy
+                </button>
+              </div>
+            </div>
+
+            {/* ── Tarjetas resumen ── */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => { setTab('ejercicios'); setVista('detalle') }}
+                className="flex items-center gap-3 bg-[#FFFFFF] border border-black/10 rounded-2xl px-4 py-3.5 text-left hover:border-[#22C55E]/40 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-[#EAF3DE] flex items-center justify-center shrink-0 text-lg">🏋️</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-[#1b201a]">Entrenamiento</div>
+                  <div className="text-xs text-[#6d7362]">Tus récords y progreso de fuerza</div>
+                </div>
+                <span className="text-[#9ba192] text-lg shrink-0">›</span>
+              </button>
+              <button
+                onClick={() => { setTab('nutricion'); setVista('detalle') }}
+                className="flex items-center gap-3 bg-[#FFFFFF] border border-black/10 rounded-2xl px-4 py-3.5 text-left hover:border-[#EA7A1C]/40 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-[#FAEEDA] flex items-center justify-center shrink-0 text-lg">🔥</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-[#1b201a]">Comida y cardio</div>
+                  <div className="text-xs text-[#6d7362]">Calorías, macros y cardio del período</div>
+                </div>
+                <span className="text-[#9ba192] text-lg shrink-0">›</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ═══════════════ VISTA DETALLE ═══════════════ */}
+        {!cargando && vista === 'detalle' && (
           <>
 
             {/* ═══════════════ PESO ═══════════════ */}
@@ -587,22 +673,22 @@ export default function ProgresoPage() {
                 {/* ── Hero: actual + caricatura ── */}
                 <div
                   className="rounded-2xl border border-[#22C55E]/40 overflow-hidden"
-                  style={{ background: 'linear-gradient(135deg, #0F1A10 0%, #0A1508 100%)', boxShadow: '0 0 28px rgba(34,197,94,0.13)' }}>
+                  style={{ background: 'linear-gradient(135deg, #E9F0E6 0%, #EDF2EA 100%)', boxShadow: '0 0 28px rgba(34,197,94,0.13)' }}>
 
                   <div className="flex items-end justify-between px-5 pt-5 pb-4 gap-2">
                     {/* Peso actual */}
                     <div className="shrink-0">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Actual</p>
+                      <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-1">Actual</p>
                       {pesoActual != null ? (
                         <>
-                          <p className="text-5xl font-black text-white leading-none">{pesoActual}</p>
-                          <p className="text-sm text-[#22C55E]/60 mt-0.5">kg</p>
-                          <p className="text-[10px] text-gray-600 mt-1">
+                          <p className="text-5xl font-black text-[#1b201a] leading-none">{pesoActual}</p>
+                          <p className="text-sm text-[#15803D]/60 mt-0.5">kg</p>
+                          <p className="text-[10px] text-[#6d7362] mt-1">
                             {formatFechaDDMMYYYY(historialPeso[historialPeso.length - 1].fecha)}
                           </p>
                         </>
                       ) : (
-                        <p className="text-2xl font-black text-gray-600">—</p>
+                        <p className="text-2xl font-black text-[#6d7362]">—</p>
                       )}
                     </div>
 
@@ -616,16 +702,16 @@ export default function ProgresoPage() {
 
                     {/* Cambio desde el inicio (lado derecho) */}
                     <div className="shrink-0 text-right">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Desde inicio</p>
+                      <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-1">Desde inicio</p>
                       {cambioPeso != null ? (
                         <>
-                          <p className={`text-2xl font-black leading-none ${cambioPeso < 0 ? 'text-[#2EE57D]' : cambioPeso > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                          <p className={`text-2xl font-black leading-none ${cambioPeso < 0 ? 'text-[#2EE57D]' : cambioPeso > 0 ? 'text-red-400' : 'text-[#5d6358]'}`}>
                             {cambioPeso > 0 ? '+' : ''}{cambioPeso}
                           </p>
-                          <p className="text-sm text-gray-500 mt-0.5">kg</p>
+                          <p className="text-sm text-[#787f70] mt-0.5">kg</p>
                         </>
                       ) : (
-                        <p className="text-2xl font-black text-gray-600">—</p>
+                        <p className="text-2xl font-black text-[#6d7362]">—</p>
                       )}
                     </div>
                   </div>
@@ -644,19 +730,19 @@ export default function ProgresoPage() {
                           }}
                         />
                       </div>
-                      <p className="text-[11px] text-gray-400 leading-snug">
+                      <p className="text-[11px] text-[#5d6358] leading-snug">
                         {cambioPeso < 0
                           ? <>Llevas <span className="text-[#2EE57D] font-semibold">{Math.abs(cambioPeso)} kg perdidos</span> · peso inicial: {pesoInicial} kg</>
                           : cambioPeso > 0
                           ? <>Llevas <span className="text-red-400 font-semibold">{cambioPeso} kg ganados</span> · peso inicial: {pesoInicial} kg</>
-                          : <span className="text-gray-500">Sin cambio desde el inicio ({pesoInicial} kg)</span>
+                          : <span className="text-[#787f70]">Sin cambio desde el inicio ({pesoInicial} kg)</span>
                         }
                       </p>
                     </div>
                   )}
 
                   {pesoActual == null && (
-                    <p className="text-center pb-6 text-gray-600 text-sm">
+                    <p className="text-center pb-6 text-[#6d7362] text-sm">
                       Registra tu primer peso para comenzar el seguimiento
                     </p>
                   )}
@@ -664,8 +750,8 @@ export default function ProgresoPage() {
 
                 {/* ── Gráfica de evolución con fechas ── */}
                 {historialPeso.length >= 2 && (
-                  <div className="bg-[#191D17] border border-white/10 rounded-2xl p-5">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Evolución del peso</p>
+                  <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-5">
+                    <p className="text-xs text-[#787f70] uppercase tracking-widest mb-4">Evolución del peso</p>
                     <ResponsiveContainer width="100%" height={210}>
                       <LineChart data={chartPeso} margin={{ top: 18, right: 12, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -696,14 +782,14 @@ export default function ProgresoPage() {
                 )}
 
                 {historialPeso.length === 1 && (
-                  <p className="text-center py-6 text-gray-600 text-xs">
+                  <p className="text-center py-6 text-[#6d7362] text-xs">
                     Registra al menos 2 pesajes para ver la gráfica
                   </p>
                 )}
 
                 {/* ── Input registrar peso de hoy ── */}
-                <div className="bg-[#191D17] border border-white/10 rounded-2xl p-5">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Registrar peso de hoy</p>
+                <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-5">
+                  <p className="text-xs text-[#787f70] uppercase tracking-widest mb-3">Registrar peso de hoy</p>
                   <div className="flex gap-3 items-center">
                     <input
                       type="number"
@@ -712,14 +798,14 @@ export default function ProgresoPage() {
                       onKeyDown={e => e.key === 'Enter' && guardarPeso()}
                       placeholder="Ej: 95.5"
                       step="0.1" min="20" max="500"
-                      className="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#22C55E]/60 placeholder-gray-600"
+                      className="flex-1 bg-black/[0.03] border border-black/10 rounded-xl px-4 py-3 text-[#1b201a] text-sm outline-none focus:border-[#22C55E]/60 placeholder-[#9ba192]"
                     />
-                    <span className="text-gray-500 text-sm shrink-0">kg</span>
+                    <span className="text-[#787f70] text-sm shrink-0">kg</span>
                     <button
                       onClick={guardarPeso}
                       disabled={guardando || !pesoInput}
                       className="font-bold px-5 py-3 rounded-xl text-sm text-white disabled:opacity-40 shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
+                      style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
                       {guardando ? '...' : 'Guardar'}
                     </button>
                   </div>
@@ -733,7 +819,7 @@ export default function ProgresoPage() {
             {tab === 'ejercicios' && (
               <div className="flex flex-col gap-4">
                 {ejerciciosList.length === 0 ? (
-                  <p className="text-center py-16 text-gray-600 text-sm leading-relaxed">
+                  <p className="text-center py-16 text-[#6d7362] text-sm leading-relaxed">
                     Aún no tienes sesiones con pesos registrados.<br />
                     Completa entrenamientos en Rutinas para ver tu progreso aquí.
                   </p>
@@ -746,7 +832,7 @@ export default function ProgresoPage() {
                         Entrenados hoy
                       </p>
                       {ejerciciosHoy.length === 0 ? (
-                        <p className="text-xs text-gray-600 px-1">Sin entrenamientos registrados hoy</p>
+                        <p className="text-xs text-[#6d7362] px-1">Sin entrenamientos registrados hoy</p>
                       ) : (
                         <div className="flex flex-col gap-3">
                           {ejerciciosHoy.map(ej => {
@@ -785,7 +871,7 @@ export default function ProgresoPage() {
                                       <span style={{ fontSize: 20, opacity: 0.3 }}>🏋️</span>
                                     )}
                                   </div>
-                                  <p className="flex-1 min-w-0 text-sm text-white uppercase leading-tight"
+                                  <p className="flex-1 min-w-0 text-sm text-[#1b201a] uppercase leading-tight"
                                     style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}>
                                     {ej.nombre}
                                   </p>
@@ -828,7 +914,7 @@ export default function ProgresoPage() {
                     {/* B · Otros ejercicios (acordeón) */}
                     {ejerciciosOtros.length > 0 && (
                       <div>
-                        <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-3 px-1"
+                        <p className="text-[11px] text-[#787f70] uppercase tracking-widest mb-3 px-1"
                           style={{ fontFamily: "'Oswald', sans-serif", letterSpacing: '0.12em' }}>
                           Otros ejercicios
                         </p>
@@ -871,7 +957,7 @@ export default function ProgresoPage() {
                                     )}
                                   </div>
                                   {/* Nombre */}
-                                  <span className="flex-1 min-w-0 text-sm text-white uppercase leading-tight"
+                                  <span className="flex-1 min-w-0 text-sm text-[#1b201a] uppercase leading-tight"
                                     style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}>
                                     {ej.nombre}
                                   </span>
@@ -880,7 +966,7 @@ export default function ProgresoPage() {
                                     style={{ color: '#FB8C3C', fontFamily: "'Oswald', sans-serif" }}>
                                     {pr > 0 ? `${pr}kg${prReps > 0 ? ` × ${prReps}` : ''}` : '—'}
                                   </span>
-                                  <span className={`text-gray-600 text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                  <span className={`text-[#6d7362] text-[10px] transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                                 </button>
                                 {isExpanded && (
                                   <div className="px-3 pb-4">
@@ -897,7 +983,7 @@ export default function ProgresoPage() {
                                         </LineChart>
                                       </ResponsiveContainer>
                                     ) : (
-                                      <p className="text-[10px] text-gray-600">
+                                      <p className="text-[10px] text-[#6d7362]">
                                         {data.length === 0
                                           ? 'Sin datos de peso para este ejercicio'
                                           : 'Entrena al menos 2 veces para ver la gráfica'}
@@ -920,7 +1006,7 @@ export default function ProgresoPage() {
             {tab === 'nutricion' && (
               <div className="flex flex-col gap-4">
                 {metaDiaria === 0 ? (
-                  <p className="text-center py-16 text-gray-600 text-sm leading-relaxed">
+                  <p className="text-center py-16 text-[#6d7362] text-sm leading-relaxed">
                     Completa el onboarding para ver<br />tu seguimiento nutricional.
                   </p>
                 ) : (
@@ -932,10 +1018,10 @@ export default function ProgresoPage() {
                           key={p}
                           onClick={() => setPeriodoNutri(p)}
                           className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
-                            periodoNutri === p ? 'text-white' : 'bg-[#191D17] text-gray-400 border border-white/10'
+                            periodoNutri === p ? 'text-white' : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10'
                           }`}
                           style={periodoNutri === p
-                            ? { background: 'linear-gradient(135deg, #22C55E, #16A34A)' }
+                            ? { background: 'linear-gradient(135deg, #16A34A, #15803D)' }
                             : undefined}
                         >
                           {p === 'semana' ? 'Semana' : 'Mes'}
@@ -951,24 +1037,24 @@ export default function ProgresoPage() {
                       const sePaso = consumido > meta
                       const titulo = periodoNutri === 'mes' ? 'CALORÍAS DEL MES' : 'CALORÍAS DE LA SEMANA'
                       return (
-                        <div className="bg-[#191D17] border border-white/10 rounded-2xl p-5">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">{titulo}</p>
+                        <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-5">
+                          <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-3">{titulo}</p>
                           <div className="flex items-baseline gap-2 mb-3">
-                            <span className="text-3xl font-black text-white">
+                            <span className="text-3xl font-black text-[#1b201a]">
                               {Math.round(consumido).toLocaleString('es-ES')}
                             </span>
-                            <span className="text-base text-gray-500">
+                            <span className="text-base text-[#787f70]">
                               / {Math.round(meta).toLocaleString('es-ES')} kcal
                             </span>
                           </div>
-                          <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                          <div className="h-2.5 bg-black/[0.05] rounded-full overflow-hidden mb-2">
                             <div
                               className="h-full rounded-full transition-all duration-500"
                               style={{ width: `${pct}%`, background: sePaso ? '#EF4444' : '#22C55E' }}
                             />
                           </div>
                           {cargandoResumenPeriodo ? (
-                            <p className="text-[10px] text-gray-600">Actualizando…</p>
+                            <p className="text-[10px] text-[#6d7362]">Actualizando…</p>
                           ) : (
                             <p className={`text-xs font-semibold ${sePaso ? 'text-red-400' : 'text-green-400'}`}>
                               {sePaso ? 'Te pasaste de tu meta' : '✓ Vas por debajo de tu meta'}
@@ -991,7 +1077,7 @@ export default function ProgresoPage() {
                             border: `1px solid ${sePaso ? 'rgba(239,68,68,0.35)' : 'rgba(34,197,94,0.35)'}`,
                           }}
                         >
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">🍔 {label}</p>
+                          <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-2">🍔 {label}</p>
                           <p className={`text-3xl font-black mb-1 ${sePaso ? 'text-red-400' : 'text-green-400'}`}>
                             {Math.abs(restantes).toLocaleString('es-ES')} kcal
                           </p>
@@ -1023,8 +1109,8 @@ export default function ProgresoPage() {
                         rawProt >= 90 ? `💪 ¡Excelente! Tu proteína va en ${rawProt}% — ¡sigue así!` :
                                         '🥗 Tus macros van bien por ahora.'
                       return (
-                        <div className="bg-[#191D17] border border-white/10 rounded-2xl p-5">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">Calidad de tu alimentación</p>
+                        <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-5">
+                          <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-4">Calidad de tu alimentación</p>
                           <div className="flex justify-around">
                             {macros.map((m, idx) => {
                               const displayPct = displayPcts[idx]
@@ -1047,26 +1133,26 @@ export default function ProgresoPage() {
                                       </Pie>
                                     </PieChart>
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                      <span className="text-xs font-black text-white">{rawPct}%</span>
+                                      <span className="text-xs font-black text-[#1b201a]">{rawPct}%</span>
                                     </div>
                                   </div>
-                                  <p className="text-[10px] text-gray-400 text-center leading-tight" style={{ maxWidth: 70 }}>{m.label}</p>
+                                  <p className="text-[10px] text-[#5d6358] text-center leading-tight" style={{ maxWidth: 70 }}>{m.label}</p>
                                 </div>
                               )
                             })}
                           </div>
-                          <p className="text-xs text-gray-400 mt-4 text-center leading-snug">{mensajeMacro}</p>
+                          <p className="text-xs text-[#5d6358] mt-4 text-center leading-snug">{mensajeMacro}</p>
                           {cargandoResumenPeriodo && (
-                            <p className="text-[10px] text-gray-600 text-center mt-1">Actualizando…</p>
+                            <p className="text-[10px] text-[#6d7362] text-center mt-1">Actualizando…</p>
                           )}
                         </div>
                       )
                     })()}
 
                     {/* 4 · Gráfica de barras por día */}
-                    <div className="bg-[#191D17] border border-white/10 rounded-2xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Calorías por día</p>
-                      <p className="text-[10px] text-gray-600 mb-4">
+                    <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-5">
+                      <p className="text-xs text-[#787f70] uppercase tracking-widest mb-1">Calorías por día</p>
+                      <p className="text-[10px] text-[#6d7362] mb-4">
                         Línea punteada = meta diaria ({metaDiaria.toLocaleString('es-ES')} kcal)
                       </p>
                       <ResponsiveContainer width="100%" height={190}>
@@ -1089,16 +1175,16 @@ export default function ProgresoPage() {
                     </div>
 
                     {/* 5 · Peso estimado del período */}
-                    <div className="bg-[#191D17] border border-white/10 rounded-2xl p-4">
+                    <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-4">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wide">⚖️ Peso estimado del período</p>
-                        <p className={`text-base font-bold ${pesoEstimadoKg == null ? 'text-gray-500' : pesoEstimadoKg >= 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                        <p className="text-[10px] text-[#787f70] uppercase tracking-wide">⚖️ Peso estimado del período</p>
+                        <p className={`text-base font-bold ${pesoEstimadoKg == null ? 'text-[#787f70]' : pesoEstimadoKg >= 0 ? 'text-green-400' : 'text-orange-400'}`}>
                           {pesoEstimadoKg == null
                             ? '—'
                             : `≈ ${formatNumeroEs(Math.abs(pesoEstimadoKg))} kg ${pesoEstimadoKg >= 0 ? 'perdido' : 'ganado'}`}
                         </p>
                       </div>
-                      <p className="text-[10px] text-gray-600 mt-1">
+                      <p className="text-[10px] text-[#6d7362] mt-1">
                         El peso estimado es una aproximación. El resultado real depende de tu metabolismo y otros factores.
                       </p>
                     </div>
@@ -1113,33 +1199,33 @@ export default function ProgresoPage() {
 
                 {/* 1 · Cuadritos de hoy */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#191D17] border border-[#22C55E]/30 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Hoy · Minutos</p>
+                  <div className="bg-[#FFFFFF] border border-[#22C55E]/30 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] text-[#787f70] uppercase tracking-wide mb-1">Hoy · Minutos</p>
                     <p className="text-4xl font-black leading-none mb-1"
                       style={{ fontFamily: "'Oswald', sans-serif", color: '#22C55E' }}>
                       {cardioHoyMin}
                     </p>
-                    <p className="text-[10px] text-gray-600">min</p>
+                    <p className="text-[10px] text-[#6d7362]">min</p>
                   </div>
-                  <div className="bg-[#191D17] border border-[#FB8C3C]/30 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Hoy · Kcal</p>
+                  <div className="bg-[#FFFFFF] border border-[#FB8C3C]/30 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] text-[#787f70] uppercase tracking-wide mb-1">Hoy · Kcal</p>
                     <p className="text-4xl font-black leading-none mb-1"
                       style={{ fontFamily: "'Oswald', sans-serif", color: '#FB8C3C' }}>
                       {cardioHoyKcal}
                     </p>
-                    <p className="text-[10px] text-gray-600">kcal</p>
+                    <p className="text-[10px] text-[#6d7362]">kcal</p>
                   </div>
                 </div>
 
                 {cardioChartData.length === 0 ? (
-                  <p className="text-center py-16 text-gray-600 text-sm leading-relaxed">
+                  <p className="text-center py-16 text-[#6d7362] text-sm leading-relaxed">
                     Aún no tienes sesiones de cardio<br />registradas.
                   </p>
                 ) : (
                   <>
                     {/* 2 · Gráfica de barras kcal */}
-                    <div className="bg-[#191D17] border border-white/10 rounded-2xl p-4">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-3">Calorías quemadas</p>
+                    <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-4">
+                      <p className="text-[10px] text-[#787f70] uppercase tracking-wide mb-3">Calorías quemadas</p>
                       <ResponsiveContainer width="100%" height={190}>
                         <BarChart data={cardioChartData} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -1159,13 +1245,13 @@ export default function ProgresoPage() {
                     </div>
 
                     {/* 3 · Historial */}
-                    <div className="bg-[#191D17] border border-white/10 rounded-2xl p-4">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-3">Historial</p>
+                    <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl p-4">
+                      <p className="text-[10px] text-[#787f70] uppercase tracking-wide mb-3">Historial</p>
                       <div className="flex flex-col">
                         {cardioHistorial.map(d => (
                           <div key={d.fecha}
-                            className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0">
-                            <span className="text-xs text-gray-400">{d.label}</span>
+                            className="flex items-center justify-between py-2.5 border-b border-black/[0.06] last:border-0">
+                            <span className="text-xs text-[#5d6358]">{d.label}</span>
                             <div className="flex items-center gap-4">
                               <span className="text-sm font-bold"
                                 style={{ fontFamily: "'Oswald', sans-serif", color: '#22C55E' }}>
@@ -1197,20 +1283,20 @@ export default function ProgresoPage() {
         >
           <div className="w-full max-w-lg rounded-t-3xl p-6 pb-10"
             style={{
-              background: 'linear-gradient(160deg, #120626 0%, #08021a 100%)',
-              border: '1px solid rgba(34,197,94,0.3)',
-              boxShadow: '0 -8px 48px rgba(34,197,94,0.2)',
+              background: 'linear-gradient(160deg, #FFFFFF 0%, #F4F6F1 100%)',
+              border: '1px solid rgba(34,197,94,0.35)',
+              boxShadow: '0 -8px 48px rgba(34,197,94,0.18)',
             }}>
 
             {/* Drag handle decorativo */}
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+            <div className="w-10 h-1 bg-black/[0.06] rounded-full mx-auto mb-5" />
 
             {/* Header */}
             <p className="text-4xl text-center mb-2">⚖️</p>
-            <h3 className="text-lg font-bold text-white text-center mb-1">¡Tu peso ha cambiado!</h3>
-            <p className="text-xs text-gray-400 text-center mb-5">
+            <h3 className="text-lg font-bold text-[#1b201a] text-center mb-1">¡Tu peso ha cambiado!</h3>
+            <p className="text-xs text-[#5d6358] text-center mb-5">
               Con{' '}
-              <span className="text-white font-semibold">{modalRecalculo.nuevoPeso} kg</span>
+              <span className="text-[#1b201a] font-semibold">{modalRecalculo.nuevoPeso} kg</span>
               {' '}tus calorías óptimas son distintas. ¿Quieres actualizarlas?
             </p>
 
@@ -1222,12 +1308,12 @@ export default function ProgresoPage() {
               ].map(row => (
                 <div key={row.label}
                   className="flex items-center justify-between rounded-2xl px-4 py-3"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <span className="text-xs text-gray-400">{row.label}</span>
+                  style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.07)' }}>
+                  <span className="text-xs text-[#5d6358]">{row.label}</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-600">{row.antes.toLocaleString()} kcal</span>
-                    <span className="text-gray-600 text-[10px]">→</span>
-                    <span className="text-sm font-bold text-[#22C55E]">{row.despues.toLocaleString()} kcal</span>
+                    <span className="text-xs text-[#6d7362]">{row.antes.toLocaleString()} kcal</span>
+                    <span className="text-[#6d7362] text-[10px]">→</span>
+                    <span className="text-sm font-bold text-[#15803D]">{row.despues.toLocaleString()} kcal</span>
                   </div>
                 </div>
               ))}
@@ -1241,9 +1327,9 @@ export default function ProgresoPage() {
                 { label: 'Grasas',   antes: modalRecalculo.actuales.grasas,   despues: modalRecalculo.nuevos.grasas,   color: '#FF5C5C' },
               ].map(m => (
                 <div key={m.label} className="rounded-xl py-2.5 px-3 text-center"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <p className="text-[10px] text-gray-500 mb-0.5">{m.label}</p>
-                  <p className="text-[10px] text-gray-600">{m.antes}g →</p>
+                  style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.07)' }}>
+                  <p className="text-[10px] text-[#787f70] mb-0.5">{m.label}</p>
+                  <p className="text-[10px] text-[#6d7362]">{m.antes}g →</p>
                   <p className="text-sm font-bold" style={{ color: m.color }}>{m.despues}g</p>
                 </div>
               ))}
@@ -1253,12 +1339,12 @@ export default function ProgresoPage() {
             <button
               onClick={aplicarRecalculo}
               className="w-full py-3.5 rounded-2xl text-white font-bold text-sm mb-2"
-              style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)' }}>
+              style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
               Actualizar mis calorías y macros
             </button>
             <button
               onClick={() => setModalRecalculo(null)}
-              className="w-full py-2 text-sm text-gray-500">
+              className="w-full py-2 text-sm text-[#787f70]">
               Ahora no
             </button>
           </div>
