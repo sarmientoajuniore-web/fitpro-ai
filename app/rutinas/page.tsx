@@ -401,8 +401,7 @@ export default function RutinasPage() {
   const sesionRef           = useRef<SesionState | null>(null)
   const userIdRef           = useRef<string | null>(null)
 
-  // Nombre del usuario (primer nombre) y sexo para caricatura
-  const [userName, setUserName] = useState<string | null>(null)
+  // Sexo del usuario para la caricatura y filtrar plantillas
   const [userSexo, setUserSexo] = useState<string | null>(null)
   // Calendario abierto/cerrado por rutina
   const [calendarAbierto, setCalendarAbierto] = useState<Record<string, boolean>>({})
@@ -436,9 +435,8 @@ export default function RutinasPage() {
 
   useEffect(() => {
     if (!userId) return
-    supabase.from('perfiles').select('nombre_completo, sexo').eq('user_id', userId).single()
+    supabase.from('perfiles').select('sexo').eq('user_id', userId).single()
       .then(({ data }) => {
-        if (data?.nombre_completo) setUserName((data.nombre_completo as string).split(' ')[0])
         if (data?.sexo) setUserSexo(data.sexo as string)
       })
   }, [userId])
@@ -1130,11 +1128,8 @@ export default function RutinasPage() {
                   {/* Cabecera: nombre usuario + código compartir + borrar */}
                   <div className="px-5 pt-5 pb-4 flex items-start justify-between border-b border-white/5">
                     <div className="min-w-0">
-                      {userName
-                        ? <div className="text-xl font-black leading-tight">{userName}</div>
-                        : <div className="text-xl font-black leading-tight">{rutina.nombre}</div>
-                      }
-                      {userName && <div className="text-xs text-[#B57BFF]/60 mt-0.5">{rutina.nombre}</div>}
+                      <div className="text-xl font-black leading-tight">Entrenamiento de hoy</div>
+                      <div className="text-xs text-[#B57BFF]/70 mt-0.5 truncate">{rutina.nombre}</div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
                       {confirmBorrar === rutina.id ? (
@@ -1173,7 +1168,6 @@ export default function RutinasPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Entrenamiento de hoy</div>
                       <div className="text-sm font-semibold text-white capitalize">{diaDisplay}</div>
                       <div className="text-[11px] text-[#B57BFF]/60 mt-0.5">
                         {ejsDia.length} ejercicio{ejsDia.length !== 1 ? 's' : ''} · {rutina.dias_semana} días/sem
@@ -1360,9 +1354,26 @@ export default function RutinasPage() {
           </div>
         )}
 
-        {/* ── BANNER: ¡Reta a un amigo! ── */}
+        {/* ── Conseguir otra rutina ── */}
+        <div className="mb-5">
+          <div className="text-[11px] text-gray-500 uppercase tracking-widest mb-2 text-center">¿Quieres otra rutina?</div>
+          <button
+            onClick={() => setGaleriaAbierta(true)}
+            className="w-full rounded-2xl py-3.5 text-white text-sm font-bold flex items-center justify-center gap-2 mb-2"
+            style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
+            <Sparkles className="w-4 h-4" />
+            Elegir una rutina lista
+          </button>
+          <button
+            onClick={abrirWizard}
+            className="w-full text-[#B57BFF]/70 text-xs font-semibold py-1.5 hover:text-[#B57BFF] transition-colors">
+            ＋ Crear desde cero (avanzado)
+          </button>
+        </div>
+
+        {/* ── BANNER: ¡Reta a un amigo! (al final) ── */}
         <div
-          className="rounded-2xl mb-4 overflow-hidden"
+          className="rounded-2xl overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #22D3EE 100%)' }}
         >
           {/* Fila principal */}
@@ -1474,20 +1485,6 @@ export default function RutinasPage() {
             </div>
           )}
         </div>
-
-        <button
-          onClick={() => setGaleriaAbierta(true)}
-          className="w-full rounded-2xl py-4 text-white text-sm font-bold flex items-center justify-center gap-2 mb-3"
-          style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
-          <Sparkles className="w-4 h-4" />
-          Elegir una rutina lista
-        </button>
-
-        <button
-          onClick={abrirWizard}
-          className="w-full border border-dashed border-[#B57BFF]/30 rounded-2xl py-4 text-[#B57BFF] text-sm font-semibold hover:border-[#B57BFF] hover:bg-[#B57BFF]/5 transition-colors">
-          ＋ Crear desde cero (avanzado)
-        </button>
       </div>
 
       {/* ══════════════════════════════════
