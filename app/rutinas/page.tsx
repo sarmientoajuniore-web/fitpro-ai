@@ -1095,9 +1095,30 @@ export default function RutinasPage() {
         )}
 
         {!cargando && rutinas.length === 0 && (
-          <div className="text-center py-16 text-gray-500">
-            <div className="text-5xl mb-4">🏋️</div>
-            <div className="text-sm">Sin rutinas aún. Crea la primera abajo.</div>
+          <div className="flex flex-col items-center text-center pt-4 pb-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imagenEntrena}
+              alt=""
+              className="mb-5 pointer-events-none select-none"
+              style={{ width: 132, height: 162, objectFit: 'contain', objectPosition: 'bottom center', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.5))' }}
+            />
+            <h3 className="text-2xl font-black">Crea tu primera rutina</h3>
+            <p className="text-sm text-gray-400 mt-2 mb-7 leading-relaxed mx-auto" style={{ maxWidth: 300 }}>
+              Elige una rutina lista hecha para tu objetivo, o arma la tuya desde cero.
+            </p>
+            <button
+              onClick={() => setGaleriaAbierta(true)}
+              className="w-full rounded-2xl py-4 text-white text-sm font-bold flex items-center justify-center gap-2 mb-3"
+              style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
+              <Sparkles className="w-4 h-4" />
+              Elegir una rutina lista
+            </button>
+            <button
+              onClick={abrirWizard}
+              className="w-full text-[#B57BFF]/70 text-xs font-semibold py-1.5 hover:text-[#B57BFF] transition-colors">
+              ＋ Crear desde cero (avanzado)
+            </button>
           </div>
         )}
 
@@ -1354,22 +1375,24 @@ export default function RutinasPage() {
           </div>
         )}
 
-        {/* ── Conseguir otra rutina ── */}
-        <div className="mb-5">
-          <div className="text-[11px] text-gray-500 uppercase tracking-widest mb-2 text-center">¿Quieres otra rutina?</div>
-          <button
-            onClick={() => setGaleriaAbierta(true)}
-            className="w-full rounded-2xl py-3.5 text-white text-sm font-bold flex items-center justify-center gap-2 mb-2"
-            style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
-            <Sparkles className="w-4 h-4" />
-            Elegir una rutina lista
-          </button>
-          <button
-            onClick={abrirWizard}
-            className="w-full text-[#B57BFF]/70 text-xs font-semibold py-1.5 hover:text-[#B57BFF] transition-colors">
-            ＋ Crear desde cero (avanzado)
-          </button>
-        </div>
+        {/* ── Conseguir otra rutina (solo si ya hay alguna) ── */}
+        {rutinas.length > 0 && (
+          <div className="mb-5">
+            <div className="text-[11px] text-gray-500 uppercase tracking-widest mb-2 text-center">¿Quieres otra rutina?</div>
+            <button
+              onClick={() => setGaleriaAbierta(true)}
+              className="w-full rounded-2xl py-3.5 text-white text-sm font-bold flex items-center justify-center gap-2 mb-2"
+              style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 24px rgba(181,123,255,0.35)' }}>
+              <Sparkles className="w-4 h-4" />
+              Elegir una rutina lista
+            </button>
+            <button
+              onClick={abrirWizard}
+              className="w-full text-[#B57BFF]/70 text-xs font-semibold py-1.5 hover:text-[#B57BFF] transition-colors">
+              ＋ Crear desde cero (avanzado)
+            </button>
+          </div>
+        )}
 
         {/* ── BANNER: ¡Reta a un amigo! (al final) ── */}
         <div
@@ -1397,18 +1420,24 @@ export default function RutinasPage() {
 
             {/* Texto y botones */}
             <div className="flex-1 min-w-0 py-4 pr-4 pl-2">
-              <div className="text-white font-black text-[15px] leading-tight">¡Reta a un amigo!</div>
-              <div className="text-white/80 text-xs mt-0.5 leading-relaxed">Comparte tu rutina o agrega una</div>
+              <div className="text-white font-black text-[15px] leading-tight">
+                {rutinas.length === 0 ? '¿Tienes un código?' : '¡Reta a un amigo!'}
+              </div>
+              <div className="text-white/80 text-xs mt-0.5 leading-relaxed">
+                {rutinas.length === 0 ? 'Agrega la rutina que un amigo te compartió' : 'Comparte tu rutina o agrega una'}
+              </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                <button
-                  onClick={() => rutinas.length > 0 && compartirDirecto(rutinas[0].id)}
-                  disabled={rutinas.length === 0 || compartiendoDirecto}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg text-xs disabled:opacity-40 transition-opacity"
-                  style={{ color: '#7B2FF7' }}
-                >
-                  <Share2 className="w-3 h-3" />
-                  {compartiendoDirecto ? '...' : 'Compartir'}
-                </button>
+                {rutinas.length > 0 && (
+                  <button
+                    onClick={() => compartirDirecto(rutinas[0].id)}
+                    disabled={compartiendoDirecto}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg text-xs disabled:opacity-40 transition-opacity"
+                    style={{ color: '#7B2FF7' }}
+                  >
+                    <Share2 className="w-3 h-3" />
+                    {compartiendoDirecto ? '...' : 'Compartir'}
+                  </button>
+                )}
                 <button
                   onClick={() => { setMostrarPegar(p => !p); setErrorImportar(null); setPreviewImport(null); setImportOk(false) }}
                   className="flex items-center gap-1.5 px-4 py-1.5 font-bold rounded-lg text-xs text-white transition-colors"
