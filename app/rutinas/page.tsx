@@ -354,9 +354,6 @@ export default function RutinasPage() {
   const [confirmBorrarEj, setConfirmBorrarEj] = useState<string | null>(null)
   const [borrandoEj, setBorrandoEj]           = useState(false)
 
-  // Reordenar días de la rutina (panel expandible)
-  const [reordenarDiasId, setReordenarDiasId] = useState<string | null>(null)
-
   // Galería de rutinas listas (Modelo B)
   const [galeriaAbierta, setGaleriaAbierta] = useState(false)
 
@@ -1140,22 +1137,6 @@ export default function RutinasPage() {
                       {userName && <div className="text-xs text-[#B57BFF]/60 mt-0.5">{rutina.nombre}</div>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
-                      {confirmBorrar !== rutina.id && (
-                        <button
-                          onClick={() => abrirModalEj(rutina.id, diaSel)}
-                          className="flex items-center gap-1 text-[11px] text-[#B57BFF] border border-[#B57BFF]/30 rounded-lg px-2.5 py-1.5 hover:bg-[#B57BFF]/10 transition-colors shrink-0">
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Agregar</span>
-                        </button>
-                      )}
-                      {confirmBorrar !== rutina.id && (
-                        <button
-                          onClick={() => { setVistaSemanal(rutina.id); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
-                          className="flex items-center gap-1 text-[11px] text-[#B57BFF] border border-[#B57BFF]/30 rounded-lg px-2.5 py-1.5 hover:bg-[#B57BFF]/10 transition-colors shrink-0">
-                          <ArrowLeftRight className="w-3.5 h-3.5" />
-                          <span>Mover</span>
-                        </button>
-                      )}
                       {confirmBorrar === rutina.id ? (
                         <>
                           <span className="text-[10px] text-gray-400">¿Eliminar?</span>
@@ -1356,60 +1337,21 @@ export default function RutinasPage() {
                         Empezar entrenamiento
                       </button>
 
-                      {/* ── Reordenar días ── */}
-                      {(() => {
-                        const diasOrdenados = DIAS.filter(d => diasEnt.has(d))
-                        if (diasOrdenados.length < 2) return null
-                        const abierto = reordenarDiasId === rutina.id
-                        return (
-                          <div className="mt-3">
-                            <button
-                              onClick={() => setReordenarDiasId(abierto ? null : rutina.id)}
-                              className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-[#B57BFF] transition-colors w-full">
-                              <span className="text-xs">⇅</span>
-                              <span>Reordenar días de entrenamiento</span>
-                              <span className="ml-auto text-[10px]">{abierto ? '▲' : '▼'}</span>
-                            </button>
-                            {abierto && (
-                              <div className="mt-2 bg-black/30 rounded-xl border border-white/8 p-3 space-y-2">
-                                {diasOrdenados.map((dia, di) => {
-                                  const ejsD = rutina.rutina_ejercicios
-                                    .filter(e => e.dia_semana === dia)
-                                    .sort((a, b) => a.orden - b.orden)
-                                  const musculos = [...new Set(
-                                    ejsD.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
-                                  )].slice(0, 3).join(', ')
-                                  return (
-                                    <div key={dia} className="flex items-center gap-2">
-                                      <div className="flex flex-col gap-0.5 shrink-0">
-                                        <button
-                                          onClick={() => intercambiarDias(rutina.id, diasOrdenados[di - 1], dia)}
-                                          disabled={di === 0}
-                                          className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                            ${di === 0 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                          ▲
-                                        </button>
-                                        <button
-                                          onClick={() => intercambiarDias(rutina.id, dia, diasOrdenados[di + 1])}
-                                          disabled={di === diasOrdenados.length - 1}
-                                          className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                            ${di === diasOrdenados.length - 1 ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 active:text-[#B57BFF]'}`}>
-                                          ▼
-                                        </button>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <span className="text-xs font-semibold text-white">{dia}</span>
-                                        {musculos && <span className="text-[10px] text-gray-500 ml-1.5">{musculos}</span>}
-                                      </div>
-                                      <span className="text-[10px] text-gray-600 shrink-0">{ejsD.length} ej.</span>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
+                      {/* Acciones secundarias: agregar ejercicio · ordenar días */}
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => abrirModalEj(rutina.id, diaSel)}
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#B57BFF] border border-[#B57BFF]/30 rounded-xl py-2.5 hover:bg-[#B57BFF]/10 transition-colors">
+                          <Plus className="w-3.5 h-3.5" />
+                          Agregar ejercicio
+                        </button>
+                        <button
+                          onClick={() => { setVistaSemanal(rutina.id); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#B57BFF] border border-[#B57BFF]/30 rounded-xl py-2.5 hover:bg-[#B57BFF]/10 transition-colors">
+                          <ArrowLeftRight className="w-3.5 h-3.5" />
+                          Ordenar días
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
