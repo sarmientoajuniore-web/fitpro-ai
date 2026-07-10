@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#B57BFF',
+  themeColor: '#22C55E',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="min-h-screen bg-[#0a0a0a] text-white">
+      <body className="min-h-screen bg-[#10130F] text-white">
         {children}
         <PwaRegister />
       </body>
