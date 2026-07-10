@@ -363,6 +363,7 @@ export default function RutinasPage() {
   const [vistaSemanal, setVistaSemanal]         = useState<string | null>(null)
   const [diaOrigenSemanal, setDiaOrigenSemanal] = useState<string | null>(null)
   const [avisoSemanal, setAvisoSemanal]         = useState<string | null>(null)
+  const [avisoSemanalError, setAvisoSemanalError] = useState(false)
 
   // Wizard de creación
   const [wizard, setWizard]               = useState<WizardState | null>(null)
@@ -656,15 +657,37 @@ export default function RutinasPage() {
   }
 
   // ── Intercambiar todos los ejercicios entre dos días ──
-  const intercambiarDias = async (rutinaId: string, diaA: string, diaB: string) => {
+  // Devuelve true SOLO si el servidor confirmó el cambio. El intercambio se hace
+  // en /api/rutinas/mover-dia (con service role) porque la tabla rutina_ejercicios
+  // no tiene política RLS de UPDATE: un UPDATE directo desde el cliente responde
+  // "ok" pero afecta 0 filas y no guarda nada. En conexiones intermitentes (wifi
+  // del gym) se reintenta; si finalmente falla, NO se toca la pantalla para no
+  // aparentar que se movió cuando en realidad no se guardó.
+  const intercambiarDias = async (rutinaId: string, diaA: string, diaB: string): Promise<boolean> => {
     const rutina = rutinas.find(r => r.id === rutinaId)
-    if (!rutina) return
-    const idsA = rutina.rutina_ejercicios.filter(e => e.dia_semana === diaA).map(e => e.id)
-    const idsB = rutina.rutina_ejercicios.filter(e => e.dia_semana === diaB).map(e => e.id)
-    await Promise.all([
-      ...(idsA.length ? [supabase.from('rutina_ejercicios').update({ dia_semana: diaB }).in('id', idsA)] : []),
-      ...(idsB.length ? [supabase.from('rutina_ejercicios').update({ dia_semana: diaA }).in('id', idsB)] : []),
-    ])
+    if (!rutina) return false
+
+    let guardado = false
+    for (let intento = 0; intento < 3; intento++) {
+      try {
+        const res = await fetch('/api/rutinas/mover-dia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutina_id: rutinaId, diaA, diaB }),
+        })
+        if (res.ok) { guardado = true; break }
+        // 4xx (sin permiso, datos inválidos) no se arregla reintentando
+        if (res.status >= 400 && res.status < 500) {
+          console.error('[intercambiarDias] el servidor rechazó el cambio:', res.status)
+          break
+        }
+      } catch (e) {
+        console.error(`[intercambiarDias] intento ${intento + 1} falló (red):`, e)
+      }
+      await new Promise(res => setTimeout(res, 500 * (intento + 1)))
+    }
+    if (!guardado) return false
+
     setRutinas(prev => prev.map(r => {
       if (r.id !== rutinaId) return r
       return {
@@ -676,6 +699,7 @@ export default function RutinasPage() {
         }),
       }
     }))
+    return true
   }
 
   // ── Agregar ejercicio ──
@@ -1900,9 +1924,13 @@ export default function RutinasPage() {
                 : 'Toca un día con entreno para seleccionarlo y moverlo'}
             </div>
 
-            {/* Aviso verde */}
+            {/* Aviso: verde si se guardó, rojo si falló */}
             {avisoSemanal && (
-              <div className="mx-5 mt-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl text-xs text-green-400 text-center shrink-0">
+              <div className={`mx-5 mt-2 px-4 py-2 rounded-xl text-xs text-center shrink-0 border ${
+                avisoSemanalError
+                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                  : 'bg-green-500/10 border-green-500/20 text-green-400'
+              }`}>
                 {avisoSemanal}
               </div>
             )}
@@ -1928,10 +1956,17 @@ export default function RutinasPage() {
                       }
                       if (diaOrigenSemanal === dia) { setDiaOrigenSemanal(null); return }
                       const tieneDestino = rutinaS.rutina_ejercicios.some(e => e.dia_semana === dia)
-                      await intercambiarDias(vistaSemanal, diaOrigenSemanal, dia)
+                      const ok = await intercambiarDias(vistaSemanal, diaOrigenSemanal, dia)
                       setDiaOrigenSemanal(null)
-                      setAvisoSemanal(tieneDestino ? '✓ Días intercambiados' : '✓ Entreno movido')
-                      setTimeout(() => setAvisoSemanal(null), 2500)
+                      if (ok) {
+                        setAvisoSemanalError(false)
+                        setAvisoSemanal(tieneDestino ? '✓ Días intercambiados' : '✓ Entreno movido')
+                        setTimeout(() => setAvisoSemanal(null), 2500)
+                      } else {
+                        setAvisoSemanalError(true)
+                        setAvisoSemanal('⚠ No se pudo guardar. Revisa tu conexión e inténtalo otra vez.')
+                        setTimeout(() => setAvisoSemanal(null), 4000)
+                      }
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left
                       ${esOrigen
