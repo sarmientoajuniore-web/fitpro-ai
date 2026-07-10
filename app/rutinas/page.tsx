@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar, ArrowLeftRight, Sparkles } from 'lucide-react'
+import { Share2, Users, Search, Download, Copy, Check, Dumbbell, Trash2, Calendar, ArrowLeftRight, Sparkles, Play } from 'lucide-react'
 import GaleriaPlantillas from './GaleriaPlantillas'
 
 const supabase = createBrowserClient(
@@ -1085,6 +1085,76 @@ export default function RutinasPage() {
 
       <div className="p-5">
         <h2 className="text-xl font-bold mb-5">Mis <span className="text-[#B57BFF]">Rutinas</span></h2>
+
+        {/* ── ENTRENAMIENTO DE HOY ── */}
+        {!cargando && rutinas.length > 0 && (() => {
+          const rutinaHoy = rutinas[0]
+          const diaHoy = diaSemanaLocal(new Date())
+          const ejsHoy = rutinaHoy.rutina_ejercicios
+            .filter(e => e.dia_semana === diaHoy)
+            .sort((a, b) => a.orden - b.orden)
+          const musculos = [...new Set(
+            ejsHoy.map(e => e.ejercicios?.musculo_principal).filter(Boolean)
+          )].slice(0, 3).join(' · ')
+          const diasEnt = new Set(
+            rutinaHoy.rutina_ejercicios.map(e => e.dia_semana).filter((d): d is string => !!d)
+          )
+          const idx = DIAS.indexOf(diaHoy)
+          let proximo: string | null = null
+          for (let i = 1; i <= 7; i++) { const d = DIAS[(idx + i) % 7]; if (diasEnt.has(d)) { proximo = d; break } }
+          const descanso = ejsHoy.length === 0
+
+          return (
+            <div className="mb-5 rounded-2xl border border-[#B57BFF]/40 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #1a0d2e 0%, #0a0318 100%)', boxShadow: '0 0 24px rgba(181,123,255,0.12)' }}>
+              <div className="px-5 pt-4 pb-3">
+                <div className="flex items-center gap-1.5 text-[11px] text-[#B57BFF]/60 uppercase tracking-widest mb-1">
+                  <Dumbbell className="w-3.5 h-3.5" /> Entrenamiento de hoy
+                </div>
+                {descanso ? (
+                  <>
+                    <div className="text-xl font-black">Hoy es descanso</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {proximo ? <>Tu próximo entreno es el <span className="text-[#B57BFF]">{proximo}</span>.</> : 'Agrega entrenos a tu rutina.'}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xl font-black leading-tight">{musculos || 'Entrenamiento'}</div>
+                    <div className="text-xs text-gray-400 mt-1">{ejsHoy.length} ejercicios · {rutinaHoy.nombre}</div>
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      {ejsHoy.slice(0, 3).map((e, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                          <span className="text-[#B57BFF] text-xs font-bold w-4 text-center">{i + 1}</span>
+                          <span className="truncate">{e.ejercicios?.nombre}</span>
+                        </div>
+                      ))}
+                      {ejsHoy.length > 3 && <div className="text-[11px] text-gray-500 pl-6">+ {ejsHoy.length - 3} más</div>}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="px-5 pb-4">
+                {descanso ? (
+                  <button
+                    onClick={() => { setVistaSemanal(rutinaHoy.id); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-[#B57BFF] border border-[#B57BFF]/30 hover:bg-[#B57BFF]/5 transition-colors">
+                    <ArrowLeftRight className="w-4 h-4" />
+                    ¿No fuiste un día? Muévelo a hoy
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => iniciarSesion(rutinaHoy, diaHoy, hoyStr)}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-white text-[15px] font-bold"
+                    style={{ background: 'linear-gradient(135deg, #B57BFF, #7B2FF7)', boxShadow: '0 0 20px rgba(181,123,255,0.35)' }}>
+                    <Play className="w-4 h-4 fill-white" />
+                    Empezar entrenamiento
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Skeleton */}
         {cargando && (
