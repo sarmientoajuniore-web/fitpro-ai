@@ -69,19 +69,20 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
   }
 
   // Cada nivel = un color relleno (tarjetas modernas con letra blanca)
+  // Escala por dificultad en la paleta PorotoFit: rojo -> rojo oscuro -> negro
   const nivelGrad: Record<string, string> = {
-    principiante: 'linear-gradient(135deg, #FFB05C, #F59E0B)',
-    intermedio:   'linear-gradient(135deg, #34D9A6, #16A87C)',
-    avanzado:     'linear-gradient(135deg, #FF7E5F, #F5563B)',
+    principiante: 'linear-gradient(135deg, #F0453C, #E11D2A)',
+    intermedio:   'linear-gradient(135deg, #B3121D, #7E0C14)',
+    avanzado:     'linear-gradient(135deg, #2E2E2E, #141414)',
   }
   const nivelSombra: Record<string, string> = {
-    principiante: '0 6px 16px rgba(245,158,11,0.30)',
-    intermedio:   '0 6px 16px rgba(46,204,155,0.30)',
-    avanzado:     '0 6px 16px rgba(255,107,87,0.30)',
+    principiante: '0 6px 16px rgba(225,29,42,0.30)',
+    intermedio:   '0 6px 16px rgba(179,18,29,0.30)',
+    avanzado:     '0 6px 16px rgba(20,20,20,0.30)',
   }
 
   return (
-    <div className="fixed inset-0 bg-[#FFF8F3] z-50 flex flex-col max-w-lg mx-auto">
+    <div className="fixed inset-0 bg-[#FFFFFF] z-50 flex flex-col max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 shrink-0">
         {preview ? (
@@ -111,12 +112,10 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition-all"
                 style={filtroSexo === s
                   ? {
-                      background: s === 'mujer'
-                        ? 'linear-gradient(135deg, #FF9F45, #F97316)'
-                        : 'linear-gradient(135deg, #FF6B57, #E14E2C)',
+                      background: 'linear-gradient(135deg, #E11D2A, #B3121D)',
                       borderColor: 'transparent', color: 'white',
                     }
-                  : { background: '#FFF3EC', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }}>
+                  : { background: '#FCEBEB', borderColor: 'rgba(225,29,42,0.2)', color: '#9ca3af' }}>
                 {s === 'hombre' ? <Mars className="w-4 h-4" /> : <Venus className="w-4 h-4" />}
                 {s === 'hombre' ? 'Hombre' : 'Mujer'}
               </button>
@@ -160,12 +159,12 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
                 <div key={i} className="bg-[#FFFFFF] border border-black/10 rounded-2xl overflow-hidden">
                   <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center justify-between">
                     <span className="text-sm font-bold">{dia.nombre_dia}</span>
-                    <span className="text-[10px] text-[#E14E2C] uppercase tracking-wider">{dia.dia_semana}</span>
+                    <span className="text-[10px] text-[#B3121D] uppercase tracking-wider">{dia.dia_semana}</span>
                   </div>
                   <div className="px-4 py-2">
                     {dia.ejercicios.map((ej, j) => (
                       <div key={j} className="flex items-center gap-2 py-1.5">
-                        <span className="text-[#E14E2C] text-xs font-bold w-4 text-center shrink-0">{ej.orden}</span>
+                        <span className="text-[#B3121D] text-xs font-bold w-4 text-center shrink-0">{ej.orden}</span>
                         <span className="flex-1 text-sm text-[#2b302a] min-w-0 truncate">
                           {cargandoNombres ? '…' : (nombres[ej.ejercicio_id] ?? 'Ejercicio')}
                         </span>
@@ -187,7 +186,7 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
           <div className="px-5 pb-10 pt-3 shrink-0">
             <button onClick={() => usar(preview)} disabled={usando}
               className="w-full text-white font-bold py-4 rounded-2xl text-base flex items-center justify-center gap-2 disabled:opacity-40"
-              style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 24px rgba(255,107,87,0.4)' }}>
+              style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 24px rgba(255,107,87,0.4)' }}>
               <Check className="w-5 h-5" />
               {usando ? 'Creando tu rutina…' : 'Usar esta rutina'}
             </button>

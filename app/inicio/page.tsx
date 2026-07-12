@@ -572,8 +572,8 @@ export default function InicioPage() {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (!listo) {
     return (
-      <div className="min-h-screen bg-[#FFF8F3] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#FF6B57] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#E11D2A] border-t-transparent animate-spin" />
       </div>
     )
   }
@@ -598,7 +598,7 @@ export default function InicioPage() {
   const estadoBadgeClass = metaCal < tdeeNum - 50
     ? 'bg-red-600 text-white'
     : metaCal > tdeeNum + 50
-    ? 'bg-[#E14E2C] text-white'
+    ? 'bg-[#B3121D] text-white'
     : 'bg-blue-600 text-white'
 
   const metaAgua    = calcularMetaAgua(perfil?.peso_kg ?? null, perfil?.nivel_actividad ?? null)
@@ -624,7 +624,7 @@ export default function InicioPage() {
   return (
     <div
       className="min-h-screen text-[#1b201a]"
-      style={{ background: 'linear-gradient(180deg, #FB5836 0px, #FF6B57 78px, #FCA98F 160px, #FCDDD1 235px, #FFF8F3 330px, #FFF8F3 100%)' }}>
+      style={{ background: 'linear-gradient(180deg, #141414 0px, #191919 82px, #3a1f1f 150px, #9c5048 208px, #FFFFFF 308px, #FFFFFF 100%)' }}>
       <div className="max-w-lg mx-auto p-5">
 
         {/* HEADER */}
@@ -654,7 +654,7 @@ export default function InicioPage() {
               <div className="flex items-center justify-between mb-2">
                 <button
                   onClick={irDiaAnterior}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FFF1EC] hover:bg-[#FFE3D8] text-[#FF6B57] text-base transition-colors">
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FCEBEB] hover:bg-[#F8D6D6] text-[#E11D2A] text-base transition-colors">
                   ‹
                 </button>
                 <span className="text-sm font-semibold text-[#3b4137] tracking-wide">
@@ -663,7 +663,7 @@ export default function InicioPage() {
                 <button
                   onClick={irDiaSiguiente}
                   disabled={esHoy}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FFF1EC] hover:bg-[#FFE3D8] text-[#FF6B57] disabled:opacity-25 disabled:cursor-not-allowed text-base transition-colors">
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FCEBEB] hover:bg-[#F8D6D6] text-[#E11D2A] disabled:opacity-25 disabled:cursor-not-allowed text-base transition-colors">
                   ›
                 </button>
               </div>
@@ -683,8 +683,8 @@ export default function InicioPage() {
                   pct={metaCal > 0 ? consumo.calorias / metaCal : 0}
                   size={160} stroke={14}
                   track="#F1F0EC"
-                  color={calExcedido ? '#EF4444' : '#FF6B57'}>
-                  <div className={`text-[38px] leading-none font-black tabular-nums ${calExcedido ? 'text-red-500' : 'text-[#FF6B57]'}`}>
+                  color={calExcedido ? '#EF4444' : '#E11D2A'}>
+                  <div className={`text-[38px] leading-none font-black tabular-nums ${calExcedido ? 'text-red-500' : 'text-[#E11D2A]'}`}>
                     {Math.abs(calRestantes).toLocaleString()}
                   </div>
                   <div className="text-[11px] text-[#9CA3AF] mt-1">
@@ -714,7 +714,7 @@ export default function InicioPage() {
 
               {/* ── Ver detalle (mantenimiento / meta) ── */}
               <details className="mb-4 group">
-                <summary className="flex items-center justify-center gap-1.5 cursor-pointer list-none py-2 rounded-xl bg-[#FFF1EC] hover:bg-[#FFE3D8] text-xs font-semibold text-[#FF6B57] transition-colors select-none">
+                <summary className="flex items-center justify-center gap-1.5 cursor-pointer list-none py-2 rounded-xl bg-[#FCEBEB] hover:bg-[#F8D6D6] text-xs font-semibold text-[#E11D2A] transition-colors select-none">
                   <span>Ver detalle</span>
                   <span className="text-[9px] transition-transform group-open:rotate-180">▼</span>
                 </summary>
@@ -728,12 +728,12 @@ export default function InicioPage() {
                       <span className="text-[10px] text-[#6d7362] uppercase tracking-wide">Meta</span>
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${estadoBadgeClass}`}>{estadoLabel}</span>
                     </div>
-                    <div className="text-base font-bold text-[#FF6B57]">{kcal} <span className="text-xs font-normal text-[#6d7362]">kcal</span></div>
+                    <div className="text-base font-bold text-[#E11D2A]">{kcal} <span className="text-xs font-normal text-[#6d7362]">kcal</span></div>
                   </div>
                 </div>
                 <a
                   href="/onboarding"
-                  className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold border border-[#FF6B57]/30 text-[#E14E2C] hover:bg-[#FFF1EC] transition-colors"
+                  className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold border border-[#E11D2A]/30 text-[#B3121D] hover:bg-[#FCEBEB] transition-colors"
                   style={{ textDecoration: 'none' }}>
                   <span>⚙️</span> Recalcular mis calorías de mantenimiento
                 </a>
@@ -753,11 +753,11 @@ export default function InicioPage() {
                 <div className="mb-3">
                   <button
                     onClick={() => setListaAbierta(v => !v)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/4 border border-[#FF6B57]/15 hover:border-[#FF6B57]/30 transition-colors">
-                    <span className="text-xs font-semibold text-[#E14E2C]/70">
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/4 border border-[#E11D2A]/15 hover:border-[#E11D2A]/30 transition-colors">
+                    <span className="text-xs font-semibold text-[#B3121D]/70">
                       Ver lo que comí {esHoy ? 'hoy' : 'ese día'} ({registros.length})
                     </span>
-                    <span className="text-[10px] text-[#E14E2C]/50 ml-2 select-none">
+                    <span className="text-[10px] text-[#B3121D]/50 ml-2 select-none">
                       {listaAbierta ? '▲' : '▼'}
                     </span>
                   </button>
@@ -769,9 +769,9 @@ export default function InicioPage() {
                             <div className="text-xs font-semibold text-[#1b201a] truncate">{r.nombre_comida}</div>
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="text-[10px] text-[#6d7362]">{formatCantidad(r)}</span>
-                              <span className="text-[10px] font-bold text-[#E14E2C]/90">{r.calorias} kcal</span>
+                              <span className="text-[10px] font-bold text-[#B3121D]/90">{r.calorias} kcal</span>
                               <span className="text-[10px] text-[#2ECC9B]/70">P{r.proteina}</span>
-                              <span className="text-[10px] text-[#FF9D42]/50">C{r.carbos}</span>
+                              <span className="text-[10px] text-[#E11D2A]/50">C{r.carbos}</span>
                               <span className="text-[10px] text-orange-400/50">G{r.grasas}</span>
                             </div>
                           </div>
@@ -795,7 +795,7 @@ export default function InicioPage() {
 
               {/* ── Formulario de búsqueda / agregar alimento ── */}
               {formAbierto ? (
-                <div className="border-t border-[#FF6B57]/10 pt-3">
+                <div className="border-t border-[#E11D2A]/10 pt-3">
 
                   {/* Título del formulario */}
                   <div className="flex items-center gap-2 mb-3">
@@ -820,8 +820,8 @@ export default function InicioPage() {
                             className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all leading-tight ${
                               origenBusqueda === key
                                 ? key === 'local'
-                                  ? 'bg-[#FF6B57] text-white shadow-[0_0_8px_rgba(22,163,74,0.35)]'
-                                  : 'bg-[#EA7A1C] text-[#1b201a] shadow-[0_0_8px_rgba(8,145,178,0.35)]'
+                                  ? 'bg-[#E11D2A] text-white shadow-[0_0_8px_rgba(22,163,74,0.35)]'
+                                  : 'bg-[#B3121D] text-[#1b201a] shadow-[0_0_8px_rgba(8,145,178,0.35)]'
                                 : 'text-[#787f70] hover:text-[#3b4137]'
                             }`}>
                             {label}
@@ -839,7 +839,7 @@ export default function InicioPage() {
                               value={busquedaLocal}
                               onChange={e => setBusquedaLocal(e.target.value)}
                               autoFocus
-                              className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm text-[#1b201a] placeholder-[#9ba192] outline-none focus:border-[#FF6B57]/50 focus:bg-white transition-all"
+                              className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm text-[#1b201a] placeholder-[#9ba192] outline-none focus:border-[#E11D2A]/50 focus:bg-white transition-all"
                             />
                           </div>
                           {buscandoLocal && (
@@ -856,14 +856,14 @@ export default function InicioPage() {
                                 <button
                                   key={a.id}
                                   onClick={() => seleccionarAlimento(a)}
-                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#FF6B57]/10 border border-transparent hover:border-[#FF6B57]/20 transition-all">
+                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#E11D2A]/10 border border-transparent hover:border-[#E11D2A]/20 transition-all">
                                   <div className="text-xs font-semibold text-[#1b201a]">{a.nombre}</div>
                                   <div className="text-[10px] text-[#787f70] mt-0.5">
-                                    <span className="text-[#E14E2C]/70">{a.calorias_100g} kcal</span>
+                                    <span className="text-[#B3121D]/70">{a.calorias_100g} kcal</span>
                                     {' · '}
                                     <span className="text-[#2ECC9B]/60">P{a.proteina_100g}</span>
                                     {' · '}
-                                    <span className="text-[#E14E2C]/40">C{a.carbos_100g}</span>
+                                    <span className="text-[#B3121D]/40">C{a.carbos_100g}</span>
                                     {' · '}
                                     <span className="text-orange-400/40">G{a.grasas_100g}</span>
                                     {' /100g'}
@@ -885,7 +885,7 @@ export default function InicioPage() {
                               value={busquedaAlim}
                               onChange={e => setBusquedaAlim(e.target.value)}
                               autoFocus
-                              className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm text-[#1b201a] placeholder-[#9ba192] outline-none focus:border-[#EA7A1C]/50 focus:bg-white transition-all"
+                              className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm text-[#1b201a] placeholder-[#9ba192] outline-none focus:border-[#B3121D]/50 focus:bg-white transition-all"
                             />
                           </div>
                           {buscandoAlim && (
@@ -902,14 +902,14 @@ export default function InicioPage() {
                                 <button
                                   key={a.id}
                                   onClick={() => seleccionarAlimento(a)}
-                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#EA7A1C]/10 border border-transparent hover:border-[#EA7A1C]/20 transition-all">
+                                  className="w-full text-left px-3 py-2.5 rounded-xl bg-white/4 hover:bg-[#B3121D]/10 border border-transparent hover:border-[#B3121D]/20 transition-all">
                                   <div className="text-xs font-semibold text-[#1b201a]">{a.nombre}</div>
                                   <div className="text-[10px] text-[#787f70] mt-0.5">
                                     <span className="text-[#2ECC9B]/80">{a.calorias_100g} kcal</span>
                                     {' · '}
                                     <span className="text-[#2ECC9B]/60">P{a.proteina_100g}</span>
                                     {' · '}
-                                    <span className="text-[#E14E2C]/40">C{a.carbos_100g}</span>
+                                    <span className="text-[#B3121D]/40">C{a.carbos_100g}</span>
                                     {' · '}
                                     <span className="text-orange-400/40">G{a.grasas_100g}</span>
                                     {' /100g'}
@@ -926,7 +926,7 @@ export default function InicioPage() {
                         <div>
                           {buscandoBarcode ? (
                             <div className="flex flex-col items-center justify-center py-8 gap-3">
-                              <div className="w-6 h-6 rounded-full border-2 border-[#EA7A1C] border-t-transparent animate-spin" />
+                              <div className="w-6 h-6 rounded-full border-2 border-[#B3121D] border-t-transparent animate-spin" />
                               <p className="text-xs text-[#787f70]">Buscando producto…</p>
                             </div>
                           ) : errorBarcode ? (
@@ -934,7 +934,7 @@ export default function InicioPage() {
                               <p className="text-xs text-orange-400 text-center">{errorBarcode}</p>
                               <button
                                 onClick={() => { setErrorBarcode(null); setScanKey(k => k + 1) }}
-                                className="text-xs font-semibold text-[#EA7A1C] hover:text-[#2ECC9B] border border-[#EA7A1C]/30 rounded-xl px-4 py-1.5 transition-colors">
+                                className="text-xs font-semibold text-[#B3121D] hover:text-[#2ECC9B] border border-[#B3121D]/30 rounded-xl px-4 py-1.5 transition-colors">
                                 Escanear de nuevo
                               </button>
                             </div>
@@ -946,7 +946,7 @@ export default function InicioPage() {
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                               />
                               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="border-2 border-[#EA7A1C]/70 rounded-lg" style={{ width: '60%', height: '35%', boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
+                                <div className="border-2 border-[#B3121D]/70 rounded-lg" style={{ width: '60%', height: '35%', boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
                               </div>
                               <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-[#1b201a]/50">
                                 Apunta al código de barras
@@ -960,7 +960,7 @@ export default function InicioPage() {
                     /* Estado B: alimento seleccionado → elegir cantidad */
                     <>
                       {/* Chip del alimento elegido */}
-                      <div className="bg-[#FFF1EC] border border-[#FF6B57]/30 rounded-2xl px-4 py-3 mb-3">
+                      <div className="bg-[#FCEBEB] border border-[#E11D2A]/30 rounded-2xl px-4 py-3 mb-3">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-sm shrink-0">✅</span>
@@ -968,16 +968,16 @@ export default function InicioPage() {
                           </div>
                           <button
                             onClick={() => { setAlimentoSel(null); setBusquedaAlim('') }}
-                            className="shrink-0 text-[10px] text-[#787f70] hover:text-[#E14E2C] border border-black/10 hover:border-[#FF6B57]/30 rounded-lg px-2 py-0.5 transition-all">
+                            className="shrink-0 text-[10px] text-[#787f70] hover:text-[#B3121D] border border-black/10 hover:border-[#E11D2A]/30 rounded-lg px-2 py-0.5 transition-all">
                             cambiar
                           </button>
                         </div>
                         {preview && (
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-black text-[#E14E2C]">{preview.calorias} kcal</span>
+                            <span className="text-xs font-black text-[#B3121D]">{preview.calorias} kcal</span>
                             <span className="text-[#7c8271] text-xs">·</span>
                             <span className="text-xs font-semibold text-[#2ECC9B]">P {preview.proteina}g</span>
-                            <span className="text-xs font-semibold text-[#E14E2C]/70">C {preview.carbos}g</span>
+                            <span className="text-xs font-semibold text-[#B3121D]/70">C {preview.carbos}g</span>
                             <span className="text-xs font-semibold text-orange-400">G {preview.grasas}g</span>
                           </div>
                         )}
@@ -996,7 +996,7 @@ export default function InicioPage() {
                             }}
                             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                               modoRegistro === m
-                                ? 'bg-[#FF6B57] text-white shadow-[0_0_12px_rgba(255,107,87,0.25)]'
+                                ? 'bg-[#E11D2A] text-white shadow-[0_0_12px_rgba(255,107,87,0.25)]'
                                 : 'bg-black/[0.04] text-[#5d6358] border border-black/10 hover:border-black/15 hover:text-[#1b201a]'
                             }`}>
                             {m === 'gramos' ? '⚖️ Gramos' : '🔢 Porción / Unidad'}
@@ -1014,14 +1014,14 @@ export default function InicioPage() {
                               value={gramosInput}
                               onChange={e => setGramosInput(e.target.value)}
                               onKeyDown={e => e.key === 'Enter' && agregarAlimento()}
-                              className="w-full bg-white border border-black/10 rounded-xl pl-4 pr-9 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#FF6B57]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-full bg-white border border-black/10 rounded-xl pl-4 pr-9 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#E11D2A]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#787f70] pointer-events-none">g</span>
                           </div>
                           <button
                             onClick={agregarAlimento}
                             disabled={guardandoAlim}
-                            className="bg-[#FF6B57] hover:bg-[#E14E2C] disabled:opacity-40 text-white font-black rounded-xl px-5 py-2.5 text-sm active:scale-95 transition-all whitespace-nowrap shadow-[0_0_16px_rgba(255,107,87,0.3)]">
+                            className="bg-[#E11D2A] hover:bg-[#B3121D] disabled:opacity-40 text-white font-black rounded-xl px-5 py-2.5 text-sm active:scale-95 transition-all whitespace-nowrap shadow-[0_0_16px_rgba(255,107,87,0.3)]">
                             {guardandoAlim ? '…' : '＋ Agregar'}
                           </button>
                         </div>
@@ -1036,7 +1036,7 @@ export default function InicioPage() {
                                 min="1"
                                 value={unidadesInput}
                                 onChange={e => setUnidadesInput(e.target.value)}
-                                className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#FF6B57]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#E11D2A]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                             </div>
                             <div className="flex-1">
@@ -1046,17 +1046,17 @@ export default function InicioPage() {
                                 min="1"
                                 value={pesoPorcion}
                                 onChange={e => setPesoPorcion(e.target.value)}
-                                className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#FF6B57]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#1b201a] outline-none focus:border-[#E11D2A]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                             </div>
                           </div>
-                          <p className="text-[11px] text-[#E14E2C]/50 pl-1">
+                          <p className="text-[11px] text-[#B3121D]/50 pl-1">
                             Total: {unidadesInput || 0} × {pesoPorcion || 0}g = {Math.round((parseFloat(unidadesInput) || 0) * (parseFloat(pesoPorcion) || 0))}g
                           </p>
                           <button
                             onClick={agregarAlimento}
                             disabled={guardandoAlim}
-                            className="w-full bg-[#FF6B57] hover:bg-[#E14E2C] disabled:opacity-40 text-white font-bold rounded-xl py-2.5 text-sm active:scale-95 transition-all shadow-[0_0_16px_rgba(255,107,87,0.3)]">
+                            className="w-full bg-[#E11D2A] hover:bg-[#B3121D] disabled:opacity-40 text-white font-bold rounded-xl py-2.5 text-sm active:scale-95 transition-all shadow-[0_0_16px_rgba(255,107,87,0.3)]">
                             {guardandoAlim ? '…' : '＋ Agregar'}
                           </button>
                         </div>
@@ -1069,7 +1069,7 @@ export default function InicioPage() {
                 <button
                   onClick={() => setFormAbierto(true)}
                   className="w-full flex items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-white active:scale-[0.98] transition-all"
-                  style={{ background: '#FF6B57', boxShadow: '0 6px 16px rgba(255,107,87,0.35)' }}>
+                  style={{ background: '#E11D2A', boxShadow: '0 6px 16px rgba(255,107,87,0.35)' }}>
                   <span className="text-lg">＋</span>
                   Agregar alimento
                 </button>
@@ -1124,7 +1124,7 @@ export default function InicioPage() {
           <a
             href="/rutinas"
             className="rounded-3xl p-[18px] transition-all active:scale-[0.97]"
-            style={{ background: '#2ECC9B', boxShadow: '0 6px 16px rgba(46,204,155,0.30)', textDecoration: 'none' }}>
+            style={{ background: '#141414', boxShadow: '0 6px 16px rgba(0,0,0,0.28)', textDecoration: 'none' }}>
             <span className="w-[46px] h-[46px] flex items-center justify-center rounded-[15px] mb-6" style={{ background: 'rgba(255,255,255,0.22)', color: '#fff' }}>
               <Dumbbell size={24} strokeWidth={2.2} />
             </span>
@@ -1135,12 +1135,12 @@ export default function InicioPage() {
           <a
             href="/progreso"
             className="rounded-3xl p-[18px] transition-all active:scale-[0.97]"
-            style={{ background: '#FF6B57', boxShadow: '0 6px 16px rgba(255,107,87,0.30)', textDecoration: 'none' }}>
+            style={{ background: '#E11D2A', boxShadow: '0 6px 16px rgba(255,107,87,0.30)', textDecoration: 'none' }}>
             <span className="w-[46px] h-[46px] flex items-center justify-center rounded-[15px] mb-6" style={{ background: 'rgba(255,255,255,0.22)', color: '#fff' }}>
               <LineChart size={24} strokeWidth={2.2} />
             </span>
             <span className="block text-base font-bold text-white">Mi progreso</span>
-            <span className="block text-[11px] text-[#FFE3DC]">Mira tu avance</span>
+            <span className="block text-[11px] text-[#F8D6D6]">Mira tu avance</span>
           </a>
         </div>
 

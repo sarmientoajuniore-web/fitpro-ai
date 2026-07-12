@@ -129,7 +129,7 @@ export default function OnboardingPage() {
     return (
       <div
         className="min-h-screen text-[#1b201a] flex flex-col items-center justify-center p-5"
-        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,107,87, 0.18) 0%, transparent 65%), #FFF8F3' }}
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,107,87, 0.18) 0%, transparent 65%), #FFFFFF' }}
       >
         <div className="w-full max-w-sm">
           <div className="text-center mb-7">
@@ -138,7 +138,7 @@ export default function OnboardingPage() {
             <p className="text-xs text-[#787f70] mt-1">Calculado con Mifflin-St Jeor</p>
           </div>
 
-          <div className="bg-[#FFF1EC] border border-[#FF6B57]/20 rounded-2xl p-4 mb-3">
+          <div className="bg-[#FCEBEB] border border-[#E11D2A]/20 rounded-2xl p-4 mb-3">
             <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-3">Metabolismo</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-black/[0.04] rounded-xl p-3 text-center">
@@ -153,8 +153,8 @@ export default function OnboardingPage() {
           </div>
 
           <div
-            className="rounded-2xl p-4 mb-3 border border-[#FF6B57]/30"
-            style={{ background: 'linear-gradient(135deg, #FFF1EC, #FDE6DB)' }}
+            className="rounded-2xl p-4 mb-3 border border-[#E11D2A]/30"
+            style={{ background: 'linear-gradient(135deg, #FCEBEB, #FDE6DB)' }}
           >
             <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-3">Calorías</p>
             <div className="flex items-center gap-2 mb-2">
@@ -163,17 +163,17 @@ export default function OnboardingPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-xs text-[#787f70] shrink-0">Tu meta</span>
-              <span className="text-3xl font-black text-[#E14E2C]">{resultado.calorias.toLocaleString()}</span>
+              <span className="text-3xl font-black text-[#B3121D]">{resultado.calorias.toLocaleString()}</span>
               <span className="text-sm text-[#5d6358]">kcal</span>
             </div>
           </div>
 
-          <div className="bg-[#FFF1EC] border border-[#FF6B57]/20 rounded-2xl p-4 mb-6">
+          <div className="bg-[#FCEBEB] border border-[#E11D2A]/20 rounded-2xl p-4 mb-6">
             <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-3">Macros diarios</p>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { val: resultado.proteina, lbl: 'Proteína', color: 'text-[#2ECC9B]' },
-                { val: resultado.carbos,   lbl: 'Carbos',   color: 'text-[#E14E2C]' },
+                { val: resultado.carbos,   lbl: 'Carbos',   color: 'text-[#B3121D]' },
                 { val: resultado.grasas,   lbl: 'Grasas',   color: 'text-orange-400' },
               ].map(({ val, lbl, color }) => (
                 <div key={lbl} className="bg-black/[0.04] rounded-xl p-3 text-center">
@@ -188,7 +188,7 @@ export default function OnboardingPage() {
             onClick={() => router.push('/inicio')}
             className="w-full text-white font-bold py-4 rounded-2xl text-base"
             style={{
-              background: 'linear-gradient(135deg, #FF6B57, #E14E2C)',
+              background: 'linear-gradient(135deg, #E11D2A, #B3121D)',
               boxShadow: '0 0 24px rgba(255,107,87, 0.4)',
             }}
           >
@@ -199,25 +199,25 @@ export default function OnboardingPage() {
     )
   }
 
-  const inputCls = "w-full bg-[#FFF3EC] border border-[#FF6B57]/20 rounded-xl px-4 py-3 text-[#1b201a] text-sm outline-none focus:border-[#FF6B57] transition-colors placeholder-[#9ba192]"
+  const inputCls = "w-full bg-[#FCEBEB] border border-[#E11D2A]/20 rounded-xl px-4 py-3 text-[#1b201a] text-sm outline-none focus:border-[#E11D2A] transition-colors placeholder-[#9ba192]"
 
   return (
     <div
       className="min-h-screen text-[#1b201a]"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,107,87, 0.18) 0%, transparent 65%), #FFF8F3' }}
+      style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,107,87, 0.18) 0%, transparent 65%), #FFFFFF' }}
     >
       <div className="max-w-lg mx-auto p-5 pb-12">
 
         {perfilCompleto && (
           <button
             onClick={() => router.push('/inicio')}
-            className="flex items-center gap-1 text-sm font-semibold text-[#E14E2C] hover:opacity-80 transition-opacity pt-1">
+            className="flex items-center gap-1 text-sm font-semibold text-[#B3121D] hover:opacity-80 transition-opacity pt-1">
             ← Volver
           </button>
         )}
 
         <div className="text-center py-8">
-          <h1 className="text-2xl font-black">Fit<span className="text-[#E14E2C]">Pro</span></h1>
+          <h1 className="text-2xl font-black">Fit<span className="text-[#B3121D]">Pro</span></h1>
           <p className="text-[#787f70] text-sm mt-1">Completa tu perfil para calcular tus macros</p>
         </div>
 
@@ -256,8 +256,8 @@ export default function OnboardingPage() {
                   onClick={() => setSexo(s)}
                   className="flex-1 py-3 rounded-xl text-sm font-semibold border transition-all text-center cursor-pointer"
                   style={sexo === s
-                    ? { background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', borderColor: '#FF6B57', color: 'white' }
-                    : { background: '#FFF3EC', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
+                    ? { background: 'linear-gradient(135deg, #E11D2A, #B3121D)', borderColor: '#E11D2A', color: 'white' }
+                    : { background: '#FCEBEB', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
                   }
                 >
                   {s === 'hombre' ? '♂ Masculino' : '♀ Femenino'}
@@ -275,8 +275,8 @@ export default function OnboardingPage() {
                   onClick={() => setActividad(a.val)}
                   className="w-full text-left px-4 py-3 rounded-xl border transition-all"
                   style={actividad === a.val
-                    ? { background: 'rgba(255,107,87,0.14)', borderColor: 'rgba(255,107,87,0.7)', color: '#E14E2C' }
-                    : { background: '#FFF3EC', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
+                    ? { background: 'rgba(255,107,87,0.14)', borderColor: 'rgba(255,107,87,0.7)', color: '#B3121D' }
+                    : { background: '#FCEBEB', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
                   }
                 >
                   <span className="font-semibold text-sm">{a.label}</span>
@@ -295,8 +295,8 @@ export default function OnboardingPage() {
                   onClick={() => setObjetivo(o.val)}
                   className="w-full text-left px-4 py-3 rounded-xl border transition-all"
                   style={objetivo === o.val
-                    ? { background: 'rgba(255,107,87,0.14)', borderColor: 'rgba(255,107,87,0.7)', color: '#E14E2C' }
-                    : { background: '#FFF3EC', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
+                    ? { background: 'rgba(255,107,87,0.14)', borderColor: 'rgba(255,107,87,0.7)', color: '#B3121D' }
+                    : { background: '#FCEBEB', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }
                   }
                 >
                   <span className="font-semibold text-sm">{o.label}</span>
@@ -317,7 +317,7 @@ export default function OnboardingPage() {
             disabled={guardando}
             className="w-full text-white font-bold py-4 rounded-2xl text-base disabled:opacity-40"
             style={{
-              background: 'linear-gradient(135deg, #FF6B57, #E14E2C)',
+              background: 'linear-gradient(135deg, #E11D2A, #B3121D)',
               boxShadow: '0 0 24px rgba(255,107,87, 0.4)',
             }}
           >

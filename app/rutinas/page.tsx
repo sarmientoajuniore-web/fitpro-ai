@@ -248,7 +248,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
           value={duracion}
           onChange={e => cambiarDuracion(e.target.value)}
           disabled={corriendo}
-          className="w-16 bg-[#FFFFFF] border border-black/10 rounded-lg py-1.5 text-sm text-[#1b201a] text-center focus:outline-none focus:border-[#FF6B57]/50 disabled:opacity-50"
+          className="w-16 bg-[#FFFFFF] border border-black/10 rounded-lg py-1.5 text-sm text-[#1b201a] text-center focus:outline-none focus:border-[#E11D2A]/50 disabled:opacity-50"
         />
         <span className="text-[10px] text-[#6d7362] mt-0.5">segundos</span>
       </div>
@@ -258,7 +258,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
           <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
           <circle
             cx="36" cy="36" r={r} fill="none"
-            stroke={restante === 0 || enAviso ? '#EF4444' : '#FB8C3C'}
+            stroke={restante === 0 || enAviso ? '#EF4444' : '#E11D2A'}
             strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={circunferencia}
@@ -266,7 +266,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
             style={{ transition: 'stroke-dashoffset 1s linear' }}
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-xl font-black" style={{ color: restante === 0 || enAviso ? '#EF4444' : '#FB8C3C' }}>
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-black" style={{ color: restante === 0 || enAviso ? '#EF4444' : '#E11D2A' }}>
           {restante}
         </div>
       </div>
@@ -275,7 +275,7 @@ function CronometroDescanso({ segundosIniciales }: { segundosIniciales: number }
         {!corriendo ? (
           <button
             onClick={iniciar}
-            className="w-11 h-11 rounded-full text-[#1b201a] flex items-center justify-center text-sm" style={{ background: '#FB8C3C' }}>
+            className="w-11 h-11 rounded-full text-[#1b201a] flex items-center justify-center text-sm" style={{ background: '#E11D2A' }}>
             ▶
           </button>
         ) : (
@@ -1072,17 +1072,17 @@ export default function RutinasPage() {
     .sort((a, b) => a.orden - b.orden)
 
   return (
-    <div className="min-h-screen bg-[#FFF8F3] text-[#1b201a] max-w-lg mx-auto">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#1b201a] max-w-lg mx-auto">
 
       {/* HEADER */}
-      <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#FF6B57' }}>
+      <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#141414' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
         <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 
       <div className="p-5">
-        <h2 className="text-xl font-bold mb-5">Mis <span className="text-[#E14E2C]">Rutinas</span></h2>
+        <h2 className="text-xl font-bold mb-5">Mis <span className="text-[#B3121D]">Rutinas</span></h2>
 
         {/* Skeleton */}
         {cargando && (
@@ -1113,13 +1113,13 @@ export default function RutinasPage() {
             <button
               onClick={() => setGaleriaAbierta(true)}
               className="w-full rounded-2xl py-4 text-white text-sm font-bold flex items-center justify-center gap-2 mb-3"
-              style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 24px rgba(255,107,87,0.35)' }}>
+              style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 24px rgba(255,107,87,0.35)' }}>
               <Sparkles className="w-4 h-4" />
               Elegir una rutina lista
             </button>
             <button
               onClick={abrirWizard}
-              className="w-full text-[#E14E2C]/70 text-xs font-semibold py-1.5 hover:text-[#E14E2C] transition-colors">
+              className="w-full text-[#B3121D]/70 text-xs font-semibold py-1.5 hover:text-[#B3121D] transition-colors">
               ＋ Crear desde cero (avanzado)
             </button>
           </div>
@@ -1147,13 +1147,13 @@ export default function RutinasPage() {
               const diaDisplay = `${diaSel} ${dateSel.getDate()} de ${MESES[dateSel.getMonth()].toLowerCase()}`
 
               return (
-                <div key={rutina.id} className="rounded-2xl overflow-hidden border border-[#FF6B57]/40" style={{ background: 'rgba(255,107,87,0.04)', boxShadow: '0 0 32px rgba(255,107,87,0.10)' }}>
+                <div key={rutina.id} className="rounded-2xl overflow-hidden border border-[#E11D2A]/40" style={{ background: 'rgba(255,107,87,0.04)', boxShadow: '0 0 32px rgba(255,107,87,0.10)' }}>
 
                   {/* Cabecera: nombre usuario + código compartir + borrar */}
                   <div className="px-5 pt-5 pb-4 flex items-start justify-between border-b border-black/[0.06]">
                     <div className="min-w-0">
                       <div className="text-xl font-black leading-tight">Entrenamiento de hoy</div>
-                      <div className="text-xs text-[#E14E2C]/70 mt-0.5 truncate">{rutina.nombre}</div>
+                      <div className="text-xs text-[#B3121D]/70 mt-0.5 truncate">{rutina.nombre}</div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
                       {confirmBorrar === rutina.id ? (
@@ -1185,7 +1185,7 @@ export default function RutinasPage() {
                   <div className="px-5 py-4 flex items-center gap-4">
                     <div
                       className="shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center"
-                      style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)' }}>
+                      style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)' }}>
                       <span className="text-3xl font-black leading-none text-white">{dateSel.getDate()}</span>
                       <span className="text-[10px] font-bold text-white/80 uppercase tracking-wide mt-0.5">
                         {diaSel.slice(0, 3).toUpperCase()}
@@ -1193,7 +1193,7 @@ export default function RutinasPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-[#1b201a] capitalize">{diaDisplay}</div>
-                      <div className="text-[11px] text-[#E14E2C]/60 mt-0.5">
+                      <div className="text-[11px] text-[#B3121D]/60 mt-0.5">
                         {ejsDia.length} ejercicio{ejsDia.length !== 1 ? 's' : ''} · {rutina.dias_semana} días/sem
                       </div>
                     </div>
@@ -1203,7 +1203,7 @@ export default function RutinasPage() {
                       style={{
                         background: calendarAbierto[rutina.id] ? 'rgba(255,107,87,0.20)' : 'rgba(255,107,87,0.08)',
                         border: '1px solid rgba(255,107,87,0.30)',
-                        color: '#FF6B57',
+                        color: '#E11D2A',
                       }}>
                       <Calendar className="w-5 h-5" />
                     </button>
@@ -1241,10 +1241,10 @@ export default function RutinasPage() {
                           const esHoy  = hoyStr === fs
                           let circulo = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold mx-auto transition-all relative select-none '
                           if (esSel && esDone)      circulo += 'bg-green-500 text-[#1b201a]'
-                          else if (esSel && esHoy)  circulo += 'bg-[#FF6B57] text-white'
-                          else if (esSel)            circulo += 'bg-[#FF6B57] text-white'
+                          else if (esSel && esHoy)  circulo += 'bg-[#E11D2A] text-white'
+                          else if (esSel)            circulo += 'bg-[#E11D2A] text-white'
                           else if (esDone)           circulo += 'bg-green-500/15 text-green-400'
-                          else if (esHoy)            circulo += 'ring-1 ring-[#FF6B57] text-[#E14E2C]'
+                          else if (esHoy)            circulo += 'ring-1 ring-[#E11D2A] text-[#B3121D]'
                           else if (esEnt)            circulo += 'text-[#1b201a] hover:bg-white/8 cursor-pointer'
                           else                       circulo += 'text-[#7c8271] hover:bg-black/[0.03] cursor-pointer'
                           return (
@@ -1276,10 +1276,10 @@ export default function RutinasPage() {
                       className="flex items-center w-full mb-3">
                       <span
                         className="text-sm font-black tracking-wider"
-                        style={{ fontFamily: "'Oswald', sans-serif", color: '#FB8C3C' }}>
+                        style={{ fontFamily: "'Oswald', sans-serif", color: '#E11D2A' }}>
                         EJERCICIOS
                       </span>
-                      <span className="ml-2 text-[11px] font-semibold text-[#E14E2C]">
+                      <span className="ml-2 text-[11px] font-semibold text-[#B3121D]">
                         {ejsDia.length} {ejsDia.length === 1 ? 'ejercicio' : 'ejercicios'}
                       </span>
                       <span
@@ -1299,7 +1299,7 @@ export default function RutinasPage() {
                         <div className="mb-3">
                           {ejsDia.map((ej, i) => (
                             <div key={ej.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-black/[0.03] mb-1.5">
-                              <span className="text-[#E14E2C] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
+                              <span className="text-[#B3121D] text-xs font-bold shrink-0 w-5 text-right">{i + 1}.</span>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
                               </div>
@@ -1309,14 +1309,14 @@ export default function RutinasPage() {
                                   onClick={() => moverEjercicio(rutina.id, ej.id, 'arriba')}
                                   disabled={i === 0}
                                   className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                    ${i === 0 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#5d6358] active:text-[#E14E2C]'}`}>
+                                    ${i === 0 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#5d6358] active:text-[#B3121D]'}`}>
                                   ▲
                                 </button>
                                 <button
                                   onClick={() => moverEjercicio(rutina.id, ej.id, 'abajo')}
                                   disabled={i === ejsDia.length - 1}
                                   className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                                    ${i === ejsDia.length - 1 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#5d6358] active:text-[#E14E2C]'}`}>
+                                    ${i === ejsDia.length - 1 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#5d6358] active:text-[#B3121D]'}`}>
                                   ▼
                                 </button>
                               </div>
@@ -1349,8 +1349,8 @@ export default function RutinasPage() {
                       <button
                         onClick={() => iniciarSesion(rutina, diaSel, fechaSel)}
                         disabled={ejsDia.length === 0}
-                        className="w-full mt-1 flex items-center justify-center gap-2 text-[#1b201a] font-bold rounded-xl py-3.5 text-[15px] disabled:opacity-25 transition-opacity"
-                        style={{ background: 'linear-gradient(135deg, #FB8C3C, #EA7A1C)', boxShadow: '0 0 20px rgba(251,140,60,0.32)' }}>
+                        className="w-full mt-1 flex items-center justify-center gap-2 text-white font-bold rounded-xl py-3.5 text-[15px] disabled:opacity-25 transition-opacity"
+                        style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 20px rgba(225,29,42,0.32)' }}>
                         <Play className="w-4 h-4 fill-white" />
                         Empezar entrenamiento
                       </button>
@@ -1359,13 +1359,13 @@ export default function RutinasPage() {
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => abrirModalEj(rutina.id, diaSel)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#E14E2C] border border-[#FF6B57]/30 rounded-xl py-2.5 hover:bg-[#FF6B57]/10 transition-colors">
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#B3121D] border border-[#E11D2A]/30 rounded-xl py-2.5 hover:bg-[#E11D2A]/10 transition-colors">
                           <Plus className="w-3.5 h-3.5" />
                           Agregar ejercicio
                         </button>
                         <button
                           onClick={() => { setVistaSemanal(rutina.id); setDiaOrigenSemanal(null); setAvisoSemanal(null) }}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#E14E2C] border border-[#FF6B57]/30 rounded-xl py-2.5 hover:bg-[#FF6B57]/10 transition-colors">
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#B3121D] border border-[#E11D2A]/30 rounded-xl py-2.5 hover:bg-[#E11D2A]/10 transition-colors">
                           <ArrowLeftRight className="w-3.5 h-3.5" />
                           Ordenar días
                         </button>
@@ -1385,13 +1385,13 @@ export default function RutinasPage() {
             <button
               onClick={() => setGaleriaAbierta(true)}
               className="w-full rounded-2xl py-3.5 text-white text-sm font-bold flex items-center justify-center gap-2 mb-2"
-              style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 24px rgba(255,107,87,0.35)' }}>
+              style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 24px rgba(255,107,87,0.35)' }}>
               <Sparkles className="w-4 h-4" />
               Elegir una rutina lista
             </button>
             <button
               onClick={abrirWizard}
-              className="w-full text-[#E14E2C]/70 text-xs font-semibold py-1.5 hover:text-[#E14E2C] transition-colors">
+              className="w-full text-[#B3121D]/70 text-xs font-semibold py-1.5 hover:text-[#B3121D] transition-colors">
               ＋ Crear desde cero (avanzado)
             </button>
           </div>
@@ -1400,7 +1400,7 @@ export default function RutinasPage() {
         {/* ── BANNER: ¡Reta a un amigo! (al final) ── */}
         <div
           className="rounded-2xl overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #FF6B57 0%, #FB8C3C 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #E11D2A 0%, #E11D2A 100%)' }}
         >
           {/* Fila principal */}
           <div className="flex items-stretch">
@@ -1435,7 +1435,7 @@ export default function RutinasPage() {
                     onClick={() => compartirDirecto(rutinas[0].id)}
                     disabled={compartiendoDirecto}
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg text-xs disabled:opacity-40 transition-opacity"
-                    style={{ color: '#FF6B57' }}
+                    style={{ color: '#E11D2A' }}
                   >
                     <Share2 className="w-3 h-3" />
                     {compartiendoDirecto ? '...' : 'Compartir'}
@@ -1476,7 +1476,7 @@ export default function RutinasPage() {
                   onClick={buscarPorCodigo}
                   disabled={!inputImportar.trim() || buscandoCodigo}
                   className="flex items-center gap-1.5 bg-white font-bold rounded-xl px-4 py-2.5 text-xs disabled:opacity-40 whitespace-nowrap transition-opacity"
-                  style={{ color: '#FF6B57' }}
+                  style={{ color: '#E11D2A' }}
                 >
                   <Search className="w-3.5 h-3.5" />
                   {buscandoCodigo ? 'Buscando...' : 'Buscar'}
@@ -1500,7 +1500,7 @@ export default function RutinasPage() {
                     onClick={importarRutina}
                     disabled={importando}
                     className="w-full bg-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-opacity"
-                    style={{ color: '#FF6B57' }}
+                    style={{ color: '#E11D2A' }}
                   >
                     <Download className="w-4 h-4" />
                     {importando ? 'Importando...' : 'Añadir a mis rutinas'}
@@ -1535,7 +1535,7 @@ export default function RutinasPage() {
           WIZARD — CREAR RUTINA (pantalla completa)
       ══════════════════════════════════ */}
       {wizard && (
-        <div className="fixed inset-0 bg-[#FFF8F3] z-50 flex flex-col max-w-lg mx-auto">
+        <div className="fixed inset-0 bg-[#FFFFFF] z-50 flex flex-col max-w-lg mx-auto">
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 shrink-0">
@@ -1557,7 +1557,7 @@ export default function RutinasPage() {
           {/* Barra de progreso */}
           <div className="h-0.5 bg-black/[0.05] shrink-0">
             <div
-              className="h-full bg-[#FF6B57] transition-all duration-300"
+              className="h-full bg-[#E11D2A] transition-all duration-300"
               style={{ width: wizard.paso === 1 ? '50%' : '100%' }}
             />
           </div>
@@ -1579,7 +1579,7 @@ export default function RutinasPage() {
                       placeholder="Ej: Push / Pull / Legs"
                       autoFocus
                       onKeyDown={e => e.key === 'Enter' && avanzarPaso1()}
-                      className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#1b201a] placeholder-[#9ba192] focus:outline-none focus:border-[#FF6B57]/50"
+                      className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl px-4 py-3 text-sm text-[#1b201a] placeholder-[#9ba192] focus:outline-none focus:border-[#E11D2A]/50"
                     />
                   </div>
 
@@ -1590,7 +1590,7 @@ export default function RutinasPage() {
                         Días de entrenamiento
                       </label>
                       {wizard.diasElegidos.length > 0 && (
-                        <span className="text-xs text-[#E14E2C] font-semibold">
+                        <span className="text-xs text-[#B3121D] font-semibold">
                           {wizard.diasElegidos.length} día{wizard.diasElegidos.length > 1 ? 's' : ''} por semana
                         </span>
                       )}
@@ -1604,7 +1604,7 @@ export default function RutinasPage() {
                             onClick={() => toggleDiaWizard(dia)}
                             className={`py-3 rounded-xl text-xs font-bold transition-colors ${
                               sel
-                                ? 'bg-[#FF6B57] text-white'
+                                ? 'bg-[#E11D2A] text-white'
                                 : 'bg-[#FFFFFF] text-[#787f70] border border-black/10 hover:border-black/15 hover:text-[#1b201a]'
                             }`}>
                             {DIAS_CORTO[i]}
@@ -1615,7 +1615,7 @@ export default function RutinasPage() {
                     {wizard.diasElegidos.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {wizard.diasElegidos.map(d => (
-                          <span key={d} className="text-[10px] text-[#E14E2C]/70 bg-[#FF6B57]/8 border border-[#FF6B57]/20 rounded-full px-2.5 py-0.5">
+                          <span key={d} className="text-[10px] text-[#B3121D]/70 bg-[#E11D2A]/8 border border-[#E11D2A]/20 rounded-full px-2.5 py-0.5">
                             {d}
                           </span>
                         ))}
@@ -1635,7 +1635,7 @@ export default function RutinasPage() {
                 <button
                   onClick={avanzarPaso1}
                   disabled={!wizard.nombre.trim() || wizard.diasElegidos.length === 0 || guardandoRutina}
-                  className="w-full bg-[#FF6B57] text-white font-bold py-4 rounded-2xl text-base disabled:opacity-30 transition-opacity">
+                  className="w-full bg-[#E11D2A] text-white font-bold py-4 rounded-2xl text-base disabled:opacity-30 transition-opacity">
                   {guardandoRutina ? 'Creando...' : 'Siguiente →'}
                 </button>
               </div>
@@ -1657,13 +1657,13 @@ export default function RutinasPage() {
                         onClick={() => setWizard(prev => prev ? { ...prev, diaActivo: dia } : prev)}
                         className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors relative ${
                           wizard.diaActivo === dia
-                            ? 'bg-[#FF6B57] text-white'
+                            ? 'bg-[#E11D2A] text-white'
                             : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10 hover:border-black/15'
                         }`}>
                         {dia}
                         {ejsEnDia > 0 && (
                           <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${
-                            wizard.diaActivo === dia ? 'bg-black text-[#E14E2C]' : 'bg-[#FF6B57] text-white'
+                            wizard.diaActivo === dia ? 'bg-black text-[#B3121D]' : 'bg-[#E11D2A] text-white'
                           }`}>
                             {ejsEnDia}
                           </span>
@@ -1684,7 +1684,7 @@ export default function RutinasPage() {
                   <div className="bg-[#FFFFFF] border border-black/10 rounded-2xl overflow-hidden mb-3">
                     {wizardEjsDia.map((ej, i) => (
                       <div key={ej.id} className="flex items-center gap-2 px-4 py-3 border-b border-black/[0.06] last:border-0">
-                        <span className="text-[#E14E2C] text-xs font-bold w-4 text-center shrink-0">{i + 1}</span>
+                        <span className="text-[#B3121D] text-xs font-bold w-4 text-center shrink-0">{i + 1}</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">{ej.ejercicios?.nombre}</div>
                           <div className="text-[10px] text-[#787f70] mt-0.5">{ej.ejercicios?.musculo_principal}</div>
@@ -1696,14 +1696,14 @@ export default function RutinasPage() {
                             onClick={() => wizard?.rutinaId && moverEjercicio(wizard.rutinaId, ej.id, 'arriba')}
                             disabled={i === 0}
                             className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                              ${i === 0 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#787f70] active:text-[#E14E2C]'}`}>
+                              ${i === 0 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#787f70] active:text-[#B3121D]'}`}>
                             ▲
                           </button>
                           <button
                             onClick={() => wizard?.rutinaId && moverEjercicio(wizard.rutinaId, ej.id, 'abajo')}
                             disabled={i === wizardEjsDia.length - 1}
                             className={`w-6 h-5 flex items-center justify-center rounded text-[10px] leading-none transition-colors
-                              ${i === wizardEjsDia.length - 1 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#787f70] active:text-[#E14E2C]'}`}>
+                              ${i === wizardEjsDia.length - 1 ? 'text-[#7c8271] cursor-not-allowed' : 'text-[#787f70] active:text-[#B3121D]'}`}>
                             ▼
                           </button>
                         </div>
@@ -1736,7 +1736,7 @@ export default function RutinasPage() {
                 {wizard.rutinaId && (
                   <button
                     onClick={() => abrirModalEj(wizard.rutinaId!, wizard.diaActivo)}
-                    className="w-full border border-dashed border-white/15 rounded-xl py-3 text-xs text-[#5d6358] hover:border-[#FF6B57]/40 hover:text-[#E14E2C] transition-colors font-medium">
+                    className="w-full border border-dashed border-white/15 rounded-xl py-3 text-xs text-[#5d6358] hover:border-[#E11D2A]/40 hover:text-[#B3121D] transition-colors font-medium">
                     ＋ Agregar ejercicio al {wizard.diaActivo}
                   </button>
                 )}
@@ -1745,7 +1745,7 @@ export default function RutinasPage() {
               <div className="px-5 pb-10 pt-3 border-t border-black/10 shrink-0">
                 <button
                   onClick={terminarWizard}
-                  className="w-full bg-[#FF6B57] text-white font-bold py-4 rounded-2xl text-base">
+                  className="w-full bg-[#E11D2A] text-white font-bold py-4 rounded-2xl text-base">
                   Listo — Ver calendario →
                 </button>
               </div>
@@ -1766,7 +1766,7 @@ export default function RutinasPage() {
                 <div className="font-bold text-sm">
                   {detalleEj ? detalleEj.nombre : 'Agregar ejercicio'}
                 </div>
-                <div className="text-xs text-[#E14E2C]">{modalEj.dia}</div>
+                <div className="text-xs text-[#B3121D]">{modalEj.dia}</div>
               </div>
               <button
                 onClick={() => detalleEj ? setDetalleEj(null) : cerrarModalEj()}
@@ -1796,7 +1796,7 @@ export default function RutinasPage() {
                 <button
                   onClick={() => agregarEjercicioDirecto(detalleEj)}
                   disabled={insertandoEjId !== null}
-                  className="w-full bg-[#FF6B57] text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-60">
+                  className="w-full bg-[#E11D2A] text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-60">
                   {insertandoEjId === detalleEj.id ? 'Agregando…' : `＋ Agregar a ${modalEj.dia}`}
                 </button>
               </div>
@@ -1804,8 +1804,8 @@ export default function RutinasPage() {
               <>
                 {/* Buscador con ícono cian */}
                 <div className="px-5 pb-3 shrink-0">
-                  <div className="flex items-center gap-2 bg-[#FFFFFF] border border-[#FB8C3C]/40 rounded-xl px-4 py-2.5 focus-within:border-[#FB8C3C]/70 transition-colors">
-                    <Search className="w-4 h-4 text-[#FB8C3C] shrink-0" />
+                  <div className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E11D2A]/40 rounded-xl px-4 py-2.5 focus-within:border-[#E11D2A]/70 transition-colors">
+                    <Search className="w-4 h-4 text-[#E11D2A] shrink-0" />
                     <input
                       value={busquedaEj}
                       onChange={e => setBusquedaEj(e.target.value)}
@@ -1823,7 +1823,7 @@ export default function RutinasPage() {
                         onClick={() => setCatFiltro(grupo)}
                         className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
                         style={catFiltro === grupo
-                          ? { background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', color: '#fff' }
+                          ? { background: 'linear-gradient(135deg, #E11D2A, #B3121D)', color: '#fff' }
                           : { background: '#FFFFFF', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.10)' }}>
                         {grupo}
                       </button>
@@ -1872,8 +1872,8 @@ export default function RutinasPage() {
                             <button
                               onClick={() => agregarEjercicioDirecto(ej)}
                               disabled={insertandoEjId !== null}
-                              className="mt-auto w-full rounded-lg py-1.5 text-[11px] font-bold text-[#FB8C3C] disabled:opacity-50 transition-colors"
-                              style={{ background: 'rgba(251,140,60,0.10)', border: '1px solid rgba(251,140,60,0.25)' }}>
+                              className="mt-auto w-full rounded-lg py-1.5 text-[11px] font-bold text-[#E11D2A] disabled:opacity-50 transition-colors"
+                              style={{ background: 'rgba(225,29,42,0.10)', border: '1px solid rgba(225,29,42,0.25)' }}>
                               {insertandoEjId === ej.id ? '…' : '+ Agregar'}
                             </button>
                           </div>
@@ -1903,7 +1903,7 @@ export default function RutinasPage() {
                 <div className="text-[10px] text-[#787f70] uppercase tracking-widest">Cambiar día de entreno</div>
                 <div
                   className="font-black text-sm mt-0.5"
-                  style={{ fontFamily: "'Oswald', sans-serif", color: '#FB8C3C' }}>
+                  style={{ fontFamily: "'Oswald', sans-serif", color: '#E11D2A' }}>
                   {rutinaS.nombre.toUpperCase()}
                 </div>
               </div>
@@ -1917,7 +1917,7 @@ export default function RutinasPage() {
             {/* Instrucción */}
             <div className="px-5 pt-3 pb-1 text-[11px] shrink-0" style={{ color: '#6b7280' }}>
               {diaOrigenSemanal
-                ? <span>Toca el día destino para mover el entreno del <span className="font-semibold" style={{ color: '#FB8C3C' }}>{diaOrigenSemanal}</span></span>
+                ? <span>Toca el día destino para mover el entreno del <span className="font-semibold" style={{ color: '#E11D2A' }}>{diaOrigenSemanal}</span></span>
                 : 'Toca un día con entreno para seleccionarlo y moverlo'}
             </div>
 
@@ -1967,9 +1967,9 @@ export default function RutinasPage() {
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left
                       ${esOrigen
-                        ? 'border-[#FB8C3C] bg-[#FB8C3C]/8'
+                        ? 'border-[#E11D2A] bg-[#E11D2A]/8'
                         : esHoy
-                          ? 'border-[#FF6B57]/60 bg-[#FF6B57]/5'
+                          ? 'border-[#E11D2A]/60 bg-[#E11D2A]/5'
                           : tieneEntreno
                             ? 'border-black/10 bg-black/[0.03]'
                             : 'border-black/[0.06] bg-transparent'}`}
@@ -1979,7 +1979,7 @@ export default function RutinasPage() {
                       className="text-sm font-black w-8 shrink-0"
                       style={{
                         fontFamily: "'Oswald', sans-serif",
-                        color: esOrigen ? '#FB8C3C' : esHoy ? '#FF6B57' : '#6b7280',
+                        color: esOrigen ? '#E11D2A' : esHoy ? '#E11D2A' : '#6b7280',
                       }}>
                       {dia.slice(0, 3).toUpperCase()}
                     </div>
@@ -1992,9 +1992,9 @@ export default function RutinasPage() {
                           fontFamily: "'Oswald', sans-serif",
                           fontSize: '13px',
                           background: esOrigen
-                            ? 'rgba(251,140,60,0.15)'
+                            ? 'rgba(225,29,42,0.15)'
                             : 'linear-gradient(135deg, rgba(255,107,87,0.18), rgba(22,163,74,0.12))',
-                          color: esOrigen ? '#FB8C3C' : '#FF6B57',
+                          color: esOrigen ? '#E11D2A' : '#E11D2A',
                         }}>
                         {musculos || 'Entrenamiento'}
                       </div>
@@ -2018,7 +2018,7 @@ export default function RutinasPage() {
           SESIÓN (pantalla completa)
       ══════════════════════════════════ */}
       {sesion && (
-        <div className="fixed inset-0 bg-[#FFF8F3] z-50 flex flex-col max-w-lg mx-auto">
+        <div className="fixed inset-0 bg-[#FFFFFF] z-50 flex flex-col max-w-lg mx-auto">
 
           <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 shrink-0">
             <div>
@@ -2048,7 +2048,7 @@ export default function RutinasPage() {
                 <div className="h-1 bg-black/[0.05] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${((ejActivo + 1) / sesion.ejercicios.length) * 100}%`, background: 'linear-gradient(90deg, #FF6B57, #FF6B57)' }}
+                    style={{ width: `${((ejActivo + 1) / sesion.ejercicios.length) * 100}%`, background: 'linear-gradient(90deg, #E11D2A, #E11D2A)' }}
                   />
                 </div>
               </div>
@@ -2061,7 +2061,7 @@ export default function RutinasPage() {
                 return (
                   <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-3 flex flex-col">
                     <div
-                      className="rounded-2xl border border-[#FF6B57]/40 p-4 w-full"
+                      className="rounded-2xl border border-[#E11D2A]/40 p-4 w-full"
                       style={{ background: 'rgba(255,107,87,0.06)', boxShadow: '0 0 24px rgba(255,107,87,0.08)', boxSizing: 'border-box' }}
                     >
                       {/* Nombre + meta */}
@@ -2075,12 +2075,12 @@ export default function RutinasPage() {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             maxWidth: '100%',
-                            color: '#FB8C3C',
+                            color: '#E11D2A',
                             lineHeight: 1.15,
                           }}
                         >{ej.ejercicios?.nombre}</div>
                         {historial[ej.ejercicio_id] && (
-                          <div className="text-[10px] text-[#E14E2C]/60 mt-1.5 flex items-center gap-2 flex-wrap">
+                          <div className="text-[10px] text-[#B3121D]/60 mt-1.5 flex items-center gap-2 flex-wrap">
                             <span>{historial[ej.ejercicio_id]}</span>
                             {!cardio && ultimoPesos[ej.ejercicio_id] > 0 && (() => {
                               const pesosValidos = (registros[ej.id] || [])
@@ -2103,7 +2103,7 @@ export default function RutinasPage() {
                         <div className="mb-4">
                           <button
                             onClick={() => setFotoAbierta(v => !v)}
-                            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#E14E2C] hover:text-[#E14E2C] transition-colors mb-2">
+                            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#B3121D] hover:text-[#B3121D] transition-colors mb-2">
                             <span className="text-xs">{fotoAbierta ? '▲' : '▼'}</span>
                             Ver ejercicio
                           </button>
@@ -2130,27 +2130,27 @@ export default function RutinasPage() {
                         <>
                           {(registros[ej.id] || []).map((serie, i) => (
                             <div key={i} className={`rounded-xl p-3 mb-2 border transition-colors
-                              ${serie.ok ? 'border-[#FF6B57]/30 bg-[#FF6B57]/5' : 'border-black/10 bg-black/[0.04]'}`}>
+                              ${serie.ok ? 'border-[#E11D2A]/30 bg-[#E11D2A]/5' : 'border-black/10 bg-black/[0.04]'}`}>
                               <div className="grid grid-cols-2 gap-2 mb-2.5">
                                 <div>
                                   <label className="text-[9px] text-[#6d7362] uppercase block mb-1 text-center">Minutos</label>
                                   <input type="number" min="0" inputMode="numeric" value={serie.duracionMin}
                                     onChange={e => updateSerie(ej.id, i, 'duracionMin', e.target.value)} placeholder="—"
-                                    className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#FF6B57]/40" />
+                                    className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#E11D2A]/40" />
                                 </div>
                                 <div>
                                   <label className="text-[9px] text-[#6d7362] uppercase block mb-1 text-center">Calorías (kcal)</label>
                                   <input type="number" min="0" inputMode="numeric" value={serie.calorias}
                                     onChange={e => updateSerie(ej.id, i, 'calorias', e.target.value)} placeholder="—"
-                                    className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#FF6B57]/40" />
+                                    className="w-full bg-[#FFFFFF] border border-black/10 rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold placeholder-gray-700 focus:outline-none focus:border-[#E11D2A]/40" />
                                 </div>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className={`text-xs font-bold ${serie.ok ? 'text-[#E14E2C]' : 'text-[#6d7362]'}`}>Bloque {i + 1}</span>
+                                <span className={`text-xs font-bold ${serie.ok ? 'text-[#B3121D]' : 'text-[#6d7362]'}`}>Bloque {i + 1}</span>
                                 <div className="flex items-center gap-2">
                                   <button onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
                                     className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                      ${serie.ok ? 'bg-[#FF6B57] text-white scale-110' : 'bg-[#FFFFFF] border border-white/15 text-[#6d7362]'}`}>✓</button>
+                                      ${serie.ok ? 'bg-[#E11D2A] text-white scale-110' : 'bg-[#FFFFFF] border border-white/15 text-[#6d7362]'}`}>✓</button>
                                   {(registros[ej.id] || []).length > 1 && (
                                     <button
                                       onClick={() => eliminarSerie(ej.id, i)}
@@ -2172,16 +2172,16 @@ export default function RutinasPage() {
                           </div>
                           {(registros[ej.id] || []).map((serie, i) => (
                             <div key={i} className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_2.25rem] gap-2 mb-2 items-center">
-                              <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#E14E2C]' : 'text-[#6d7362]'}`}>{i + 1}</div>
+                              <div className={`text-xs font-bold text-center ${serie.ok ? 'text-[#B3121D]' : 'text-[#6d7362]'}`}>{i + 1}</div>
                               <input type="text" value={serie.reps} onChange={e => updateSerie(ej.id, i, 'reps', e.target.value)}
                                 className={`w-full min-w-0 bg-[#FFFFFF] border rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold focus:outline-none transition-colors
-                                  ${serie.ok ? 'border-[#FF6B57]/30 bg-[#FF6B57]/5' : 'border-black/10'}`} />
+                                  ${serie.ok ? 'border-[#E11D2A]/30 bg-[#E11D2A]/5' : 'border-black/10'}`} />
                               <input type="number" min="0" step="0.5" value={serie.peso} onChange={e => updateSerie(ej.id, i, 'peso', e.target.value)} placeholder="—"
                                 className={`w-full min-w-0 bg-[#FFFFFF] border rounded-xl py-3 text-sm text-[#1b201a] text-center font-bold placeholder-gray-700 focus:outline-none transition-colors
-                                  ${serie.ok ? 'border-[#FF6B57]/30 bg-[#FF6B57]/5' : 'border-black/10'}`} />
+                                  ${serie.ok ? 'border-[#E11D2A]/30 bg-[#E11D2A]/5' : 'border-black/10'}`} />
                               <button onClick={() => updateSerie(ej.id, i, 'ok', !serie.ok)}
                                 className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                  ${serie.ok ? 'bg-[#FF6B57] text-white scale-110' : 'bg-[#FFFFFF] border border-white/15 text-[#6d7362]'}`}>✓</button>
+                                  ${serie.ok ? 'bg-[#E11D2A] text-white scale-110' : 'bg-[#FFFFFF] border border-white/15 text-[#6d7362]'}`}>✓</button>
                               <button
                                 onClick={() => eliminarSerie(ej.id, i)}
                                 disabled={(registros[ej.id] || []).length <= 1}
@@ -2198,7 +2198,7 @@ export default function RutinasPage() {
 
                       <button
                         onClick={() => agregarSerie(ej.id)}
-                        className="mt-1 mb-4 flex items-center gap-1.5 text-xs text-[#6d7362] hover:text-[#E14E2C] transition-colors">
+                        className="mt-1 mb-4 flex items-center gap-1.5 text-xs text-[#6d7362] hover:text-[#B3121D] transition-colors">
                         <span className="text-sm leading-none font-bold">+</span> Agregar serie
                       </button>
 
@@ -2225,7 +2225,7 @@ export default function RutinasPage() {
                           <button
                             onClick={() => { setEjActivo(v => v + 1); setFotoAbierta(false) }}
                             className="flex-1 text-white font-bold py-3.5 rounded-xl text-sm"
-                            style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 16px rgba(255,107,87,0.35)' }}>
+                            style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 16px rgba(255,107,87,0.35)' }}>
                             Siguiente ›
                           </button>
                         ) : (
@@ -2233,7 +2233,7 @@ export default function RutinasPage() {
                             onClick={guardarSesion}
                             disabled={guardandoSesion}
                             className="flex-1 text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-40"
-                            style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 16px rgba(255,107,87,0.35)' }}>
+                            style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)', boxShadow: '0 0 16px rgba(255,107,87,0.35)' }}>
                             {guardandoSesion ? 'Guardando...' : '✓ Guardar sesión'}
                           </button>
                         )}
@@ -2254,7 +2254,7 @@ export default function RutinasPage() {
                 {sesion.ejercicios.reduce((t, e) => t + (registros[e.id]?.filter(s => s.ok).length || 0), 0)} series completadas
               </div>
               <button onClick={() => setSesion(null)}
-                className="w-full bg-[#FF6B57] text-white font-bold py-4 rounded-2xl text-base">
+                className="w-full bg-[#E11D2A] text-white font-bold py-4 rounded-2xl text-base">
                 Volver a mis rutinas
               </button>
             </div>
@@ -2274,8 +2274,8 @@ export default function RutinasPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#FF6B57]/10 border border-[#FF6B57]/20 flex items-center justify-center">
-                  <Share2 className="w-4 h-4 text-[#E14E2C]" />
+                <div className="w-9 h-9 rounded-xl bg-[#E11D2A]/10 border border-[#E11D2A]/20 flex items-center justify-center">
+                  <Share2 className="w-4 h-4 text-[#B3121D]" />
                 </div>
                 <div>
                   <div className="font-bold text-sm">Comparte tu rutina 💪</div>
@@ -2292,17 +2292,17 @@ export default function RutinasPage() {
             <div className="px-5 pb-8">
               {generandoCodigo ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-3">
-                  <div className="w-8 h-8 border-2 border-[#FF6B57]/20 border-t-[#FF6B57] rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-[#E11D2A]/20 border-t-[#E11D2A] rounded-full animate-spin" />
                   <div className="text-[#787f70] text-sm">Generando tu código único...</div>
                 </div>
               ) : codigoCompartir ? (
                 <>
                   {/* Código con card dorada */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-[#E7F1E3] to-[#111] border border-[#FF6B57]/30 rounded-2xl px-5 py-7 text-center mb-4">
-                    <div className="absolute -top-8 -right-8 w-28 h-28 bg-[#FF6B57]/8 rounded-full blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-[#FF6B57]/5 rounded-full blur-2xl pointer-events-none" />
-                    <div className="text-[9px] text-[#E14E2C]/50 uppercase tracking-[0.3em] mb-3 font-semibold">Código de tu rutina</div>
-                    <div className="text-5xl font-black font-mono tracking-[0.12em] text-[#E14E2C] mb-6"
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#E7F1E3] to-[#111] border border-[#E11D2A]/30 rounded-2xl px-5 py-7 text-center mb-4">
+                    <div className="absolute -top-8 -right-8 w-28 h-28 bg-[#E11D2A]/8 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-[#E11D2A]/5 rounded-full blur-2xl pointer-events-none" />
+                    <div className="text-[9px] text-[#B3121D]/50 uppercase tracking-[0.3em] mb-3 font-semibold">Código de tu rutina</div>
+                    <div className="text-5xl font-black font-mono tracking-[0.12em] text-[#B3121D] mb-6"
                       style={{ textShadow: '0 0 30px rgba(245,197,24,0.25)' }}>
                       {codigoCompartir}
                     </div>
@@ -2311,7 +2311,7 @@ export default function RutinasPage() {
                       className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                         copiado
                           ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          : 'bg-[#FF6B57] text-white hover:bg-[#E14E2C]'
+                          : 'bg-[#E11D2A] text-white hover:bg-[#B3121D]'
                       }`}>
                       {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       {copiado ? '¡Copiado!' : 'Copiar código'}
@@ -2322,15 +2322,15 @@ export default function RutinasPage() {
                   <div className="bg-[#FFFFFF] border border-black/[0.08] rounded-xl p-4 space-y-2.5">
                     <div className="text-xs font-semibold text-[#2b302a]">¿Cómo lo comparto?</div>
                     <div className="flex items-start gap-2 text-xs text-[#5d6358]">
-                      <span className="text-[#E14E2C] font-bold shrink-0">1.</span>
+                      <span className="text-[#B3121D] font-bold shrink-0">1.</span>
                       <span>Copia el código y mándalo por WhatsApp, mensaje o como quieras.</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-[#5d6358]">
-                      <span className="text-[#E14E2C] font-bold shrink-0">2.</span>
+                      <span className="text-[#B3121D] font-bold shrink-0">2.</span>
                       <span>Tu amigo/a abre PorotoFit → Rutinas → &ldquo;¿Te compartieron una rutina?&rdquo;</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-[#5d6358]">
-                      <span className="text-[#E14E2C] font-bold shrink-0">3.</span>
+                      <span className="text-[#B3121D] font-bold shrink-0">3.</span>
                       <span>Pega el código y listo — recibirán su propia copia para editar.</span>
                     </div>
                   </div>
