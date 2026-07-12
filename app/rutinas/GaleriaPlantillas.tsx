@@ -68,14 +68,20 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
     onUsada()
   }
 
-  const nivelColor: Record<string, string> = {
-    principiante: '#FB8C3C',
-    intermedio:   '#22C55E',
-    avanzado:     '#F0997B',
+  // Cada nivel = un color relleno (tarjetas modernas con letra blanca)
+  const nivelGrad: Record<string, string> = {
+    principiante: 'linear-gradient(135deg, #FFB05C, #F59E0B)',
+    intermedio:   'linear-gradient(135deg, #34D9A6, #16A87C)',
+    avanzado:     'linear-gradient(135deg, #FF7E5F, #F5563B)',
+  }
+  const nivelSombra: Record<string, string> = {
+    principiante: '0 6px 16px rgba(245,158,11,0.30)',
+    intermedio:   '0 6px 16px rgba(46,204,155,0.30)',
+    avanzado:     '0 6px 16px rgba(255,107,87,0.30)',
   }
 
   return (
-    <div className="fixed inset-0 bg-[#F4F6F1] z-50 flex flex-col max-w-lg mx-auto">
+    <div className="fixed inset-0 bg-[#FFF8F3] z-50 flex flex-col max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 shrink-0">
         {preview ? (
@@ -104,8 +110,13 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
               <button key={s} onClick={() => setFiltroSexo(s)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition-all"
                 style={filtroSexo === s
-                  ? { background: 'linear-gradient(135deg, #16A34A, #15803D)', borderColor: '#22C55E', color: 'white' }
-                  : { background: '#EFF1EB', borderColor: 'rgba(34,197,94,0.2)', color: '#9ca3af' }}>
+                  ? {
+                      background: s === 'mujer'
+                        ? 'linear-gradient(135deg, #FF9F45, #F97316)'
+                        : 'linear-gradient(135deg, #FF6B57, #E14E2C)',
+                      borderColor: 'transparent', color: 'white',
+                    }
+                  : { background: '#FFF3EC', borderColor: 'rgba(255,107,87,0.2)', color: '#9ca3af' }}>
                 {s === 'hombre' ? <Mars className="w-4 h-4" /> : <Venus className="w-4 h-4" />}
                 {s === 'hombre' ? 'Hombre' : 'Mujer'}
               </button>
@@ -115,16 +126,17 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
           <div className="flex flex-col gap-3">
             {lista.map(r => (
               <button key={r.id} onClick={() => { setPreview(r); setNombres({}) }}
-                className="text-left bg-[#FFFFFF] border border-black/10 rounded-2xl p-4 hover:border-[#22C55E]/40 transition-colors">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="font-bold text-[15px]">{r.nombre}</div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                    style={{ color: nivelColor[r.nivel] ?? '#22C55E', background: (nivelColor[r.nivel] ?? '#22C55E') + '18' }}>
+                className="text-left rounded-2xl p-4 active:scale-[0.99] transition-transform"
+                style={{ background: nivelGrad[r.nivel] ?? nivelGrad.intermedio, boxShadow: nivelSombra[r.nivel] ?? nivelSombra.intermedio }}>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="font-bold text-[15px] text-white">{r.nombre}</div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.25)' }}>
                     {r.nivel}
                   </span>
                 </div>
-                <div className="text-xs text-[#787f70] leading-relaxed">{r.descripcion}</div>
-                <div className="flex items-center gap-1.5 mt-2.5 text-[11px] text-[#15803D]">
+                <div className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.92)' }}>{r.descripcion}</div>
+                <div className="flex items-center gap-1.5 mt-2.5 text-[11px] text-white">
                   <Dumbbell className="w-3.5 h-3.5" />
                   {r.dias_semana} días por semana
                 </div>
@@ -148,12 +160,12 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
                 <div key={i} className="bg-[#FFFFFF] border border-black/10 rounded-2xl overflow-hidden">
                   <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center justify-between">
                     <span className="text-sm font-bold">{dia.nombre_dia}</span>
-                    <span className="text-[10px] text-[#15803D] uppercase tracking-wider">{dia.dia_semana}</span>
+                    <span className="text-[10px] text-[#E14E2C] uppercase tracking-wider">{dia.dia_semana}</span>
                   </div>
                   <div className="px-4 py-2">
                     {dia.ejercicios.map((ej, j) => (
                       <div key={j} className="flex items-center gap-2 py-1.5">
-                        <span className="text-[#15803D] text-xs font-bold w-4 text-center shrink-0">{ej.orden}</span>
+                        <span className="text-[#E14E2C] text-xs font-bold w-4 text-center shrink-0">{ej.orden}</span>
                         <span className="flex-1 text-sm text-[#2b302a] min-w-0 truncate">
                           {cargandoNombres ? '…' : (nombres[ej.ejercicio_id] ?? 'Ejercicio')}
                         </span>
@@ -175,7 +187,7 @@ export default function GaleriaPlantillas({ userId, userSexo, onClose, onUsada }
           <div className="px-5 pb-10 pt-3 shrink-0">
             <button onClick={() => usar(preview)} disabled={usando}
               className="w-full text-white font-bold py-4 rounded-2xl text-base flex items-center justify-center gap-2 disabled:opacity-40"
-              style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', boxShadow: '0 0 24px rgba(34,197,94,0.4)' }}>
+              style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)', boxShadow: '0 0 24px rgba(255,107,87,0.4)' }}>
               <Check className="w-5 h-5" />
               {usando ? 'Creando tu rutina…' : 'Usar esta rutina'}
             </button>

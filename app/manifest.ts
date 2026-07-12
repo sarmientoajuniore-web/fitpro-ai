@@ -8,23 +8,23 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#F4F6F1',
-    theme_color: '#22C55E',
+    background_color: '#FFF8F3',
+    theme_color: '#FF6B57',
     icons: [
       {
-        src: '/fitpro-icono-192.png',
+        src: '/icons/icon-192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/fitpro-icono-512.png',
+        src: '/icons/icon-512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/fitpro-icono-512.png',
+        src: '/icons/icon-512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

@@ -12,14 +12,14 @@ export const metadata: Metadata = {
     title: 'FitPro',
   },
   icons: {
-    icon: '/fitpro-icono-512.png',
-    apple: '/fitpro-icono-192.png',
+    icon: '/icons/icon-512',
+    apple: '/apple-icon',
   },
   formatDetection: { telephone: false },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#22C55E',
+  themeColor: '#FF6B57',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="min-h-screen bg-[#F4F6F1] text-[#1b201a]">
+      <body className="min-h-screen bg-[#FFF8F3] text-[#1b201a]">
         {children}
         <PwaRegister />
       </body>

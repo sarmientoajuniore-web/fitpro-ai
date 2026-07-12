@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell,
 } from 'recharts'
+import { Dumbbell, Flame, ChevronRight } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -545,12 +546,12 @@ export default function ProgresoPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#F4F6F1] text-[#1b201a] max-w-lg mx-auto">
+    <div className="min-h-screen bg-[#FFF8F3] text-[#1b201a] max-w-lg mx-auto">
 
       {/* HEADER */}
-      <div className="sticky top-0 bg-[#F4F6F1] z-10 border-b border-black/10 px-5 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold">Fit<span className="text-[#15803D]">Pro</span></h1>
-        <a href="/inicio" className="text-xs text-[#5d6358]">← Inicio</a>
+      <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#FF6B57' }}>
+        <h1 className="text-lg font-bold text-white">FitPro</h1>
+        <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 
       <div className="p-5">
@@ -561,7 +562,7 @@ export default function ProgresoPage() {
           <div className="mb-5">
             <button
               onClick={() => setVista('resumen')}
-              className="flex items-center gap-1 text-xs font-semibold text-[#15803D] mb-3 hover:opacity-80 transition-opacity">
+              className="flex items-center gap-1 text-xs font-semibold text-[#E14E2C] mb-3 hover:opacity-80 transition-opacity">
               ← Volver al resumen
             </button>
             <div className="flex gap-2">
@@ -569,7 +570,7 @@ export default function ProgresoPage() {
                 <button key={key} onClick={() => setTab(key)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors
                     ${tab === key
-                      ? 'bg-[#16A34A] text-white'
+                      ? 'bg-[#FF6B57] text-white'
                       : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10'}`}>
                   {label}
                 </button>
@@ -592,19 +593,19 @@ export default function ProgresoPage() {
           <>
             {/* ── Peso protagonista ── */}
             <div
-              className="rounded-2xl border border-[#22C55E]/40 overflow-hidden mb-4"
-              style={{ background: 'linear-gradient(135deg, #E9F0E6 0%, #EDF2EA 100%)', boxShadow: '0 0 28px rgba(34,197,94,0.13)' }}>
+              className="rounded-2xl border border-[#FF6B57]/40 overflow-hidden mb-4"
+              style={{ background: 'linear-gradient(135deg, #FFF1EC 0%, #FFF8F3 100%)', boxShadow: '0 0 28px rgba(255,107,87,0.13)' }}>
               <div className="px-5 pt-5 pb-5 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#15803D] uppercase tracking-widest mb-2">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#E14E2C] uppercase tracking-widest mb-2">
                   <span>⚖️</span> Mi peso
                 </div>
                 {pesoActual != null ? (
                   <>
-                    <p className="text-5xl font-black text-[#15803D] leading-none">
-                      {pesoActual}<span className="text-lg text-[#15803D]/60 font-bold"> kg</span>
+                    <p className="text-5xl font-black text-[#E14E2C] leading-none">
+                      {pesoActual}<span className="text-lg text-[#E14E2C]/60 font-bold"> kg</span>
                     </p>
                     {cambioPeso != null && cambioPeso !== 0 && (
-                      <div className={`inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full ${cambioPeso < 0 ? 'bg-[#22C55E]/15 text-[#15803D]' : 'bg-[#EA7A1C]/15 text-[#B45309]'}`}>
+                      <div className={`inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full ${cambioPeso < 0 ? 'bg-[#FF6B57]/15 text-[#E14E2C]' : 'bg-[#EA7A1C]/15 text-[#B45309]'}`}>
                         {cambioPeso < 0 ? '▼ ' : '▲ '}{Math.abs(cambioPeso)} kg {cambioPeso < 0 ? 'menos' : 'más'} desde que empezaste
                       </div>
                     )}
@@ -619,7 +620,7 @@ export default function ProgresoPage() {
                       }).join(' ')
                       return (
                         <svg viewBox="0 0 200 38" style={{ width: '100%', height: 34, marginTop: 12 }}>
-                          <polyline points={coords} fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <polyline points={coords} fill="none" stroke="#FF6B57" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )
                     })()}
@@ -629,8 +630,8 @@ export default function ProgresoPage() {
                 )}
                 <button
                   onClick={() => { setTab('peso'); setVista('detalle') }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl py-3 mt-4 text-sm font-bold text-white active:scale-[0.98] transition-all shadow-[0_0_18px_rgba(34,197,94,0.3)]"
-                  style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-3 mt-4 text-sm font-bold text-white active:scale-[0.98] transition-all shadow-[0_0_18px_rgba(255,107,87,0.3)]"
+                  style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)' }}>
                   ＋ Registrar mi peso de hoy
                 </button>
               </div>
@@ -640,23 +641,29 @@ export default function ProgresoPage() {
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => { setTab('ejercicios'); setVista('detalle') }}
-                className="flex items-center gap-3 bg-[#FFFFFF] border border-black/10 rounded-2xl px-4 py-3.5 text-left hover:border-[#22C55E]/40 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-[#EAF3DE] flex items-center justify-center shrink-0 text-lg">🏋️</div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-[#1b201a]">Entrenamiento</div>
-                  <div className="text-xs text-[#6d7362]">Tus récords y progreso de fuerza</div>
+                className="flex items-center gap-3 rounded-2xl px-4 py-4 text-left active:scale-[0.98] transition-transform"
+                style={{ background: '#2ECC9B', boxShadow: '0 6px 16px rgba(46,204,155,0.30)' }}>
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.22)' }}>
+                  <Dumbbell size={22} strokeWidth={2.2} color="#fff" />
                 </div>
-                <span className="text-[#9ba192] text-lg shrink-0">›</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-bold text-white">Entrenamiento</div>
+                  <div className="text-xs text-[#EAFBF4]">Tus récords y progreso de fuerza</div>
+                </div>
+                <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
               </button>
               <button
                 onClick={() => { setTab('nutricion'); setVista('detalle') }}
-                className="flex items-center gap-3 bg-[#FFFFFF] border border-black/10 rounded-2xl px-4 py-3.5 text-left hover:border-[#EA7A1C]/40 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-[#FAEEDA] flex items-center justify-center shrink-0 text-lg">🔥</div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-[#1b201a]">Comida y cardio</div>
-                  <div className="text-xs text-[#6d7362]">Calorías, macros y cardio del período</div>
+                className="flex items-center gap-3 rounded-2xl px-4 py-4 text-left active:scale-[0.98] transition-transform"
+                style={{ background: '#FF6B57', boxShadow: '0 6px 16px rgba(255,107,87,0.30)' }}>
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.22)' }}>
+                  <Flame size={22} strokeWidth={2.2} color="#fff" />
                 </div>
-                <span className="text-[#9ba192] text-lg shrink-0">›</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-bold text-white">Comida y cardio</div>
+                  <div className="text-xs text-[#FFE3DC]">Calorías, macros y cardio del período</div>
+                </div>
+                <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
               </button>
             </div>
           </>
@@ -672,8 +679,8 @@ export default function ProgresoPage() {
 
                 {/* ── Hero: actual + caricatura ── */}
                 <div
-                  className="rounded-2xl border border-[#22C55E]/40 overflow-hidden"
-                  style={{ background: 'linear-gradient(135deg, #E9F0E6 0%, #EDF2EA 100%)', boxShadow: '0 0 28px rgba(34,197,94,0.13)' }}>
+                  className="rounded-2xl border border-[#FF6B57]/40 overflow-hidden"
+                  style={{ background: 'linear-gradient(135deg, #FFF1EC 0%, #FFF8F3 100%)', boxShadow: '0 0 28px rgba(255,107,87,0.13)' }}>
 
                   <div className="flex items-end justify-between px-5 pt-5 pb-4 gap-2">
                     {/* Peso actual */}
@@ -682,7 +689,7 @@ export default function ProgresoPage() {
                       {pesoActual != null ? (
                         <>
                           <p className="text-5xl font-black text-[#1b201a] leading-none">{pesoActual}</p>
-                          <p className="text-sm text-[#15803D]/60 mt-0.5">kg</p>
+                          <p className="text-sm text-[#E14E2C]/60 mt-0.5">kg</p>
                           <p className="text-[10px] text-[#6d7362] mt-1">
                             {formatFechaDDMMYYYY(historialPeso[historialPeso.length - 1].fecha)}
                           </p>
@@ -705,7 +712,7 @@ export default function ProgresoPage() {
                       <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-1">Desde inicio</p>
                       {cambioPeso != null ? (
                         <>
-                          <p className={`text-2xl font-black leading-none ${cambioPeso < 0 ? 'text-[#2EE57D]' : cambioPeso > 0 ? 'text-red-400' : 'text-[#5d6358]'}`}>
+                          <p className={`text-2xl font-black leading-none ${cambioPeso < 0 ? 'text-[#2ECC9B]' : cambioPeso > 0 ? 'text-red-400' : 'text-[#5d6358]'}`}>
                             {cambioPeso > 0 ? '+' : ''}{cambioPeso}
                           </p>
                           <p className="text-sm text-[#787f70] mt-0.5">kg</p>
@@ -725,14 +732,14 @@ export default function ProgresoPage() {
                           style={{
                             width: `${pctCambioPeso}%`,
                             background: cambioPeso <= 0
-                              ? 'linear-gradient(90deg, #22C55E 0%, #2EE57D 100%)'
-                              : 'linear-gradient(90deg, #22C55E 0%, #FF5C5C 100%)',
+                              ? 'linear-gradient(90deg, #FF6B57 0%, #2ECC9B 100%)'
+                              : 'linear-gradient(90deg, #FF6B57 0%, #D85A30 100%)',
                           }}
                         />
                       </div>
                       <p className="text-[11px] text-[#5d6358] leading-snug">
                         {cambioPeso < 0
-                          ? <>Llevas <span className="text-[#2EE57D] font-semibold">{Math.abs(cambioPeso)} kg perdidos</span> · peso inicial: {pesoInicial} kg</>
+                          ? <>Llevas <span className="text-[#2ECC9B] font-semibold">{Math.abs(cambioPeso)} kg perdidos</span> · peso inicial: {pesoInicial} kg</>
                           : cambioPeso > 0
                           ? <>Llevas <span className="text-red-400 font-semibold">{cambioPeso} kg ganados</span> · peso inicial: {pesoInicial} kg</>
                           : <span className="text-[#787f70]">Sin cambio desde el inicio ({pesoInicial} kg)</span>
@@ -761,19 +768,19 @@ export default function ProgresoPage() {
                         <Line
                           type="monotone"
                           dataKey="peso"
-                          stroke="#22C55E"
+                          stroke="#FF6B57"
                           strokeWidth={2}
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           dot={(props: any) => {
                             const isLast = props.index === chartPeso.length - 1
-                            return <circle key={props.index} cx={props.cx} cy={props.cy} r={isLast ? 5 : 3} fill={isLast ? '#2EE57D' : '#22C55E'} />
+                            return <circle key={props.index} cx={props.cx} cy={props.cy} r={isLast ? 5 : 3} fill={isLast ? '#2ECC9B' : '#FF6B57'} />
                           }}
-                          activeDot={{ r: 6, fill: '#2EE57D', strokeWidth: 0 }}
+                          activeDot={{ r: 6, fill: '#2ECC9B', strokeWidth: 0 }}
                         >
                           <LabelList
                             dataKey="peso"
                             position="top"
-                            style={{ fill: 'rgba(34,197,94,0.75)', fontSize: 10, fontWeight: 700 }}
+                            style={{ fill: 'rgba(255,107,87,0.75)', fontSize: 10, fontWeight: 700 }}
                           />
                         </Line>
                       </LineChart>
@@ -798,14 +805,14 @@ export default function ProgresoPage() {
                       onKeyDown={e => e.key === 'Enter' && guardarPeso()}
                       placeholder="Ej: 95.5"
                       step="0.1" min="20" max="500"
-                      className="flex-1 bg-black/[0.03] border border-black/10 rounded-xl px-4 py-3 text-[#1b201a] text-sm outline-none focus:border-[#22C55E]/60 placeholder-[#9ba192]"
+                      className="flex-1 bg-black/[0.03] border border-black/10 rounded-xl px-4 py-3 text-[#1b201a] text-sm outline-none focus:border-[#FF6B57]/60 placeholder-[#9ba192]"
                     />
                     <span className="text-[#787f70] text-sm shrink-0">kg</span>
                     <button
                       onClick={guardarPeso}
                       disabled={guardando || !pesoInput}
                       className="font-bold px-5 py-3 rounded-xl text-sm text-white disabled:opacity-40 shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
+                      style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)' }}>
                       {guardando ? '...' : 'Guardar'}
                     </button>
                   </div>
@@ -919,7 +926,7 @@ export default function ProgresoPage() {
                           Otros ejercicios
                         </p>
                         <div className="rounded-2xl overflow-hidden"
-                          style={{ background: '#111', border: '1px solid rgba(34,197,94,0.2)' }}>
+                          style={{ background: '#111', border: '1px solid rgba(255,107,87,0.2)' }}>
                           {ejerciciosOtros.map((ej, idx) => {
                             const data = ejercicioChartMap.get(ej.id) ?? []
                             const pr = data.length > 0 ? Math.max(...data.map(d => d.peso)) : 0
@@ -946,7 +953,7 @@ export default function ProgresoPage() {
                                 >
                                   {/* Foto */}
                                   <div className="shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
-                                    style={{ width: 40, height: 42, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(34,197,94,0.15)' }}>
+                                    style={{ width: 40, height: 42, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,107,87,0.15)' }}>
                                     {ej.imagen ? (
                                       // eslint-disable-next-line @next/next/no-img-element
                                       <img src={ej.imagen} alt={ej.nombre} loading="lazy"
@@ -977,9 +984,9 @@ export default function ProgresoPage() {
                                           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" />
                                           <YAxis {...AXIS} width={36} tickFormatter={v => `${v}kg`} />
                                           <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v} kg`, 'Peso máx.']} />
-                                          <Line type="monotone" dataKey="peso" stroke="#22C55E" strokeWidth={2}
-                                            dot={{ fill: '#22C55E', r: 2, strokeWidth: 0 }}
-                                            activeDot={{ r: 4, fill: '#22C55E', strokeWidth: 0 }} />
+                                          <Line type="monotone" dataKey="peso" stroke="#FF6B57" strokeWidth={2}
+                                            dot={{ fill: '#FF6B57', r: 2, strokeWidth: 0 }}
+                                            activeDot={{ r: 4, fill: '#FF6B57', strokeWidth: 0 }} />
                                         </LineChart>
                                       </ResponsiveContainer>
                                     ) : (
@@ -1021,7 +1028,7 @@ export default function ProgresoPage() {
                             periodoNutri === p ? 'text-white' : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10'
                           }`}
                           style={periodoNutri === p
-                            ? { background: 'linear-gradient(135deg, #16A34A, #15803D)' }
+                            ? { background: 'linear-gradient(135deg, #FF6B57, #E14E2C)' }
                             : undefined}
                         >
                           {p === 'semana' ? 'Semana' : 'Mes'}
@@ -1050,7 +1057,7 @@ export default function ProgresoPage() {
                           <div className="h-2.5 bg-black/[0.05] rounded-full overflow-hidden mb-2">
                             <div
                               className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%`, background: sePaso ? '#EF4444' : '#22C55E' }}
+                              style={{ width: `${pct}%`, background: sePaso ? '#EF4444' : '#FF6B57' }}
                             />
                           </div>
                           {cargandoResumenPeriodo ? (
@@ -1073,8 +1080,8 @@ export default function ProgresoPage() {
                         <div
                           className="rounded-2xl p-5"
                           style={{
-                            background: sePaso ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)',
-                            border: `1px solid ${sePaso ? 'rgba(239,68,68,0.35)' : 'rgba(34,197,94,0.35)'}`,
+                            background: sePaso ? 'rgba(239,68,68,0.08)' : 'rgba(255,107,87,0.08)',
+                            border: `1px solid ${sePaso ? 'rgba(239,68,68,0.35)' : 'rgba(255,107,87,0.35)'}`,
                           }}
                         >
                           <p className="text-[10px] text-[#787f70] uppercase tracking-widest mb-2">🍔 {label}</p>
@@ -1093,9 +1100,9 @@ export default function ProgresoPage() {
                     {/* 3 · Calidad de tu alimentación – anillos de macros */}
                     {(() => {
                       const macros = [
-                        { label: 'Proteína',      consumido: resumenPeriodo.proteina, meta: objProteinaPeriodo, color: '#38B6FF' },
-                        { label: 'Carbohidratos', consumido: resumenPeriodo.carbos,   meta: objCarbosPeriodo,   color: '#FF9D42' },
-                        { label: 'Grasas',        consumido: resumenPeriodo.grasas,   meta: objGrasasPeriodo,   color: '#FF5C5C' },
+                        { label: 'Proteína',      consumido: resumenPeriodo.proteina, meta: objProteinaPeriodo, color: '#2ECC9B' },
+                        { label: 'Carbohidratos', consumido: resumenPeriodo.carbos,   meta: objCarbosPeriodo,   color: '#EF9F27' },
+                        { label: 'Grasas',        consumido: resumenPeriodo.grasas,   meta: objGrasasPeriodo,   color: '#D85A30' },
                       ]
                       const rawPcts = macros.map(m =>
                         m.meta > 0 ? Math.round((m.consumido / m.meta) * 100) : 0
@@ -1167,7 +1174,7 @@ export default function ProgresoPage() {
                           <ReferenceLine y={metaDiaria} stroke="#FFC93C" strokeDasharray="5 4" />
                           <Bar dataKey="consumido" radius={[4, 4, 0, 0]} maxBarSize={36}>
                             {nutriData.map((d, i) => (
-                              <Cell key={`bar-${i}`} fill={d.consumido > metaDiaria ? '#FF7A3D' : '#22C55E'} />
+                              <Cell key={`bar-${i}`} fill={d.consumido > metaDiaria ? '#FF7A3D' : '#FF6B57'} />
                             ))}
                           </Bar>
                         </BarChart>
@@ -1199,10 +1206,10 @@ export default function ProgresoPage() {
 
                 {/* 1 · Cuadritos de hoy */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#FFFFFF] border border-[#22C55E]/30 rounded-2xl p-4 text-center">
+                  <div className="bg-[#FFFFFF] border border-[#FF6B57]/30 rounded-2xl p-4 text-center">
                     <p className="text-[10px] text-[#787f70] uppercase tracking-wide mb-1">Hoy · Minutos</p>
                     <p className="text-4xl font-black leading-none mb-1"
-                      style={{ fontFamily: "'Oswald', sans-serif", color: '#22C55E' }}>
+                      style={{ fontFamily: "'Oswald', sans-serif", color: '#FF6B57' }}>
                       {cardioHoyMin}
                     </p>
                     <p className="text-[10px] text-[#6d7362]">min</p>
@@ -1237,7 +1244,7 @@ export default function ProgresoPage() {
                           />
                           <Bar dataKey="kcal" radius={[4, 4, 0, 0]} maxBarSize={36}>
                             {cardioChartData.map((d, i) => (
-                              <Cell key={`cardio-bar-${i}`} fill={d.isHoy ? '#FB8C3C' : '#22C55E'} />
+                              <Cell key={`cardio-bar-${i}`} fill={d.isHoy ? '#FB8C3C' : '#FF6B57'} />
                             ))}
                           </Bar>
                         </BarChart>
@@ -1254,7 +1261,7 @@ export default function ProgresoPage() {
                             <span className="text-xs text-[#5d6358]">{d.label}</span>
                             <div className="flex items-center gap-4">
                               <span className="text-sm font-bold"
-                                style={{ fontFamily: "'Oswald', sans-serif", color: '#22C55E' }}>
+                                style={{ fontFamily: "'Oswald', sans-serif", color: '#FF6B57' }}>
                                 {d.min} min
                               </span>
                               <span className="text-sm font-bold"
@@ -1283,9 +1290,9 @@ export default function ProgresoPage() {
         >
           <div className="w-full max-w-lg rounded-t-3xl p-6 pb-10"
             style={{
-              background: 'linear-gradient(160deg, #FFFFFF 0%, #F4F6F1 100%)',
-              border: '1px solid rgba(34,197,94,0.35)',
-              boxShadow: '0 -8px 48px rgba(34,197,94,0.18)',
+              background: 'linear-gradient(160deg, #FFFFFF 0%, #FFF8F3 100%)',
+              border: '1px solid rgba(255,107,87,0.35)',
+              boxShadow: '0 -8px 48px rgba(255,107,87,0.18)',
             }}>
 
             {/* Drag handle decorativo */}
@@ -1313,7 +1320,7 @@ export default function ProgresoPage() {
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-[#6d7362]">{row.antes.toLocaleString()} kcal</span>
                     <span className="text-[#6d7362] text-[10px]">→</span>
-                    <span className="text-sm font-bold text-[#15803D]">{row.despues.toLocaleString()} kcal</span>
+                    <span className="text-sm font-bold text-[#E14E2C]">{row.despues.toLocaleString()} kcal</span>
                   </div>
                 </div>
               ))}
@@ -1322,9 +1329,9 @@ export default function ProgresoPage() {
             {/* Macros */}
             <div className="grid grid-cols-3 gap-2 mb-6">
               {[
-                { label: 'Proteína', antes: modalRecalculo.actuales.proteina, despues: modalRecalculo.nuevos.proteina, color: '#38B6FF' },
-                { label: 'Carbos',   antes: modalRecalculo.actuales.carbos,   despues: modalRecalculo.nuevos.carbos,   color: '#FF9D42' },
-                { label: 'Grasas',   antes: modalRecalculo.actuales.grasas,   despues: modalRecalculo.nuevos.grasas,   color: '#FF5C5C' },
+                { label: 'Proteína', antes: modalRecalculo.actuales.proteina, despues: modalRecalculo.nuevos.proteina, color: '#2ECC9B' },
+                { label: 'Carbos',   antes: modalRecalculo.actuales.carbos,   despues: modalRecalculo.nuevos.carbos,   color: '#EF9F27' },
+                { label: 'Grasas',   antes: modalRecalculo.actuales.grasas,   despues: modalRecalculo.nuevos.grasas,   color: '#D85A30' },
               ].map(m => (
                 <div key={m.label} className="rounded-xl py-2.5 px-3 text-center"
                   style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.07)' }}>
@@ -1339,7 +1346,7 @@ export default function ProgresoPage() {
             <button
               onClick={aplicarRecalculo}
               className="w-full py-3.5 rounded-2xl text-white font-bold text-sm mb-2"
-              style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}>
+              style={{ background: 'linear-gradient(135deg, #FF6B57, #E14E2C)' }}>
               Actualizar mis calorías y macros
             </button>
             <button
