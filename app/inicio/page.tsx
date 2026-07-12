@@ -629,7 +629,8 @@ export default function InicioPage() {
 
         {/* HEADER */}
         <div className="flex items-center justify-between py-3 mb-1">
-          <h1 className="text-xl font-bold text-white">FitPro</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 30, width: 'auto' }} className="pointer-events-none select-none" />
           <button
             onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
             className="text-xs text-white/85 hover:text-white transition-colors">
@@ -667,20 +668,29 @@ export default function InicioPage() {
                 </button>
               </div>
 
-              {/* ── Hero: anillo de calorías ── */}
-              <div className="flex flex-col items-center mb-5">
+              {/* ── Hero: poroto comiendo (izq) + anillo de calorías (der) ── */}
+              <div className="flex items-center justify-between gap-1 mb-5">
+                {/* Poroto comiendo */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/caricaturas/poroto-comida.png"
+                  alt=""
+                  className="pointer-events-none select-none shrink-0"
+                  style={{ width: 120, height: 'auto', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.12))' }}
+                />
+                {/* Anillo de calorías */}
                 <Anillo
                   pct={metaCal > 0 ? consumo.calorias / metaCal : 0}
-                  size={200} stroke={16}
+                  size={160} stroke={14}
                   track="#F1F0EC"
                   color={calExcedido ? '#EF4444' : '#FF6B57'}>
-                  <div className={`text-[52px] leading-none font-black tabular-nums ${calExcedido ? 'text-red-500' : 'text-[#FF6B57]'}`}>
+                  <div className={`text-[38px] leading-none font-black tabular-nums ${calExcedido ? 'text-red-500' : 'text-[#FF6B57]'}`}>
                     {Math.abs(calRestantes).toLocaleString()}
                   </div>
-                  <div className="text-xs text-[#9CA3AF] mt-1">
+                  <div className="text-[11px] text-[#9CA3AF] mt-1">
                     {calExcedido ? 'kcal de más' : 'kcal restantes'}
                   </div>
-                  <div className="text-[11px] text-[#B0AEA6] mt-0.5">
+                  <div className="text-[10px] text-[#B0AEA6] mt-0.5">
                     {Math.round(consumo.calorias).toLocaleString()} de {kcal}
                   </div>
                 </Anillo>
@@ -1136,7 +1146,7 @@ export default function InicioPage() {
 
         {/* Botón reporte WhatsApp */}
         <a
-          href="https://wa.me/56934580344?text=Hola!%20FitPro%20est%C3%A1%20en%20prueba.%20Quiero%20reportar%20esto%3A%20"
+          href="https://wa.me/56934580344?text=Hola!%20PorotoFit%20est%C3%A1%20en%20prueba.%20Quiero%20reportar%20esto%3A%20"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2.5 w-full rounded-xl py-3 px-4 mt-3 transition-opacity hover:opacity-90 active:opacity-80"

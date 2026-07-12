@@ -125,7 +125,6 @@ export default function ProgresoPage() {
   const [pesoInput, setPesoInput]   = useState('')
   const [guardando, setGuardando]   = useState(false)
   const [errorPeso, setErrorPeso]   = useState<string | null>(null)
-  const [sexoPerfil, setSexoPerfil] = useState<string | null>(null)
 
   // ── Ejercicios ──
   const [sesiones, setSesiones]           = useState<SesionRow[]>([])
@@ -244,7 +243,6 @@ export default function ProgresoPage() {
       const objValido = (['bajar', 'mantener', 'subir'] as const).includes(objDB as ObjetivoPersona)
         ? (objDB as ObjetivoPersona) : 'bajar'
       setObjetivoPersona(objValido)
-      setSexoPerfil(perfilData?.sexo ?? null)
       if (perfilData?.peso_kg && perfilData?.altura_cm && perfilData?.edad) {
         setPerfilCalculo({
           peso_kg:         Number(perfilData.peso_kg),
@@ -377,9 +375,8 @@ export default function ProgresoPage() {
   // Barra de progreso: % del cambio sobre el peso inicial (cap 100%)
   const pctCambioPeso = pesoInicial && cambioPeso != null
     ? Math.min(Math.abs(cambioPeso) / pesoInicial * 100 * 5, 100) : 0
-  const imagenEntrenaPeso = sexoPerfil === 'mujer'
-    ? '/caricaturas/mujer-progreso.png'
-    : '/caricaturas/hombre-progreso.png'
+  // Mascota PorotoFit: una sola para todos (ya no depende del sexo del usuario).
+  const imagenEntrenaPeso = '/caricaturas/poroto-flex.png'
 
   // ── Datos derivados: ejercicio seleccionado ──
   const chartEjercicio = useMemo(() => {
@@ -550,7 +547,8 @@ export default function ProgresoPage() {
 
       {/* HEADER */}
       <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#FF6B57' }}>
-        <h1 className="text-lg font-bold text-white">FitPro</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
         <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 

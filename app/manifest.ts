@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'FitPro',
-    short_name: 'FitPro',
+    name: 'PorotoFit',
+    short_name: 'PorotoFit',
     description: 'Tu plataforma de fitness y entrenamiento',
     start_url: '/',
     display: 'standalone',

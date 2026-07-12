@@ -54,7 +54,7 @@ const MENSAJES = [
   { title: '💧 ¡Hora de hidratarte!',  body: '¡Venga, un vaso de agua YA! No te hagas el duro 😤' },
   { title: '💧 ¡Bebe agua ahora!',     body: 'Llevas rato sin tomar nada. ¡30 segundos y un vaso, hazlo! 🥤' },
   { title: '💧 Aviso de hidratación',  body: 'Sí, tú. Ve por agua y vuelve. ¡Tus riñones te lo piden! 🙏' },
-  { title: '💧 ¡Agua, no excusas!',    body: '¿Cuánto llevas hoy? Abre FitPro y dale al +250 ml 👊' },
+  { title: '💧 ¡Agua, no excusas!',    body: '¿Cuánto llevas hoy? Abre PorotoFit y dale al +250 ml 👊' },
   { title: '💧 ¡Última llamada!',      body: 'Queda poco del día. Cierra esa brecha antes de dormir 🌙' },
   { title: '💧 ¡El último, va!',       body: 'Un vaso más y cumples la meta. ¡No te rindas tan cerca! 💪' },
 ]

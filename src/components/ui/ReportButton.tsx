@@ -1,5 +1,5 @@
 const WA_REPORTE =
-  'https://wa.me/56934580344?text=Hola!%20FitPro%20est%C3%A1%20en%20prueba.%20Quiero%20reportar%20esto%3A%20'
+  'https://wa.me/56934580344?text=Hola!%20PorotoFit%20est%C3%A1%20en%20prueba.%20Quiero%20reportar%20esto%3A%20'
 
 export default function ReportButton() {
   return (

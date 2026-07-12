@@ -3,13 +3,13 @@ import './globals.css'
 import { PwaRegister } from './pwa-register'
 
 export const metadata: Metadata = {
-  title: 'FitPro',
+  title: 'PorotoFit',
   description: 'Tu plataforma de fitness y entrenamiento',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'FitPro',
+    title: 'PorotoFit',
   },
   icons: {
     icon: '/icons/icon-512',

@@ -425,7 +425,9 @@ export default function RutinasPage() {
   const [mostrarPegar, setMostrarPegar] = useState(false)
 
   const hoyStr = toLocalDate(new Date())
-  const imagenEntrena = userSexo === 'mujer' ? '/caricaturas/mujer-entrena.png' : '/caricaturas/hombre-entrena.png'
+  // Mascota PorotoFit: una sola para todos (ya no depende del sexo del usuario).
+  const porotoEntrena = '/caricaturas/poroto-entrena.png'
+  const porotoAmigos = '/caricaturas/poroto-amigos.png'
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -435,7 +437,7 @@ export default function RutinasPage() {
 
   useEffect(() => {
     if (!userId) return
-    supabase.from('perfiles').select('sexo').eq('user_id', userId).single()
+    supabase.from('perfiles').select('sexo').eq('id', userId).single()
       .then(({ data }) => {
         if (data?.sexo) setUserSexo(data.sexo as string)
       })
@@ -1011,7 +1013,7 @@ export default function RutinasPage() {
     }
     setCompartiendoDirecto(false)
     if (!codigo) return
-    const texto = `¡Entrena conmigo en FitPro! Usa mi código de rutina: ${codigo}`
+    const texto = `¡Entrena conmigo en PorotoFit! Usa mi código de rutina: ${codigo}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try { await navigator.share({ text: texto }) } catch { /* usuario canceló */ }
     } else {
@@ -1074,7 +1076,8 @@ export default function RutinasPage() {
 
       {/* HEADER */}
       <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#FF6B57' }}>
-        <h1 className="text-lg font-bold text-white">FitPro</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
         <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 
@@ -1098,10 +1101,10 @@ export default function RutinasPage() {
           <div className="flex flex-col items-center text-center pt-4 pb-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={imagenEntrena}
+              src={porotoEntrena}
               alt=""
               className="mb-5 pointer-events-none select-none"
-              style={{ width: 132, height: 162, objectFit: 'contain', objectPosition: 'bottom center', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.5))' }}
+              style={{ width: 180, height: 180, objectFit: 'contain', objectPosition: 'bottom center', filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.18))' }}
             />
             <h3 className="text-2xl font-black">Crea tu primera rutina</h3>
             <p className="text-sm text-[#5d6358] mt-2 mb-7 leading-relaxed mx-auto" style={{ maxWidth: 300 }}>
@@ -1402,18 +1405,18 @@ export default function RutinasPage() {
           {/* Fila principal */}
           <div className="flex items-stretch">
             {/* Caricatura libre: sin recuadro, apoyada en la base del banner */}
-            <div className="shrink-0 flex flex-col justify-end" style={{ width: '88px' }}>
+            <div className="shrink-0 flex flex-col justify-center" style={{ width: '118px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={imagenEntrena}
-                alt="Entrena"
+                src={porotoAmigos}
+                alt="Reta a un amigo"
                 style={{
                   display: 'block',
-                  width: '88px',
-                  height: '110px',
+                  width: '118px',
+                  height: '112px',
                   objectFit: 'contain',
-                  objectPosition: 'bottom center',
-                  filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.55))',
+                  objectPosition: 'center',
+                  filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.35))',
                 }}
               />
             </div>
@@ -2324,7 +2327,7 @@ export default function RutinasPage() {
                     </div>
                     <div className="flex items-start gap-2 text-xs text-[#5d6358]">
                       <span className="text-[#E14E2C] font-bold shrink-0">2.</span>
-                      <span>Tu amigo/a abre FitPro → Rutinas → &ldquo;¿Te compartieron una rutina?&rdquo;</span>
+                      <span>Tu amigo/a abre PorotoFit → Rutinas → &ldquo;¿Te compartieron una rutina?&rdquo;</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-[#5d6358]">
                       <span className="text-[#E14E2C] font-bold shrink-0">3.</span>
