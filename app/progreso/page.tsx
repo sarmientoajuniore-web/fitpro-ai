@@ -9,7 +9,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell,
 } from 'recharts'
-import { Dumbbell, Flame, ChevronRight } from 'lucide-react'
+import { Dumbbell, Flame, Activity, ChevronRight } from 'lucide-react'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -536,10 +536,10 @@ export default function ProgresoPage() {
 
   // ── UI helpers ──
   const TABS = [
-    { key: 'peso',       label: 'Peso'       },
-    { key: 'ejercicios', label: 'Ejercicios' },
-    { key: 'nutricion',  label: 'Nutrición'  },
-    { key: 'cardio',     label: 'Cardio'     },
+    { key: 'peso',       label: 'Mi peso'           },
+    { key: 'ejercicios', label: 'Récords de fuerza' },
+    { key: 'nutricion',  label: 'Nutrición'         },
+    { key: 'cardio',     label: 'Cardio'            },
   ]
 
   return (
@@ -563,16 +563,10 @@ export default function ProgresoPage() {
               className="flex items-center gap-1 text-xs font-semibold text-[#B3121D] mb-3 hover:opacity-80 transition-opacity">
               ← Volver al resumen
             </button>
-            <div className="flex gap-2">
-              {TABS.map(({ key, label }) => (
-                <button key={key} onClick={() => setTab(key)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors
-                    ${tab === key
-                      ? 'bg-[#E11D2A] text-white'
-                      : 'bg-[#FFFFFF] text-[#5d6358] border border-black/10'}`}>
-                  {label}
-                </button>
-              ))}
+            {/* Sección activa (Idea 2: sin barra de 4 pestañas, solo la sección donde estás) */}
+            <div className="inline-flex items-center gap-2 py-2 px-4 rounded-xl text-sm font-bold text-white"
+              style={{ background: 'linear-gradient(135deg, #E11D2A, #B3121D)' }}>
+              {TABS.find(t => t.key === tab)?.label ?? 'Detalle'}
             </div>
           </div>
         )}
@@ -645,21 +639,34 @@ export default function ProgresoPage() {
                   <Dumbbell size={22} strokeWidth={2.2} color="#fff" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[15px] font-bold text-white">Entrenamiento</div>
-                  <div className="text-xs text-[#EAFBF4]">Tus récords y progreso de fuerza</div>
+                  <div className="text-[15px] font-bold text-white">Récords de fuerza</div>
+                  <div className="text-xs text-white/70">Tus récords y progreso por ejercicio</div>
                 </div>
                 <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
               </button>
               <button
                 onClick={() => { setTab('nutricion'); setVista('detalle') }}
                 className="flex items-center gap-3 rounded-2xl px-4 py-4 text-left active:scale-[0.98] transition-transform"
-                style={{ background: '#E11D2A', boxShadow: '0 6px 16px rgba(255,107,87,0.30)' }}>
+                style={{ background: '#E11D2A', boxShadow: '0 6px 16px rgba(225,29,42,0.30)' }}>
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.22)' }}>
                   <Flame size={22} strokeWidth={2.2} color="#fff" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[15px] font-bold text-white">Comida y cardio</div>
-                  <div className="text-xs text-[#F8D6D6]">Calorías, macros y cardio del período</div>
+                  <div className="text-[15px] font-bold text-white">Nutrición</div>
+                  <div className="text-xs text-white/80">Calorías y macros del período</div>
+                </div>
+                <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
+              </button>
+              <button
+                onClick={() => { setTab('cardio'); setVista('detalle') }}
+                className="flex items-center gap-3 rounded-2xl px-4 py-4 text-left active:scale-[0.98] transition-transform"
+                style={{ background: '#B3121D', boxShadow: '0 6px 16px rgba(179,18,29,0.30)' }}>
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.22)' }}>
+                  <Activity size={22} strokeWidth={2.2} color="#fff" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-bold text-white">Cardio</div>
+                  <div className="text-xs text-white/80">Minutos y calorías quemadas</div>
                 </div>
                 <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
               </button>
