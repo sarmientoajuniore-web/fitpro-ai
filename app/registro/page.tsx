@@ -96,7 +96,9 @@ export default function RegistroPage() {
               </div>
             </div>
             <span className="text-xs text-[#5d6358] leading-relaxed" onClick={() => setPrivacidad(v => !v)}>
-              Acepto el aviso de privacidad y el tratamiento de mis datos
+              Acepto el{' '}
+              <a href="/privacidad" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[#E11D2A] underline">aviso de privacidad</a>
+              {' '}y el tratamiento de mis datos
             </span>
           </label>
 
