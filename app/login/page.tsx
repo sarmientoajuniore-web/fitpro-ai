@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/caricaturas/poroto-logo.png" alt="PorotoFit" className="mx-auto pointer-events-none select-none" style={{ height: 150, width: 'auto' }} />
+          <img src="/caricaturas/poroto-logo.png" alt="PorotoFit" className="mx-auto pointer-events-none select-none" style={{ height: 190, width: 'auto' }} />
           <p className="text-[#787f70] mt-3 text-sm">Tu plataforma de fitness inteligente</p>
         </div>
 

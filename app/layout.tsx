@@ -11,10 +11,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'PorotoFit',
   },
-  icons: {
-    icon: '/icons/icon-512',
-    apple: '/apple-icon',
-  },
   formatDetection: { telephone: false },
 }
 
