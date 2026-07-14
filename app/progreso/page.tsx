@@ -626,6 +626,16 @@ export default function ProgresoPage() {
                 ) : (
                   <p className="text-sm text-[#6d7362] py-3">Registra tu primer peso para comenzar el seguimiento</p>
                 )}
+
+                {/* Poroto antes/después: refuerza la idea de transformación junto al peso */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/caricaturas/poroto-progreso.png"
+                  alt="Poroto antes y después"
+                  className="mx-auto mt-4"
+                  style={{ height: 116, width: 'auto' }}
+                />
+
                 <button
                   onClick={() => { setTab('peso'); setVista('detalle') }}
                   className="w-full flex items-center justify-center gap-2 rounded-xl py-3 mt-4 text-sm font-bold text-white active:scale-[0.98] transition-all shadow-[0_0_18px_rgba(255,107,87,0.3)]"
