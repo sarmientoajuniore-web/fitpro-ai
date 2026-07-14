@@ -15,7 +15,21 @@ Todo listo para copiar/pegar cuando generemos el APK y creemos la ficha en Play 
 | Política de privacidad | `https://porotofit.cl/privacidad` |
 | Correo de contacto | `contacto@porotofit.cl` |
 
-> Importante: el `package_name` en PWABuilder debe ser **exactamente** `cl.porotofit.twa` para que calce con `public/.well-known/assetlinks.json`. Al generar el APK, PWABuilder da un **SHA-256** → pegarlo en ese archivo (reemplazar `PENDIENTE_REEMPLAZAR_...`) y volver a desplegar.
+> Importante: el `package_name` en PWABuilder debe ser **exactamente** `cl.porotofit.twa` para que calce con `public/.well-known/assetlinks.json`.
+
+> ⚠️ **El SHA-256 que da PWABuilder NO alcanza.** Ese es el de la **clave de carga**, y Google **re-firma** la app con su propia clave (Play App Signing) antes de distribuirla. Si en `assetlinks.json` va solo el de PWABuilder, la verificación de Digital Asset Links falla y la app abre **con la barra del navegador visible**.
+>
+> El que manda es el de **Play Console → Protegido con Play → Firma de apps → "Certificado de la clave de firma de la app" → Huella digital SHA-256**. Hoy el archivo lleva **las dos** huellas (Google para instalaciones desde Play, carga para el APK directo).
+>
+> Para comprobar que quedó bien, sin instalar nada:
+> ```bash
+> curl -s -G "https://digitalassetlinks.googleapis.com/v1/assetlinks:check" \
+>   --data-urlencode "source.web.site=https://porotofit.cl" \
+>   --data-urlencode "relation=delegate_permission/common.handle_all_urls" \
+>   --data-urlencode "target.android_app.package_name=cl.porotofit.twa" \
+>   --data-urlencode "target.android_app.certificate.sha256_fingerprint=<HUELLA>"
+> # debe responder: {"linked": true}
+> ```
 
 ---
 
@@ -68,9 +82,12 @@ Empieza hoy. Tu versión más fit te está esperando. 💪
 ---
 
 ## 4. Pasos que faltan (orden)
-1. ⏳ Esperar a que `porotofit.cl` cargue (DNS propagando).
-2. Crear **cuenta Google Play Developer** (US$25, pago único) — lo hace Junior.
-3. En **pwabuilder.com**: pegar `https://porotofit.cl` → Android → package `cl.porotofit.twa` → generar y descargar el paquete (AAB/APK + assetlinks).
-4. Pegar el **SHA-256** de PWABuilder en `public/.well-known/assetlinks.json` → commit + deploy.
-5. Subir el **AAB** a Play Store + completar la ficha con lo de arriba + subir capturas.
-6. (Cuentas personales nuevas) Ojo con la **prueba cerrada** (~12 testers × 14 días) antes de publicar abierto — evaluar cuenta de empresa/SpA.
+1. ~~Esperar a que `porotofit.cl` cargue (DNS propagando).~~ ✅ live.
+2. ~~Crear **cuenta Google Play Developer** (US$25, pago único).~~ ✅ cuenta `porotos.cl@gmail.com`, developer "PorotoFit".
+3. ~~En **pwabuilder.com**: generar el paquete (AAB/APK + assetlinks).~~ ✅ package `cl.porotofit.twa`.
+4. ~~`assetlinks.json` con las huellas correctas → commit + deploy.~~ ✅ 14/07/2026, las dos huellas, verificado con `linked: true`.
+5. ~~Subir el **AAB** a Play Console.~~ ✅ versión 1 (1.0.0.0) activa en **prueba interna**.
+6. ⬜ **Completar la ficha de la tienda** con la sección 2 de este doc + gráficos de la sección 3 (falta el feature graphic 1024×500 y las capturas).
+7. ⬜ (Cuentas personales nuevas) **Prueba cerrada** ~12-20 testers × 14 días antes de publicar en producción.
+
+> ⚠️ **Guardar para siempre**: `signing.keystore` + `signing-key-info.txt` (contraseñas) del paquete de PWABuilder. Sin esos archivos no se puede volver a actualizar la app en Play Store.
