@@ -382,7 +382,7 @@ export default function ProgresoPage() {
   const pctCambioPeso = pesoInicial && cambioPeso != null
     ? Math.min(Math.abs(cambioPeso) / pesoInicial * 100 * 5, 100) : 0
   // Mascota PorotoFit: una sola para todos (ya no depende del sexo del usuario).
-  const imagenEntrenaPeso = '/caricaturas/poroto-flex.png'
+  const imagenEntrenaPeso = '/caricaturas/poroto-flex.webp'
 
   // ── Datos derivados: ejercicio seleccionado ──
   const chartEjercicio = useMemo(() => {
@@ -554,7 +554,7 @@ export default function ProgresoPage() {
       {/* HEADER */}
       <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#141414' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
+        <img src="/caricaturas/poroto-wordmark.webp" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
         <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 
@@ -630,7 +630,7 @@ export default function ProgresoPage() {
                 {/* Poroto antes/después: refuerza la idea de transformación junto al peso */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/caricaturas/poroto-progreso.png"
+                  src="/caricaturas/poroto-progreso.webp"
                   alt="Poroto antes y después"
                   className="mx-auto mt-4"
                   style={{ height: 116, width: 'auto' }}

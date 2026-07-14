@@ -426,8 +426,8 @@ export default function RutinasPage() {
 
   const hoyStr = toLocalDate(new Date())
   // Mascota PorotoFit: una sola para todos (ya no depende del sexo del usuario).
-  const porotoEntrena = '/caricaturas/poroto-entrena.png'
-  const porotoAmigos = '/caricaturas/poroto-amigos.png'
+  const porotoEntrena = '/caricaturas/poroto-entrena.webp'
+  const porotoAmigos = '/caricaturas/poroto-amigos.webp'
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -1077,7 +1077,7 @@ export default function RutinasPage() {
       {/* HEADER */}
       <div className="sticky top-0 z-10 px-5 py-3 flex items-center justify-between" style={{ background: '#141414' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
+        <img src="/caricaturas/poroto-wordmark.webp" alt="PorotoFit" style={{ height: 28, width: 'auto' }} className="pointer-events-none select-none" />
         <a href="/inicio" className="text-xs text-white/85">← Inicio</a>
       </div>
 

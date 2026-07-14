@@ -649,7 +649,7 @@ export default function InicioPage() {
         {/* HEADER */}
         <div className="flex items-center justify-between py-3 mb-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/caricaturas/poroto-wordmark.png" alt="PorotoFit" style={{ height: 30, width: 'auto' }} className="pointer-events-none select-none" />
+          <img src="/caricaturas/poroto-wordmark.webp" alt="PorotoFit" style={{ height: 30, width: 'auto' }} className="pointer-events-none select-none" />
           <button
             onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
             className="text-xs text-white/85 hover:text-white transition-colors">
@@ -692,7 +692,7 @@ export default function InicioPage() {
                 {/* Poroto comiendo */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/caricaturas/poroto-comida.png"
+                  src="/caricaturas/poroto-comida.webp"
                   alt=""
                   className="pointer-events-none select-none shrink-0"
                   style={{ width: 120, height: 'auto', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.12))' }}
