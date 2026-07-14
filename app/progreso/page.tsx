@@ -156,6 +156,12 @@ export default function ProgresoPage() {
   } | null>(null)
   const [modalRecalculo, setModalRecalculo] = useState<{ actuales: MacrosObjetivo; nuevos: MacrosObjetivo; nuevoPeso: number } | null>(null)
 
+  // Eliminar cuenta — requisito de Google Play para apps con registro.
+  const [modalEliminar, setModalEliminar] = useState(false)
+  const [confirmacionTexto, setConfirmacionTexto] = useState('')
+  const [eliminando, setEliminando] = useState(false)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
+
   const hoyStr = useMemo(() => toLocalDateStr(new Date()), [])
 
   useEffect(() => {
@@ -669,6 +675,15 @@ export default function ProgresoPage() {
                   <div className="text-xs text-white/80">Minutos y calorías quemadas</div>
                 </div>
                 <ChevronRight size={20} color="#ffffffcc" className="shrink-0" />
+              </button>
+            </div>
+
+            {/* ── Eliminar cuenta (requisito Google Play) ── */}
+            <div className="mt-10 pt-5 border-t border-black/10">
+              <button
+                onClick={() => { setModalEliminar(true); setConfirmacionTexto(''); setErrorEliminar(null) }}
+                className="w-full py-3 text-sm text-[#9aa091] active:text-[#E11D2A] transition-colors">
+                Eliminar mi cuenta
               </button>
             </div>
           </>
@@ -1359,6 +1374,66 @@ export default function ProgresoPage() {
               className="w-full py-2 text-sm text-[#787f70]">
               Ahora no
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ MODAL ELIMINAR CUENTA ═══════════════ */}
+      {modalEliminar && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.55)' }}>
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6">
+
+            <h3 className="text-lg font-black mb-2">¿Eliminar tu cuenta?</h3>
+            <p className="text-sm text-[#5d6358] mb-4">
+              Se borra todo para siempre: tu perfil, tus rutinas, tus entrenamientos y tus
+              registros de comidas, agua y peso. <span className="font-semibold text-[#141414]">No se puede deshacer.</span>
+            </p>
+
+            <p className="text-xs text-[#787f70] mb-2">
+              Para confirmar, escribe <span className="font-bold text-[#141414]">ELIMINAR</span>:
+            </p>
+            <input
+              value={confirmacionTexto}
+              onChange={(e) => setConfirmacionTexto(e.target.value)}
+              disabled={eliminando}
+              autoCapitalize="characters"
+              className="w-full rounded-xl px-4 py-3 text-sm mb-3 outline-none"
+              style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.10)' }}
+              placeholder="ELIMINAR"
+            />
+
+            {errorEliminar && (
+              <p className="text-xs text-[#E11D2A] mb-3">{errorEliminar}</p>
+            )}
+
+            <button
+              onClick={async () => {
+                setEliminando(true)
+                setErrorEliminar(null)
+                try {
+                  const res = await fetch('/api/cuenta/eliminar', { method: 'POST' })
+                  const data = await res.json().catch(() => ({}))
+                  if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la cuenta')
+                  await supabase.auth.signOut()
+                  window.location.href = '/login'
+                } catch (e) {
+                  setErrorEliminar(e instanceof Error ? e.message : 'No se pudo eliminar la cuenta')
+                  setEliminando(false)
+                }
+              }}
+              disabled={confirmacionTexto.trim().toUpperCase() !== 'ELIMINAR' || eliminando}
+              className="w-full py-3.5 rounded-2xl text-white font-bold text-sm mb-2 disabled:opacity-40"
+              style={{ background: '#E11D2A' }}>
+              {eliminando ? 'Eliminando…' : 'Eliminar mi cuenta para siempre'}
+            </button>
+            <button
+              onClick={() => setModalEliminar(false)}
+              disabled={eliminando}
+              className="w-full py-2 text-sm text-[#787f70]">
+              Cancelar
+            </button>
+
           </div>
         </div>
       )}
