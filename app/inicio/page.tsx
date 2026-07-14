@@ -66,6 +66,9 @@ type AlimentoBusqueda = {
   proteina_100g: number
   carbos_100g:   number
   grasas_100g:   number
+  // Peso real de una porción según la tabla `alimentos` (ej. un sobre de sopa = 70 g).
+  // Cuando viene, le gana a la estimación por nombre de gramosPorUnidad().
+  porcion_g?:    number | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,6 +100,8 @@ function labelFecha(fechaStr: string): string {
   return `${d} ${MESES_CORTOS[f.getMonth()]} ${y}`
 }
 
+// Estimación por nombre, para alimentos que no traen porcion_g cargado en la tabla.
+// Es un último recurso: si el alimento tiene porcion_g, se usa ese (ver pesoDePorcion).
 function gramosPorUnidad(nombre: string): number {
   const n = nombre.toLowerCase()
   if (n.includes('huevo'))                                          return 50
@@ -107,6 +112,13 @@ function gramosPorUnidad(nombre: string): number {
   if (n.includes('galleta') || n.includes('oreo'))                 return 11
   if (n.includes('pan') && !n.includes('empanada'))                return 30
   return 100
+}
+
+// El dato de la tabla manda sobre la adivinanza por nombre: un sobre de sopa Maggi
+// pesa 70 g, pero por nombre no hay forma de saberlo y caería en el default de 100 g.
+function pesoDePorcion(a: AlimentoBusqueda): number {
+  if (a.porcion_g && a.porcion_g > 0) return a.porcion_g
+  return gramosPorUnidad(a.nombre)
 }
 
 function formatCantidad(item: RegistroItem): string {
@@ -355,7 +367,7 @@ export default function InicioPage() {
     busquedaLocalTimerRef.current = setTimeout(async () => {
       const { data } = await supabase
         .from('alimentos')
-        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g')
+        .select('id, nombre, calorias_100g, proteina_100g, carbos_100g, grasas_100g, porcion_g')
         .ilike('nombre', `%${busquedaLocal.trim()}%`)
         .limit(15)
       setResultadosLocal(
@@ -366,6 +378,7 @@ export default function InicioPage() {
           proteina_100g: a.proteina_100g ?? 0,
           carbos_100g:   a.carbos_100g   ?? 0,
           grasas_100g:   a.grasas_100g   ?? 0,
+          porcion_g:     a.porcion_g     ?? null,
         }))
       )
       setBuscandoLocal(false)
@@ -512,7 +525,13 @@ export default function InicioPage() {
 
   const seleccionarAlimento = (a: AlimentoBusqueda) => {
     setAlimentoSel(a)
-    setPesoPorcion(String(gramosPorUnidad(a.nombre)))
+    setPesoPorcion(String(pesoDePorcion(a)))
+    // Si el alimento trae su porción de la tabla, arrancamos en "Porción / Unidad":
+    // el usuario come "un sobre", no "70 gramos".
+    if (a.porcion_g && a.porcion_g > 0) {
+      setModoRegistro('unidades')
+      setUnidadesInput('1')
+    }
     setResultadosAlim([])
     setResultadosLocal([])
   }
